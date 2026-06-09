@@ -1,0 +1,38 @@
+# ---- Gradle / Kotlin ----
+.gradle/
+**/build/
+!**/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+
+# ---- IntelliJ IDEA ----
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ---- Node / frontend ----
+**/node_modules/
+**/coverage/
+.pnp
+.pnp.js
+.yarn/
+.yarnrc.yml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- H2 / local dev database ----
+**/data/
+*.mv.db
+*.trace.db
+
+# ---- Local env overrides ----
+.env.local
+.env.*.local
+
+# ---- OS ----
+.DS_Store
+Thumbs.db

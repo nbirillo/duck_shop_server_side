@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: duck-shop-server
+
+  # File-based H2 for development (Module 5) — data survives restarts.
+  # Swapped for PostgreSQL in tests (Module 7).
+  datasource:
+    url: jdbc:h2:file:./data/duckshop;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # keep schema & data across restarts (dev)
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Browse the dev database at http://localhost:8080/h2-console
+  h2:
+    console:
+      enabled: true
+
+# Runtime visibility (Module 3 / Module 8)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: duck-shop-server
