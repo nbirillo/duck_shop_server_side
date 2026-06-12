@@ -6,8 +6,9 @@ REST API and a (fixed-design) React frontend. The single artifact serves both th
 ## Layout
 
 ```
-server/     Spring Boot 3 / Kotlin / JVM 21 — REST API at /api/ducks
-frontend/   React + TypeScript (design is fixed; only the API layer changes)
+server/       Spring Boot 3 / Kotlin / JVM 21 — REST API at /api/ducks (the main app)
+ktor-server/  Ktor 3 / Kotlin / JVM 21 — a subset of /api/ducks, for the Spring-vs-Ktor comparison
+frontend/     React + TypeScript (design is fixed; only the API layer changes)
 ```
 
 ## Stack & features
@@ -31,3 +32,18 @@ cd server
 Open <http://localhost:8080> for the UI · `GET /api/ducks` for the API · `/actuator/health` for status.
 
 Dev credentials (HTTP Basic): `admin/admin` (ADMIN), `user/user` (USER).
+
+## Ktor (comparison — Module 9)
+
+A lightweight port of a **subset** of `/api/ducks` (`GET` / `GET /state` / `PUT` / `POST`), used to
+contrast Spring with Ktor on four axes (routing, serialization, DB, auth). API-only, separate port,
+its own H2 file — runs side by side with the Spring app.
+
+```bash
+cd ktor-server
+./gradlew run                     # starts on http://localhost:8081
+```
+
+- Routing DSL · **kotlinx.serialization** · **Exposed** (file H2, durable) · **Ktor Authentication** (Basic).
+- Authorization is a manual ADMIN check (Ktor has no built-in `hasRole`): `PUT` = ADMIN, `POST` = any user, `GET` public.
+- Same dev credentials as Spring. `PATCH`/`DELETE` and the `Duck ↔ Accessory` relationship are intentionally not ported.
