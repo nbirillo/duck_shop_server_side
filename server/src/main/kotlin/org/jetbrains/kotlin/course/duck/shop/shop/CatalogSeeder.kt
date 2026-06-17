@@ -11,7 +11,7 @@ class CatalogSeeder(
     private val duckRepository: DuckRepository,
     private val accessoryRepository: AccessoryRepository,
 ) : CommandLineRunner {
-    override fun run(vararg args: String?) {
+    override fun run(vararg args: String) {
         if (duckRepository.count() > 0) return
 
         val hat = accessoryRepository.save(Accessory("Hat", 75))

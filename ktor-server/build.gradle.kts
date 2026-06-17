@@ -9,8 +9,8 @@ val exposedVersion = "0.61.0"
 val logbackVersion = "1.5.12"
 
 plugins {
-    kotlin("jvm") version "2.0.21"
-    kotlin("plugin.serialization") version "2.0.21"
+    kotlin("jvm") version "2.2.20"
+    kotlin("plugin.serialization") version "2.2.20"
     application
 }
 

@@ -6,14 +6,14 @@ REST API and a (fixed-design) React frontend. The single artifact serves both th
 ## Layout
 
 ```
-server/       Spring Boot 3 / Kotlin / JVM 21 — REST API at /api/ducks (the main app)
+server/       Spring Boot 4 / Kotlin / JVM 21 — REST API at /api/ducks (the main app)
 ktor-server/  Ktor 3 / Kotlin / JVM 21 — a subset of /api/ducks, for the Spring-vs-Ktor comparison
 frontend/     React + TypeScript (design is fixed; only the API layer changes)
 ```
 
 ## Stack & features
 
-- **Spring Boot 3.3** · Kotlin 2.0 · JVM 21
+- **Spring Boot 4.0** · Kotlin 2.2 · JVM 21
 - **REST** resource `/api/ducks` (GET/POST/PUT/PATCH/DELETE), server-side state
 - **JPA** persistence — `Duck` ↔ `Accessory` (`@ManyToMany`), file-based **H2** (survives restart)
 - **Spring Security** — GET public, mutations authenticated, `PUT` = ADMIN (HTTP Basic, dev users)

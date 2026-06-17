@@ -1,11 +1,11 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
-    kotlin("plugin.spring") version "2.0.21"
-    kotlin("plugin.jpa") version "2.0.21"
-    id("org.springframework.boot") version "3.3.5"
-    id("io.spring.dependency-management") version "1.1.6"
-    // Build a GraalVM native image with ./gradlew nativeCompile (requires a GraalVM JDK).
-    id("org.graalvm.buildtools.native") version "0.10.3"
+    kotlin("jvm") version "2.2.20"
+    kotlin("plugin.spring") version "2.2.20"
+    kotlin("plugin.jpa") version "2.2.20"
+    id("org.springframework.boot") version "4.0.0"
+    id("io.spring.dependency-management") version "1.1.7"
+    // Build a GraalVM native image with ./gradlew nativeCompile (requires a GraalVM 25+ JDK).
+    id("org.graalvm.buildtools.native") version "1.1.2"
 }
 
 group = "org.jetbrains.kotlin.course"
@@ -27,22 +27,23 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc") // was spring-boot-starter-web (deprecated in Boot 4)
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("tools.jackson.module:jackson-module-kotlin") // Jackson 3 (Boot 4): group moved com.fasterxml.jackson -> tools.jackson
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test") // Boot 4: modular test starter for @AutoConfigureMockMvc
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter") // Testcontainers 2.0 (Boot 4): modules gained a testcontainers- prefix
+    testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.postgresql:postgresql")
 }
 
@@ -69,10 +70,13 @@ fun npm(vararg args: String) = listOf(if (isWindows) "npm.cmd" else "npm", *args
 
 val installFrontend = tasks.register<Exec>("installFrontend") {
     group = "frontend"
-    description = "Installs npm dependencies (only when node_modules is missing)."
+    description = "Installs npm dependencies (when they're missing or incomplete)."
     workingDir = frontendDir
     commandLine(npm("install"))
-    onlyIf { !frontendDir.resolve("node_modules").exists() }
+    // Re-install when the deps are absent OR present-but-incomplete: checking only the
+    // node_modules directory misses a partial/corrupted install, which then fails the build
+    // later with "react-scripts: not found". Keying on the react-scripts package is robust.
+    onlyIf { !frontendDir.resolve("node_modules/react-scripts").exists() }
 }
 
 val buildFrontend = tasks.register<Exec>("buildFrontend") {
@@ -81,6 +85,9 @@ val buildFrontend = tasks.register<Exec>("buildFrontend") {
     dependsOn(installFrontend)
     workingDir = frontendDir
     environment("CI", "false") // treat CRA warnings as warnings, not errors
+    // Create React App 5 (webpack 5) trips OpenSSL on Node 17+ ("digital envelope routines::
+    // unsupported"); the legacy provider keeps the build working on modern Node versions.
+    environment("NODE_OPTIONS", "--openssl-legacy-provider")
     inputs.dir(frontendDir.resolve("src"))
     inputs.dir(frontendDir.resolve("public"))
     inputs.files(
