@@ -48,8 +48,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -58,10 +58,18 @@ abstract class RunAgentTask @Inject constructor(
         val root = layout.projectDirectory.asFile
 
         val systemPrompt = root.resolve(
-            if (mode == "impl") "tools/agent-prompt.md" else "tools/agent-prompt-tests.md",
+            when (mode) {
+                "impl" -> "tools/agent-prompt.md"
+                "verify-harden" -> "tools/agent-prompt-verify.md"
+                else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
+            },
         ).readText()
         val stubs = if (mode == "impl") stubFiles(root) else emptyList()
-        val userPrompt = if (mode == "impl") buildImplPrompt(root, stubs) else buildTestsPrompt(root)
+        val userPrompt = when (mode) {
+            "impl" -> buildImplPrompt(root, stubs)
+            "verify-harden" -> buildVerifyPrompt(root)
+            else -> buildTestsPrompt(root)
+        }
         val outDir = root.resolve(if (mode == "tests") "test-suites/$agent" else "solutions/$agent")
         val exerciseFile = root.resolve("exercises/write-tests/src/test/kotlin/$packagePath/PolicyTests.kt")
 
@@ -113,12 +121,18 @@ abstract class RunAgentTask @Inject constructor(
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
 
-        if (mode == "verify-exercise") {
-            val suite = injectPlantedDefect(normalizeCode(extractCode(content), basePackage))
+        if (mode == "verify-exercise" || mode == "verify-harden") {
+            val body = normalizeCode(extractCode(content), basePackage)
+            val suite = if (mode == "verify-exercise") injectPlantedDefect(body) else body
             exerciseFile.parentFile.mkdirs()
             exerciseFile.writeText(suite + "\n")
-            logger.lifecycle("[runAgent] wrote exercise starter ${exerciseFile.relativeTo(root)} from $model, with a planted invalid Not test.")
-            logger.lifecycle("[runAgent] review: git diff -- ${exerciseFile.relativeTo(root)} ; then ./gradlew :exercises:write-tests:test (should be RED on the planted test).")
+            if (mode == "verify-exercise") {
+                logger.lifecycle("[runAgent] wrote exercise starter ${exerciseFile.relativeTo(root)} from $model, with a planted invalid Not test.")
+                logger.lifecycle("[runAgent] review: git diff -- ${exerciseFile.relativeTo(root)} ; then ./gradlew :exercises:write-tests:test (should be RED on the planted test).")
+            } else {
+                logger.lifecycle("[runAgent] wrote $model's verified+hardened suite to ${exerciseFile.relativeTo(root)}.")
+                logger.lifecycle("[runAgent] score it: ./gradlew :exercises:write-tests:test (validity) then ./gradlew practiceCatch (coverage).")
+            }
             return
         }
 
@@ -200,6 +214,28 @@ abstract class RunAgentTask @Inject constructor(
             appendLine("```")
             appendLine()
             append("Write one test file for these classes, per the output contract.")
+        }
+    }
+
+    private fun buildVerifyPrompt(root: File): String {
+        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
+        val algebra = listOf("Domain.kt", "Leaves.kt", "Combinators.kt")
+            .map { coreBase.resolve(it) }
+            .filter { it.exists() }
+            .joinToString("\n\n") { it.readText() }
+        val flawed = root.resolve("exercises/write-tests/src/test/kotlin/$packagePath/PolicyTests.kt").readText()
+        return buildString {
+            appendLine("The algebra under test (given and correct — do not redeclare):")
+            appendLine("```kotlin")
+            appendLine(algebra)
+            appendLine("```")
+            appendLine()
+            appendLine("A test suite another AI wrote for it:")
+            appendLine("```kotlin")
+            appendLine(flawed)
+            appendLine("```")
+            appendLine()
+            append("Verify and harden it, per the output contract.")
         }
     }
 
