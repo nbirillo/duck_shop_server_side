@@ -123,4 +123,6 @@ Options: `-Pagent=<name>` (defaults to `<provider>-<model>`). Then check how it 
 ./gradlew checkPrimary -PprimaryAgent=<name>     # e.g. ollama-qwen2.5-coder
 ```
 
-Interactive agents (Claude Code, Junie, Cursor) are driven in the IDE instead of via this task.
+Interactive agents (Claude Code, Junie, Cursor) are driven in the IDE instead of via this task —
+see `tools/running-advanced-agents.md` for the teacher instructions (setup, isolation, and the
+two recommended prompts).
