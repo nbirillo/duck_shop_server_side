@@ -95,6 +95,12 @@ result as a new `solutions/<agent>/`. It assembles the prompt from the `:core` c
 The agent is asked to return each file in a `// FILE: <path>` fenced block; weaker models that
 ignore this are merged into a single file as a fallback.
 
+> The harness system prompt lives in **`tools/agent-prompt.md`** — it is author-side only and is
+> deliberately NOT a root `AGENTS.md`, so it is not auto-picked-up by a student's own agent. The
+> `// FILE:` output contract is a harness detail (single API call) and is irrelevant to
+> interactive agents. **Student-facing requirements are the spec itself: the stub KDoc and the
+> test suite** (plus the module materials), not this prompt.
+
 ```bash
 # Ollama (local, no key):
 ./gradlew runAgent -Pprovider=ollama -Pmodel=qwen2.5-coder

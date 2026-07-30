@@ -55,7 +55,7 @@ abstract class RunAgentTask @Inject constructor(
 
         val root = layout.projectDirectory.asFile
         val stubs = stubFiles(root)
-        val systemPrompt = root.resolve("AGENTS.md").readText()
+        val systemPrompt = root.resolve("tools/agent-prompt.md").readText()
         val userPrompt = buildUserPrompt(root, stubs)
 
         val endpoint = when (provider) {
