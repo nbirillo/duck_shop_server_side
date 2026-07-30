@@ -7,7 +7,7 @@ plugins {
 }
 
 // Which implementation the student's `checkPrimary` runs against. Override with
-// -PprimaryAgent=<name>; a solutions/<name>/ folder, or "starter"/"grading".
+// -PprimaryAgent=<name>: "starter" or a solutions/<name>/ folder.
 val primaryAgent: String = providers.gradleProperty("primaryAgent").getOrElse("starter")
 
 val primaryPath: String = when (primaryAgent) {
@@ -29,4 +29,13 @@ tasks.register("compareAgents") {
             .filter { it.path.startsWith(":solutions:") }
             .map { "${it.path}:test" }
     )
+}
+
+// Convenience for the teacher: after driving an interactive agent that filled in the :starter
+// stubs, restore them to the committed TODO() state. Touches only starter/src. Requires git.
+tasks.register<Exec>("resetStarter") {
+    group = "duck-shop"
+    description = "Restore :starter to its committed TODO() stubs (e.g. after an interactive agent run)."
+    workingDir = rootDir
+    commandLine("git", "restore", "--source=HEAD", "--staged", "--worktree", "--", "starter/src")
 }

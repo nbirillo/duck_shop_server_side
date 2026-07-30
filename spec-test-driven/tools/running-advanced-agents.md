@@ -20,7 +20,7 @@ Afterwards:
 ./gradlew checkPrimary                 # runs the shared suite against :starter
 # optional: keep the result for comparison (git-ignored):
 #   cp -r starter/src/main/kotlin/.../schedule solutions/<agent>/src/main/kotlin/.../schedule
-git checkout -- starter                # restore the pristine stubs
+./gradlew resetStarter                 # restore the pristine :starter stubs (git-based)
 ```
 
 ## Two prompts (pick per goal)
