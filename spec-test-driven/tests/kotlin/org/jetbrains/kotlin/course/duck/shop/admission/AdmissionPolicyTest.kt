@@ -5,12 +5,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Test-first specification for [AdmissionPolicy], its leaves/combinators and [Shop].
+ * The single shared acceptance suite for [AdmissionPolicy], its leaves/combinators and [Shop].
  *
- * These tests are written BEFORE the implementations (which are `TODO()` stubs in :starter),
- * so the suite is expected to fail ("red") until an implementation is provided. They pin down
- * the corner cases where implementations — human or AI — tend to slip: the `<=` boundary,
- * empty accessories, and the vacuous-truth results of `AllOf`/`AnyOf`.
+ * The convention plugin compiles and runs this same source against every implementation
+ * module (:starter, :grading, each solutions/<agent>/). It pins down the corner cases where
+ * implementations — human or AI — tend to slip: the `<=` boundary, empty accessories, and the
+ * vacuous-truth results of `AllOf`/`AnyOf`. Against :starter's stubs it is red; against a
+ * correct implementation it is green; against a broken one it fails on the affected case.
  */
 class AdmissionPolicyTest {
 

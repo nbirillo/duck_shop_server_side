@@ -1,0 +1,6 @@
+{
+  "agent": "demo-buggy",
+  "model": "hand-seeded",
+  "checkedOn": "2026-07-30",
+  "notes": "Not a real agent. Reference implementation with one deliberately seeded bug: MaxBudget uses `<` instead of `<=`, so the boundary test (price == maxPrice) fails. Demonstrates that the shared acceptance suite catches a broken implementation."
+}

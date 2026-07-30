@@ -1,23 +1,7 @@
-// :starter — the student-facing surface: stub policy types (TODO()) plus the test-first
-// tests. A student (or an AI agent) implements the stubs until `:starter:test` goes green.
+// :starter — the student-facing baseline: stub policy types (TODO()) under src/main. The
+// shared acceptance suite and all wiring come from the convention plugin. Red until the stubs
+// are implemented.
 
 plugins {
-    kotlin("jvm")
-}
-
-kotlin {
-    jvmToolchain(21)
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    implementation(project(":core"))
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
+    id("duck-shop.solution")
 }

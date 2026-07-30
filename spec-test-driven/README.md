@@ -37,16 +37,33 @@ Dev credentials (HTTP Basic): `admin/admin` (ADMIN), `user/user` (USER).
 
 A lightweight Ktor variant of the API lives in `ktor-server/` (`./gradlew run`, port 8081).
 
+## Modules
+
+One shared acceptance suite (`tests/kotlin`) is compiled and run against every implementation
+module (Design B): a module supplies only its policy implementation under `src/main`, and the
+`duck-shop.solution` convention plugin (in `build-logic/`) wires in `:core` and the shared tests.
+
+- `:core` — contract + domain: `AdmissionPolicy` + `Duck`/`Accessory`/`Shop`. No implementations.
+- `:starter` — student-facing stubs (`TODO()`). Red until implemented.
+- `:grading` — reference implementation, teacher-only (`-PincludeGrading`).
+- `solutions/<agent>/` — one implementation per AI agent (`src/main` + `agent.json`), auto-discovered.
+
 ## Run the tests
 
-The student-facing spec/tests (`:starter`) — red until the policy stubs are implemented:
+Check the primary implementation (`primaryAgent` in `gradle.properties`, default `starter`):
 
 ```bash
 cd spec-test-driven
-./gradlew :starter:test
+./gradlew checkPrimary                 # or override: -PprimaryAgent=<name>
 ```
 
-Teachers can run the reference grading suite (`:grading`, hidden unless the flag is passed):
+Run the suite against every `solutions/<agent>/` and compare:
+
+```bash
+./gradlew compareAgents --continue
+```
+
+Reference grading suite (teacher-only):
 
 ```bash
 ./gradlew :grading:test -PincludeGrading
@@ -56,6 +73,3 @@ Teachers can run the reference grading suite (`:grading`, hidden unless the flag
 > flag on every sync), add `includeGrading=true` to your **`~/.gradle/gradle.properties`**
 > and Reload the Gradle project. This is a local, uncommitted teacher setting; students who
 > don't set it get the clean `:core` + `:starter` view.
-
-Modules: `:core` (contract + `Duck`/`Accessory`/`Shop` domain) · `:starter` (stubs + tests) ·
-`:grading` (reference impl + tests, teacher-only).
