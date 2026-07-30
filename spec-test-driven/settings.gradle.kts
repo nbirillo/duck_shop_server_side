@@ -18,6 +18,7 @@ fun autoDiscover(dir: String) = file(dir).listFiles()
     ?.sortedBy { it.name }
     ?.forEach { include(":$dir:${it.name}") }
 
-autoDiscover("solutions")    // agent implementations of the impl exercise
-autoDiscover("exercises")    // learner-facing exercises (e.g. write-tests)
-autoDiscover("test-suites")  // agent-generated test suites (runAgent -Pmode=tests)
+autoDiscover("solutions")     // agent implementations of the impl exercise
+autoDiscover("exercises")     // learner-facing exercises (e.g. write-tests)
+autoDiscover("test-suites")   // agent-generated test suites (runAgent -Pmode=tests)
+autoDiscover("practice-bugs") // broken algebras the learner's tests should catch (11.2 practiceCatch)
