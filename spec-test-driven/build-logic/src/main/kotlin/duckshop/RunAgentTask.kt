@@ -41,6 +41,7 @@ abstract class RunAgentTask @Inject constructor(
 ) : DefaultTask() {
 
     private val packagePath = "org/jetbrains/kotlin/course/duck/shop/admission"
+    private val packageName = packagePath.replace('/', '.')
 
     @TaskAction
     fun run() {
@@ -98,7 +99,7 @@ abstract class RunAgentTask @Inject constructor(
         val content = Json.parseToJsonElement(response.body())
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
-        val code = extractKotlin(content)
+        val code = extractSolution(content)
 
         val srcDir = agentDir.resolve("src/main/kotlin/$packagePath")
         srcDir.mkdirs()
@@ -144,9 +145,31 @@ abstract class RunAgentTask @Inject constructor(
         }
     }
 
-    private fun extractKotlin(content: String): String {
+    /**
+     * Extracts the Kotlin solution from the model's reply and normalises its formatting so the
+     * harness stays robust to weaker models that don't honour the "one file / one package"
+     * contract. This touches only wrapping (fences, duplicate `package` headers, `// Foo.kt`
+     * file separators, import placement) — never the logic, which is what we want to evaluate.
+     */
+    private fun extractSolution(content: String): String {
         val fence = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
-        return fence.find(content)?.groupValues?.get(1)?.trim() ?: content.trim()
+        val blocks = fence.findAll(content).map { it.groupValues[1].trim() }.toList()
+        val raw = if (blocks.isNotEmpty()) blocks.joinToString("\n\n") else content.trim()
+
+        val lines = raw.lines()
+        val imports = lines.map { it.trim() }.filter { it.startsWith("import ") }.distinct()
+        val body = lines
+            .filterNot { it.trim().startsWith("package ") }
+            .filterNot { it.trim().startsWith("import ") }
+            .filterNot { it.trim().matches(Regex("//\\s*\\S+\\.kt")) }
+            .joinToString("\n")
+            .trim()
+
+        return buildString {
+            append("package ").append(packageName).append("\n\n")
+            if (imports.isNotEmpty()) append(imports.joinToString("\n")).append("\n\n")
+            append(body)
+        }
     }
 
     private fun sha256(s: String): String =

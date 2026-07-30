@@ -1,0 +1,7 @@
+# Generated agent solutions from `runAgent` — reproducible, model-dependent, not committed.
+# demo-buggy is a curated, hand-written sample and stays tracked.
+# Anchored patterns (/*) only affect this directory's direct entries, so nested build/ etc.
+# still fall under the repo-root .gitignore.
+/*
+!/.gitignore
+!/demo-buggy

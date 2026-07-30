@@ -28,6 +28,10 @@ package org.jetbrains.kotlin.course.duck.shop.admission
 
 No prose before or after the block. No extra files.
 
+Strictly: **exactly one `package` declaration** at the very top, all classes in that one file.
+Do not concatenate several files, do not repeat the `package` line, and do not add `// Foo.kt`
+file-separator comments.
+
 ## Note
 
 Do not search for or copy any reference/answer implementation; implement the logic yourself
