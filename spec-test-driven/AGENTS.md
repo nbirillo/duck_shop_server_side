@@ -1,38 +1,51 @@
-# Agent instructions — Duck Shop admission policies
+# Agent instructions — Duck Shop opening schedule
 
-You are implementing the admission-policy logic for a Kotlin "duck shop" exercise.
+You are implementing the opening-schedule logic for a Kotlin "duck shop" exercise: a shop admits
+ducks only while it is open, according to a weekly schedule.
 
 ## Task
 
-Given the contract and the stub types below, implement every stub with a correct, idiomatic
-Kotlin body. The behaviour of each type is fully described by the KDoc on the contract and the
-stubs — follow it exactly, including edge cases (price boundaries, empty collections, and the
-vacuous-truth results of the `AllOf`/`AnyOf` combinators over an empty list).
+Implement the stub files you are given (`DailyWindow.covers` and `OpeningSchedule.isOpenAt`) so
+that they satisfy the following semantics. Use the given `DailyWindow` / `SpecialClosure` types
+from `:core` — do not redeclare them.
 
-- Do **not** redeclare the `AdmissionPolicy` interface or the `Duck`/`Accessory`/`Shop` domain
-  types — they come from the `:core` module and are already on the classpath.
-- Keep the same package: `org.jetbrains.kotlin.course.duck.shop.admission`.
-- Do not add new public types beyond the stubs you are given.
+Semantics:
+1. A `DailyWindow` runs from `open` (inclusive) to `close` (exclusive): at exactly `close` it is
+   NOT covered.
+2. If `close < open` the window wraps past midnight: it covers `[open, 24:00)` on its own `day`
+   AND `[00:00, close)` on the following day.
+3. If `close == open` the window covers nothing.
+4. `OpeningSchedule.isOpenAt(at)` is open iff at least one window covers `at`.
+5. A `SpecialClosure` whose date equals `at`'s date closes the shop all day, overriding every
+   window.
+6. An empty schedule (no windows) is always closed.
+7. No time zones — interpret every `LocalDateTime` as-is.
 
 ## Output contract
 
-Return **exactly one** Kotlin file, named `Solution.kt`, inside a **single** fenced block:
+Return one fenced Kotlin block **per file**, each immediately preceded by a `// FILE:` line with
+the file's path (exactly as given in the stubs):
 
 ````
+// FILE: schedule/WindowMatching.kt
 ```kotlin
-package org.jetbrains.kotlin.course.duck.shop.admission
+package org.jetbrains.kotlin.course.duck.shop.admission.schedule
 
-// ...all the concrete policy classes with working bodies...
+// ...implementation...
+```
+
+// FILE: schedule/OpeningSchedule.kt
+```kotlin
+package org.jetbrains.kotlin.course.duck.shop.admission.schedule
+
+// ...implementation...
 ```
 ````
 
-No prose before or after the block. No extra files.
-
-Strictly: **exactly one `package` declaration** at the very top, all classes in that one file.
-Do not concatenate several files, do not repeat the `package` line, and do not add `// Foo.kt`
-file-separator comments.
+Rules: exactly one `package` declaration per file, keep the given paths/packages/signatures, no
+prose outside the blocks, no extra files.
 
 ## Note
 
-Do not search for or copy any reference/answer implementation; implement the logic yourself
-from the contract and stubs.
+Do not search for or copy any reference/answer implementation; implement the logic yourself from
+the given types and the semantics above.

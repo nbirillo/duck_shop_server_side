@@ -18,10 +18,17 @@ TODO: describe about agent-agnostic and how to work with this later
 ## Feature
 
 Duck shops with an **admission policy** — `AdmissionPolicy.admits(duck): Boolean`, modelled with
-the **Specification pattern**:
+the **Specification pattern** (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`
++ combinators `AllOf`, `AnyOf`, `Not`). This algebra is **given** in `:core`.
 
-- **Leaves:** `KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`
-- **Combinators:** `All`, `Any`, `Not`
+The current implementation **task** (what an agent/student implements) is the harder
+**opening-schedule** engine: a shop admits ducks only while open, per a weekly schedule.
+
+- `DailyWindow.covers(at)` — open inclusive, close exclusive, wrap past midnight.
+- `OpeningSchedule.isOpenAt(at)` — union of windows, `SpecialClosure` overrides, empty = closed.
+
+(The earlier in-memory policy task turned out too easy — every tested model one-shot it — so the
+schedule engine replaced it as the difficulty-calibrated task.)
 
 ## Run the app
 
@@ -43,8 +50,8 @@ One shared acceptance suite (`tests/kotlin`) is compiled and run against every i
 module (Design B): a module supplies only its policy implementation under `src/main`, and the
 `duck-shop.solution` convention plugin (in `build-logic/`) wires in `:core` and the shared tests.
 
-- `:core` — contract + domain: `AdmissionPolicy` + `Duck`/`Accessory`/`Shop`. No implementations.
-- `:starter` — student-facing stubs (`TODO()`). Red until implemented.
+- `:core` — contract + domain + **given** algebra & time types (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DailyWindow`/`SpecialClosure`).
+- `:starter` — the stubs to implement (`schedule/WindowMatching.kt`, `schedule/OpeningSchedule.kt`), `TODO()`. Red until implemented.
 - `:grading` — reference implementation, teacher-only (`-PincludeGrading`).
 - `solutions/<agent>/` — one implementation per AI agent (`src/main` + `agent.json`), auto-discovered.
 
@@ -85,6 +92,8 @@ Reference grading suite (teacher-only):
 The `runAgent` task calls an OpenAI-compatible chat API to fill in the stubs and writes the
 result as a new `solutions/<agent>/`. It assembles the prompt from the `:core` contract and the
 `:starter` stubs only — never `:grading` — so an API agent cannot copy the reference answers.
+The agent is asked to return each file in a `// FILE: <path>` fenced block; weaker models that
+ignore this are merged into a single file as a fallback.
 
 ```bash
 # Ollama (local, no key):

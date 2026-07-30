@@ -1,8 +1,8 @@
 package org.jetbrains.kotlin.course.duck.shop.admission
 
-// Reference implementation of the combinator policies (teacher-only, :grading). The idiomatic
-// stdlib all{}/any{} give the vacuous-truth results (AllOf(emptyList())==true,
-// AnyOf(emptyList())==false) for free.
+// The combinator policies — given, correct, and shared from :core. The idiomatic stdlib
+// all{}/any{} give the vacuous-truth results (AllOf(emptyList())==true, AnyOf(emptyList())==false)
+// for free.
 
 /**
  * Admits a duck only when **every** policy in [policies] admits it (logical AND).

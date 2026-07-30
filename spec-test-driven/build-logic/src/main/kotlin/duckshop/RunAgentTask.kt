@@ -12,6 +12,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.TaskAction
+import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -22,14 +23,15 @@ import javax.inject.Inject
 
 /**
  * Generates a `solutions/<agent>/` implementation by asking an OpenAI-compatible chat API
- * (Ollama or Mistral) to fill in the stub policy types.
+ * (Ollama or Mistral) to implement the stub files.
  *
- * The prompt is assembled here from the `:core` contract and the `:starter` stubs only — the
- * reference implementation in `:grading` is never included, so an API agent cannot copy it.
+ * The prompt is assembled here from the `:core` given types and the `:starter` stubs only — the
+ * reference implementation in `:grading` is never included, so an API agent cannot copy it. The
+ * agent may return MULTIPLE files, each in its own `// FILE: <path>` + fenced block.
  *
  * Parameters (project properties):
  *  - `-Pprovider=ollama|mistral`  (required)
- *  - `-Pmodel=<model>`            (required, e.g. `qwen2.5-coder` or `mistral-small-latest`)
+ *  - `-Pmodel=<model>`            (required)
  *  - `-Pagent=<name>`             (optional; defaults to `<provider>-<model>`)
  *  - `-Pdry`                      (optional; assemble and print the prompt, skip the HTTP call)
  *
@@ -41,7 +43,7 @@ abstract class RunAgentTask @Inject constructor(
 ) : DefaultTask() {
 
     private val packagePath = "org/jetbrains/kotlin/course/duck/shop/admission"
-    private val packageName = packagePath.replace('/', '.')
+    private val basePackage = packagePath.replace('/', '.')
 
     @TaskAction
     fun run() {
@@ -52,8 +54,9 @@ abstract class RunAgentTask @Inject constructor(
         val agent = prop("agent") ?: "$provider-$safeModel"
 
         val root = layout.projectDirectory.asFile
+        val stubs = stubFiles(root)
         val systemPrompt = root.resolve("AGENTS.md").readText()
-        val userPrompt = buildUserPrompt(root)
+        val userPrompt = buildUserPrompt(root, stubs)
 
         val endpoint = when (provider) {
             "ollama" -> "http://localhost:11434/v1/chat/completions"
@@ -65,7 +68,7 @@ abstract class RunAgentTask @Inject constructor(
         if (dry) {
             logger.lifecycle("[runAgent] DRY RUN — no HTTP call, no files written.")
             logger.lifecycle("[runAgent] provider=$provider model=$model agent=$agent endpoint=$endpoint")
-            logger.lifecycle("[runAgent] would write: ${agentDir.relativeTo(root)}/{build.gradle.kts, agent.json, src/main/kotlin/$packagePath/Solution.kt}")
+            logger.lifecycle("[runAgent] would write ${stubs.size} file(s) under ${agentDir.relativeTo(root)}: ${stubs.map { it.first }}")
             logger.lifecycle("\n===== SYSTEM =====\n$systemPrompt\n===== USER =====\n$userPrompt")
             return
         }
@@ -99,11 +102,8 @@ abstract class RunAgentTask @Inject constructor(
         val content = Json.parseToJsonElement(response.body())
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
-        val code = extractSolution(content)
 
-        val srcDir = agentDir.resolve("src/main/kotlin/$packagePath")
-        srcDir.mkdirs()
-        srcDir.resolve("Solution.kt").writeText(code + "\n")
+        val written = writeSolutionFiles(agentDir, content, stubs.map { it.first })
         agentDir.resolve("build.gradle.kts").writeText("plugins {\n    id(\"duck-shop.solution\")\n}\n")
         agentDir.resolve("agent.json").writeText(
             buildJsonObject {
@@ -116,57 +116,95 @@ abstract class RunAgentTask @Inject constructor(
             }.toString() + "\n"
         )
 
-        logger.lifecycle("[runAgent] wrote ${agentDir.relativeTo(root)}. Now run: ./gradlew checkPrimary -PprimaryAgent=$agent")
+        logger.lifecycle("[runAgent] wrote ${written.size} file(s) to ${agentDir.relativeTo(root)}: $written")
+        logger.lifecycle("[runAgent] now run: ./gradlew checkPrimary -PprimaryAgent=$agent")
     }
 
     private fun prop(name: String): String? = providers.gradleProperty(name).orNull
 
-    private fun buildUserPrompt(root: java.io.File): String {
-        val coreDir = root.resolve("core/src/main/kotlin/$packagePath")
-        val contract = listOf("AdmissionPolicy.kt", "Domain.kt")
-            .joinToString("\n\n") { coreDir.resolve(it).readText() }
-        val starterDir = root.resolve("starter/src/main/kotlin/$packagePath")
-        val stubs = (starterDir.listFiles { f -> f.extension == "kt" } ?: emptyArray())
-            .sortedBy { it.name }
-            .joinToString("\n\n") { "// ${it.name}\n${it.readText()}" }
+    /** The stub files under :starter as (relativePath, contents), relative to the base package dir. */
+    private fun stubFiles(root: File): List<Pair<String, String>> {
+        val starterBase = root.resolve("starter/src/main/kotlin/$packagePath")
+        return starterBase.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .sortedBy { it.path }
+            .map { it.relativeTo(starterBase).path to it.readText() }
+            .toList()
+    }
+
+    private fun buildUserPrompt(root: File, stubs: List<Pair<String, String>>): String {
+        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
+        val given = listOf("Domain.kt", "schedule/TimeTypes.kt")
+            .map { coreBase.resolve(it) }
+            .filter { it.exists() }
+            .joinToString("\n\n") { it.readText() }
+        val stubText = stubs.joinToString("\n\n") { (rel, body) -> "// FILE: $rel\n$body" }
 
         return buildString {
-            appendLine("Contract from the :core module (already on the classpath — do not redeclare):")
+            appendLine("Given types (already on the classpath — do not redeclare):")
             appendLine("```kotlin")
-            appendLine(contract)
+            appendLine(given)
             appendLine("```")
             appendLine()
-            appendLine("Stub types to implement (same package):")
-            appendLine("```kotlin")
-            appendLine(stubs)
-            appendLine("```")
+            appendLine("Implement these stub files. Keep the exact paths, packages and signatures,")
+            appendLine("and return each as its own `// FILE:` block per the output contract.")
             appendLine()
-            append("Return one Solution.kt implementing every stub, per the output contract.")
+            append(stubText)
+        }
+    }
+
+    /** Parses `// FILE: <path>` + fenced blocks and writes each normalised file. */
+    private fun writeSolutionFiles(agentDir: File, content: String, stubPaths: List<String>): List<String> {
+        val srcRoot = agentDir.resolve("src/main/kotlin/$packagePath")
+        val fileBlock = Regex(
+            "//\\s*FILE:\\s*(\\S+)[^\\n]*\\n```(?:kotlin|kt)?\\s*\\n(.*?)```",
+            RegexOption.DOT_MATCHES_ALL,
+        )
+        val matches = fileBlock.findAll(content).toList()
+
+        val units: List<Pair<String, String>> = if (matches.isNotEmpty()) {
+            matches.map { it.groupValues[1].trim() to it.groupValues[2] }
+        } else {
+            // Fallback: the model ignored the // FILE: contract (common with weak models). Merge
+            // all fenced code into one file under the stubs' common subpackage. Our stubs share a
+            // package, so a single combined file still compiles.
+            val allFences = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
+                .findAll(content).map { it.groupValues[1] }.toList()
+            val combined = if (allFences.isNotEmpty()) allFences.joinToString("\n\n") else content
+            val commonSub = stubPaths.map { it.substringBeforeLast('/', "") }.distinct().singleOrNull() ?: ""
+            val fallbackRel = if (commonSub.isEmpty()) "Solution.kt" else "$commonSub/Solution.kt"
+            logger.warn("[runAgent] no // FILE: markers; merging output into single file $fallbackRel")
+            listOf(fallbackRel to combined)
+        }
+
+        return units.map { (rel, code) ->
+            val sub = rel.substringBeforeLast('/', "").replace('/', '.')
+            val pkg = if (sub.isEmpty()) basePackage else "$basePackage.$sub"
+            val target = srcRoot.resolve(rel)
+            target.parentFile.mkdirs()
+            target.writeText(normalizeCode(code, pkg) + "\n")
+            rel
         }
     }
 
     /**
-     * Extracts the Kotlin solution from the model's reply and normalises its formatting so the
-     * harness stays robust to weaker models that don't honour the "one file / one package"
-     * contract. This touches only wrapping (fences, duplicate `package` headers, `// Foo.kt`
-     * file separators, import placement) — never the logic, which is what we want to evaluate.
+     * Normalises one file's code so the harness stays robust to models that don't honour the
+     * output contract: strips any `package`/`// Foo.kt` lines, hoists imports, and prepends the
+     * one correct package. Only wrapping is touched, never logic.
      */
-    private fun extractSolution(content: String): String {
-        val fence = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
-        val blocks = fence.findAll(content).map { it.groupValues[1].trim() }.toList()
-        val raw = if (blocks.isNotEmpty()) blocks.joinToString("\n\n") else content.trim()
-
-        val lines = raw.lines()
+    private fun normalizeCode(raw: String, pkg: String): String {
+        val lines = raw.trim().lines()
         val imports = lines.map { it.trim() }.filter { it.startsWith("import ") }.distinct()
         val body = lines
             .filterNot { it.trim().startsWith("package ") }
             .filterNot { it.trim().startsWith("import ") }
             .filterNot { it.trim().matches(Regex("//\\s*\\S+\\.kt")) }
+            .filterNot { it.trim().matches(Regex("//\\s*FILE:.*")) }
+            .filterNot { it.trim().startsWith("```") }
             .joinToString("\n")
             .trim()
-
         return buildString {
-            append("package ").append(packageName).append("\n\n")
+            append("package ").append(pkg).append("\n\n")
             if (imports.isNotEmpty()) append(imports.joinToString("\n")).append("\n\n")
             append(body)
         }

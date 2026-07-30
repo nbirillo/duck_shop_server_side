@@ -1,7 +1,8 @@
 package org.jetbrains.kotlin.course.duck.shop.admission
 
-// Reference implementation of the leaf policies (teacher-only, :grading). Mirrors the specs
-// in the :starter stubs; kept here so the student's project never contains the answers.
+// The leaf policies — given, correct, and shared from :core. They are the building blocks the
+// harder tasks (e.g. the DSL parser or the opening-schedule engine) build on, so they are no
+// longer part of what an agent implements.
 
 /**
  * Admits only ducks that carry the Kotlin attribute.
