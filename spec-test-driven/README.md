@@ -73,3 +73,34 @@ Reference grading suite (teacher-only):
 > flag on every sync), add `includeGrading=true` to your **`~/.gradle/gradle.properties`**
 > and Reload the Gradle project. This is a local, uncommitted teacher setting; students who
 > don't set it get the clean `:core` + `:starter` view.
+
+## Generate a solution with an AI agent (Ollama / Mistral)
+
+> **Author-side tool, not a student workflow.** `runAgent` and the `solutions/<agent>/` modules
+> exist to test the *course content across different agents* — to see how each agent implements
+> the same task and whether the tests catch its mistakes. A student does **not** use this to
+> solve the exercise: they work in `:starter` (writing/checking specs and tests), and the AI
+> merely fills the implementation.
+
+The `runAgent` task calls an OpenAI-compatible chat API to fill in the stubs and writes the
+result as a new `solutions/<agent>/`. It assembles the prompt from the `:core` contract and the
+`:starter` stubs only — never `:grading` — so an API agent cannot copy the reference answers.
+
+```bash
+# Ollama (local, no key):
+./gradlew runAgent -Pprovider=ollama -Pmodel=qwen2.5-coder
+
+# Mistral (needs MISTRAL_API_KEY in the environment):
+./gradlew runAgent -Pprovider=mistral -Pmodel=mistral-small-latest
+
+# See the assembled prompt without calling the API or writing files:
+./gradlew runAgent -Pprovider=ollama -Pmodel=qwen2.5-coder -Pdry
+```
+
+Options: `-Pagent=<name>` (defaults to `<provider>-<model>`). Then check how it did:
+
+```bash
+./gradlew checkPrimary -PprimaryAgent=<name>     # e.g. ollama-qwen2.5-coder
+```
+
+Interactive agents (Claude Code, Junie, Cursor) are driven in the IDE instead of via this task.

@@ -3,6 +3,7 @@
 
 plugins {
     kotlin("jvm") version "2.2.20" apply false
+    id("duck-shop.run-agent")
 }
 
 // Which implementation the student's `checkPrimary` runs against. Override with
