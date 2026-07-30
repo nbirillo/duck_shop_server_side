@@ -7,12 +7,9 @@ rootProject.name = "spec-test-driven"
 
 include(":core", ":starter")
 
-// :grading holds the reference implementation and grading suite — teacher-only. Added only
-// when -PincludeGrading is passed (or includeGrading=true in ~/.gradle/gradle.properties), so
-// a student's default import contains the stubs (in :starter) but never the reference answers.
-if (providers.gradleProperty("includeGrading").isPresent) {
-    include(":grading")
-}
+// The reference implementation and grading suite live in a SEPARATE build OUTSIDE this folder
+// (../spec-test-driven-grading), so a student's project never contains the answers — not even as
+// readable files. This build knows nothing about grading.
 
 // Auto-discover agent solutions: every solutions/<name>/ that has a build script becomes a
 // module. Adding a new agent is just dropping a folder — no edit here.

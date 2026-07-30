@@ -11,7 +11,7 @@ plugins {
 val primaryAgent: String = providers.gradleProperty("primaryAgent").getOrElse("starter")
 
 val primaryPath: String = when (primaryAgent) {
-    "starter", "grading" -> ":$primaryAgent"
+    "starter" -> ":starter"
     else -> ":solutions:$primaryAgent"
 }
 

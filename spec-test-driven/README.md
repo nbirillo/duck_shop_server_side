@@ -52,7 +52,7 @@ module (Design B): a module supplies only its policy implementation under `src/m
 
 - `:core` — contract + domain + **given** algebra & time types (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DailyWindow`/`SpecialClosure`).
 - `:starter` — the stubs to implement (`schedule/WindowMatching.kt`, `schedule/OpeningSchedule.kt`), `TODO()`. Red until implemented.
-- `:grading` — reference implementation, teacher-only (`-PincludeGrading`).
+- `spec-test-driven-grading/` — reference implementation + grading suite: a **separate teacher-only build outside this folder**, invisible to students (see "Reference grading suite" below).
 - `solutions/<agent>/` — one implementation per AI agent (`src/main` + `agent.json`), auto-discovered.
 
 ## Run the tests
@@ -70,16 +70,18 @@ Run the suite against every `solutions/<agent>/` and compare:
 ./gradlew compareAgents --continue
 ```
 
-Reference grading suite (teacher-only):
+Reference grading suite (teacher-only) — a **separate build outside this folder**:
 
 ```bash
-./gradlew :grading:test -PincludeGrading
+cd ../spec-test-driven-grading
+./gradlew :grading:test
 ```
 
-> To work on `:grading` inside the IDE (so it imports as a real module without passing the
-> flag on every sync), add `includeGrading=true` to your **`~/.gradle/gradle.properties`**
-> and Reload the Gradle project. This is a local, uncommitted teacher setting; students who
-> don't set it get the clean `:core` + `:starter` view.
+> `spec-test-driven-grading/` lives OUTSIDE the student's `spec-test-driven/` folder on purpose:
+> a student opening `spec-test-driven/` — and any agent working from it — never sees the reference
+> implementation, not even as readable files. That grading build links back to `:core` and the
+> shared test suite via a composite build (`includeBuild("../spec-test-driven")`); the link only
+> points from grading INTO the student project, never the other way.
 
 ## Generate a solution with an AI agent (Ollama / Mistral)
 

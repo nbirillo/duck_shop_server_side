@@ -5,6 +5,10 @@ plugins {
     kotlin("jvm")
 }
 
+// Coordinates so the sibling grading build can depend on :core via composite-build substitution.
+group = "org.jetbrains.kotlin.course"
+version = "0.0.0"
+
 kotlin {
     jvmToolchain(21)
 }
