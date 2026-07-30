@@ -24,3 +24,14 @@ data class Duck(
     val hasKotlinAttribute: Boolean,
     val accessories: List<Accessory> = emptyList(),
 )
+
+/**
+ * A duck shop that admits ducks according to its [admissionPolicy].
+ *
+ * @property name the shop's name.
+ * @property admissionPolicy the policy this shop applies to candidate ducks.
+ */
+data class Shop(val name: String, val admissionPolicy: AdmissionPolicy) {
+    /** Returns `true` if [duck] is allowed into this shop by its [admissionPolicy]. */
+    fun admits(duck: Duck): Boolean = admissionPolicy.admits(duck)
+}

@@ -39,9 +39,23 @@ A lightweight Ktor variant of the API lives in `ktor-server/` (`./gradlew run`, 
 
 ## Run the tests
 
-The `:core` spec/tests:
+The student-facing spec/tests (`:starter`) — red until the policy stubs are implemented:
 
 ```bash
 cd spec-test-driven
-./gradlew :core:test
+./gradlew :starter:test
 ```
+
+Teachers can run the reference grading suite (`:grading`, hidden unless the flag is passed):
+
+```bash
+./gradlew :grading:test -PincludeGrading
+```
+
+> To work on `:grading` inside the IDE (so it imports as a real module without passing the
+> flag on every sync), add `includeGrading=true` to your **`~/.gradle/gradle.properties`**
+> and Reload the Gradle project. This is a local, uncommitted teacher setting; students who
+> don't set it get the clean `:core` + `:starter` view.
+
+Modules: `:core` (contract + `Duck`/`Accessory`/`Shop` domain) · `:starter` (stubs + tests) ·
+`:grading` (reference impl + tests, teacher-only).

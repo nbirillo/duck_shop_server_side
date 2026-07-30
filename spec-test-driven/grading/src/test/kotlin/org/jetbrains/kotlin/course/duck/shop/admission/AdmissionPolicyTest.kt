@@ -5,12 +5,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Test-first specification for [AdmissionPolicy] and its leaves/combinators.
+ * Test-first specification for [AdmissionPolicy], its leaves/combinators and [Shop].
  *
- * These tests are written BEFORE the implementations (which are currently `TODO()` stubs),
- * so the whole suite is expected to fail ("red") until an implementation is provided. They
- * deliberately pin down the corner cases where implementations — human or AI — tend to slip:
- * the `<=` boundary, empty accessories, and the vacuous-truth results of `All`/`Any`.
+ * These tests are written BEFORE the implementations (which are `TODO()` stubs in :starter),
+ * so the suite is expected to fail ("red") until an implementation is provided. They pin down
+ * the corner cases where implementations — human or AI — tend to slip: the `<=` boundary,
+ * empty accessories, and the vacuous-truth results of `AllOf`/`AnyOf`.
  */
 class AdmissionPolicyTest {
 
@@ -70,30 +70,30 @@ class AdmissionPolicyTest {
         assertFalse(MinAccessories(3).admits(fancyDuck)) // 2 < 3
     }
 
-    // ---- All (AND + vacuous truth) ----
+    // ---- AllOf (AND + vacuous truth) ----
 
     @Test
-    fun `All admits only when every policy admits`() {
-        assertTrue(All(KotlinOnly(), MaxBudget(50)).admits(kotlinDuck))
-        assertFalse(All(KotlinOnly(), MaxBudget(50)).admits(plainDuck)) // fails KotlinOnly
+    fun `AllOf admits only when every policy admits`() {
+        assertTrue(AllOf(KotlinOnly(), MaxBudget(50)).admits(kotlinDuck))
+        assertFalse(AllOf(KotlinOnly(), MaxBudget(50)).admits(plainDuck)) // fails KotlinOnly
     }
 
     @Test
-    fun `All of no policies admits every duck (vacuous truth)`() {
-        assertTrue(All(emptyList()).admits(plainDuck))
+    fun `AllOf of no policies admits every duck (vacuous truth)`() {
+        assertTrue(AllOf(emptyList()).admits(plainDuck))
     }
 
-    // ---- Any (OR + vacuous truth) ----
+    // ---- AnyOf (OR + vacuous truth) ----
 
     @Test
-    fun `Any admits when at least one policy admits`() {
-        assertTrue(Any(KotlinOnly(), MaxBudget(10)).admits(kotlinDuck)) // passes KotlinOnly
-        assertFalse(Any(KotlinOnly(), RequiresAccessory("hat")).admits(plainDuck)) // passes neither
+    fun `AnyOf admits when at least one policy admits`() {
+        assertTrue(AnyOf(KotlinOnly(), MaxBudget(10)).admits(kotlinDuck)) // passes KotlinOnly
+        assertFalse(AnyOf(KotlinOnly(), RequiresAccessory("hat")).admits(plainDuck)) // passes neither
     }
 
     @Test
-    fun `Any of no policies admits no duck (vacuous truth)`() {
-        assertFalse(Any(emptyList()).admits(kotlinDuck))
+    fun `AnyOf of no policies admits no duck (vacuous truth)`() {
+        assertFalse(AnyOf(emptyList()).admits(kotlinDuck))
     }
 
     // ---- Not ----
@@ -102,5 +102,24 @@ class AdmissionPolicyTest {
     fun `Not inverts the wrapped policy`() {
         assertTrue(Not(KotlinOnly()).admits(plainDuck))
         assertFalse(Not(KotlinOnly()).admits(kotlinDuck))
+    }
+
+    // ---- Shop ----
+
+    @Test
+    fun `Shop admits a duck when its policy admits it and rejects it otherwise`() {
+        val kotlinShop = Shop(name = "Kotlin Ducks", admissionPolicy = KotlinOnly())
+        assertTrue(kotlinShop.admits(kotlinDuck))
+        assertFalse(kotlinShop.admits(plainDuck))
+    }
+
+    @Test
+    fun `Shop applies a composite admission policy`() {
+        val boutique = Shop(
+            name = "Kotlin Boutique",
+            admissionPolicy = AllOf(KotlinOnly(), RequiresAccessory("hat")),
+        )
+        assertTrue(boutique.admits(fancyDuck))   // kotlin + wears a hat
+        assertFalse(boutique.admits(kotlinDuck)) // kotlin but no accessories
     }
 }
