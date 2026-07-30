@@ -48,7 +48,9 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it == "impl" || it == "tests") { "Unknown -Pmode='$it' (use impl|tests)" }
+            require(it in setOf("impl", "tests", "verify-exercise")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise)"
+            }
         }
         val dry = providers.gradleProperty("dry").isPresent
         val safeModel = model.replace(Regex("[^A-Za-z0-9._-]"), "-")
@@ -56,11 +58,12 @@ abstract class RunAgentTask @Inject constructor(
         val root = layout.projectDirectory.asFile
 
         val systemPrompt = root.resolve(
-            if (mode == "tests") "tools/agent-prompt-tests.md" else "tools/agent-prompt.md",
+            if (mode == "impl") "tools/agent-prompt.md" else "tools/agent-prompt-tests.md",
         ).readText()
         val stubs = if (mode == "impl") stubFiles(root) else emptyList()
-        val userPrompt = if (mode == "tests") buildTestsPrompt(root) else buildImplPrompt(root, stubs)
+        val userPrompt = if (mode == "impl") buildImplPrompt(root, stubs) else buildTestsPrompt(root)
         val outDir = root.resolve(if (mode == "tests") "test-suites/$agent" else "solutions/$agent")
+        val exerciseFile = root.resolve("exercises/write-tests/src/test/kotlin/$packagePath/PolicyTests.kt")
 
         val endpoint = when (provider) {
             "ollama" -> "http://localhost:11434/v1/chat/completions"
@@ -72,7 +75,8 @@ abstract class RunAgentTask @Inject constructor(
         if (dry) {
             logger.lifecycle("[runAgent] DRY RUN — no HTTP call, no files written.")
             logger.lifecycle("[runAgent] mode=$mode provider=$provider model=$model agent=$agent endpoint=$endpoint")
-            logger.lifecycle("[runAgent] would write under ${outDir.relativeTo(root)}")
+            val target = if (mode == "verify-exercise") exerciseFile.relativeTo(root) else outDir.relativeTo(root)
+            logger.lifecycle("[runAgent] would write under $target")
             logger.lifecycle("\n===== SYSTEM =====\n$systemPrompt\n===== USER =====\n$userPrompt")
             return
         }
@@ -108,6 +112,15 @@ abstract class RunAgentTask @Inject constructor(
         val content = Json.parseToJsonElement(response.body())
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
+
+        if (mode == "verify-exercise") {
+            val suite = injectPlantedDefect(normalizeCode(extractCode(content), basePackage))
+            exerciseFile.parentFile.mkdirs()
+            exerciseFile.writeText(suite + "\n")
+            logger.lifecycle("[runAgent] wrote exercise starter ${exerciseFile.relativeTo(root)} from $model, with a planted invalid Not test.")
+            logger.lifecycle("[runAgent] review: git diff -- ${exerciseFile.relativeTo(root)} ; then ./gradlew :exercises:write-tests:test (should be RED on the planted test).")
+            return
+        }
 
         val written = if (mode == "tests") {
             writeTestSuite(outDir, content)
@@ -231,6 +244,41 @@ abstract class RunAgentTask @Inject constructor(
         target.parentFile.mkdirs()
         target.writeText(normalizeCode(code, basePackage) + "\n")
         return listOf("src/test/kotlin/$packagePath/$rel")
+    }
+
+    /** All fenced Kotlin blocks concatenated (or the whole reply if there are no fences). */
+    private fun extractCode(content: String): String {
+        val fences = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
+            .findAll(content).map { it.groupValues[1] }.toList()
+        return if (fences.isNotEmpty()) fences.joinToString("\n\n") else content
+    }
+
+    /**
+     * Injects one guaranteed-invalid test (a wrong `Not` assertion) into a generated suite, so the
+     * verify-exercise always has at least one defect for the learner to find — regardless of model.
+     */
+    private fun injectPlantedDefect(code: String): String {
+        val withImports = ensureImports(code, listOf("import kotlin.test.Test", "import kotlin.test.assertTrue"))
+        val defect = "\n" +
+            "    @Test\n" +
+            "    fun `Not returns the decision of the wrapped policy`() {\n" +
+            "        // PLANTED DEFECT: Not must INVERT the wrapped policy — this assertion is wrong on purpose.\n" +
+            "        assertTrue(Not(KotlinOnly()).admits(Duck(name = \"Kotlina\", price = 40, hasKotlinAttribute = true)))\n" +
+            "    }\n"
+        val i = withImports.lastIndexOf('}')
+        return if (i < 0) withImports + defect else withImports.substring(0, i) + defect + "}" + withImports.substring(i + 1)
+    }
+
+    private fun ensureImports(code: String, needed: List<String>): String {
+        var out = code
+        for (imp in needed) {
+            if (!out.contains(imp)) {
+                val pkgLineEnd = out.indexOf('\n', out.indexOf("package "))
+                out = if (pkgLineEnd < 0) "$imp\n$out"
+                else out.substring(0, pkgLineEnd + 1) + imp + "\n" + out.substring(pkgLineEnd + 1)
+            }
+        }
+        return out
     }
 
     /**
