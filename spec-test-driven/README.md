@@ -110,6 +110,9 @@ ignore this are merged into a single file as a fallback.
 # Mistral (needs MISTRAL_API_KEY in the environment):
 ./gradlew runAgent -Pprovider=mistral -Pmodel=mistral-small-latest
 
+# Anthropic / Claude (needs ANTHROPIC_API_KEY; OpenAI-compatible endpoint):
+./gradlew runAgent -Pprovider=anthropic -Pmodel=claude-sonnet-4-5
+
 # See the assembled prompt without calling the API or writing files:
 ./gradlew runAgent -Pprovider=ollama -Pmodel=qwen2.5-coder -Pdry
 ```

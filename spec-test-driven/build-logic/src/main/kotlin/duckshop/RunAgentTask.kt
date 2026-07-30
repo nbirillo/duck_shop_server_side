@@ -61,7 +61,8 @@ abstract class RunAgentTask @Inject constructor(
         val endpoint = when (provider) {
             "ollama" -> "http://localhost:11434/v1/chat/completions"
             "mistral" -> "https://api.mistral.ai/v1/chat/completions"
-            else -> error("Unknown provider '$provider' (use ollama|mistral)")
+            "anthropic" -> "https://api.anthropic.com/v1/chat/completions" // OpenAI-compatible layer
+            else -> error("Unknown provider '$provider' (use ollama|mistral|anthropic)")
         }
 
         val agentDir = root.resolve("solutions/$agent")
@@ -73,15 +74,17 @@ abstract class RunAgentTask @Inject constructor(
             return
         }
 
-        val authHeader = if (provider == "mistral") {
-            "Bearer " + (providers.environmentVariable("MISTRAL_API_KEY").orNull
-                ?: error("MISTRAL_API_KEY environment variable is not set"))
-        } else null
+        val authHeader = when (provider) {
+            "mistral" -> "Bearer " + envKey("MISTRAL_API_KEY")
+            "anthropic" -> "Bearer " + envKey("ANTHROPIC_API_KEY")
+            else -> null
+        }
 
         val payload = buildJsonObject {
             put("model", model)
             put("temperature", 0)
             put("stream", false)
+            if (provider == "anthropic") put("max_tokens", 4096) // required by the Anthropic API
             putJsonArray("messages") {
                 addJsonObject { put("role", "system"); put("content", systemPrompt) }
                 addJsonObject { put("role", "user"); put("content", userPrompt) }
@@ -121,6 +124,9 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     private fun prop(name: String): String? = providers.gradleProperty(name).orNull
+
+    private fun envKey(name: String): String =
+        providers.environmentVariable(name).orNull ?: error("$name environment variable is not set")
 
     /** The stub files under :starter as (relativePath, contents), relative to the base package dir. */
     private fun stubFiles(root: File): List<Pair<String, String>> {
