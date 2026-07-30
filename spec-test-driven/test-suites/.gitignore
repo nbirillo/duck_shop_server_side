@@ -1,0 +1,4 @@
+# Agent-generated test suites from `runAgent -Pmode=tests` — reproducible, model-dependent, not
+# committed. Only this .gitignore is tracked.
+/*
+!/.gitignore

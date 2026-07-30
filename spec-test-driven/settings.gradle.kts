@@ -11,9 +11,13 @@ include(":core", ":starter")
 // (../spec-test-driven-grading), so a student's project never contains the answers — not even as
 // readable files. This build knows nothing about grading.
 
-// Auto-discover agent solutions: every solutions/<name>/ that has a build script becomes a
-// module. Adding a new agent is just dropping a folder — no edit here.
-file("solutions").listFiles()
+// Auto-discover folders under solutions/ and exercises/: every subdir with a build script
+// becomes a module. Adding one is just dropping a folder — no edit here.
+fun autoDiscover(dir: String) = file(dir).listFiles()
     ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
     ?.sortedBy { it.name }
-    ?.forEach { include(":solutions:${it.name}") }
+    ?.forEach { include(":$dir:${it.name}") }
+
+autoDiscover("solutions")    // agent implementations of the impl exercise
+autoDiscover("exercises")    // learner-facing exercises (e.g. write-tests)
+autoDiscover("test-suites")  // agent-generated test suites (runAgent -Pmode=tests)

@@ -22,20 +22,18 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 /**
- * Generates a `solutions/<agent>/` implementation by asking an OpenAI-compatible chat API
- * (Ollama or Mistral) to implement the stub files.
+ * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
+ * Anthropic). Two modes:
+ *  - `impl`  (default) — implement the :starter stubs; writes to `solutions/<agent>/`.
+ *  - `tests`           — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
  *
- * The prompt is assembled here from the `:core` given types and the `:starter` stubs only — the
- * reference implementation in `:grading` is never included, so an API agent cannot copy it. The
- * agent may return MULTIPLE files, each in its own `// FILE: <path>` + fenced block.
+ * The prompt is assembled here from :core (and, for impl, the :starter stubs) — never :grading —
+ * so an API agent cannot copy a reference. In tests mode the prompt is deliberately generic
+ * ("cover every edge case you can think of"): it does NOT enumerate the corner cases, so it
+ * measures whether the agent finds them.
  *
- * Parameters (project properties):
- *  - `-Pprovider=ollama|mistral`  (required)
- *  - `-Pmodel=<model>`            (required)
- *  - `-Pagent=<name>`             (optional; defaults to `<provider>-<model>`)
- *  - `-Pdry`                      (optional; assemble and print the prompt, skip the HTTP call)
- *
- * Mistral reads the API key from the `MISTRAL_API_KEY` environment variable.
+ * Params: -Pprovider=ollama|mistral|anthropic, -Pmodel=<m>, [-Pmode=impl|tests], [-Pagent=<name>], [-Pdry].
+ * Mistral/Anthropic read their key from MISTRAL_API_KEY / ANTHROPIC_API_KEY.
  */
 abstract class RunAgentTask @Inject constructor(
     private val providers: ProviderFactory,
@@ -47,16 +45,22 @@ abstract class RunAgentTask @Inject constructor(
 
     @TaskAction
     fun run() {
-        val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral")
+        val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
+        val mode = (prop("mode") ?: "impl").also {
+            require(it == "impl" || it == "tests") { "Unknown -Pmode='$it' (use impl|tests)" }
+        }
         val dry = providers.gradleProperty("dry").isPresent
         val safeModel = model.replace(Regex("[^A-Za-z0-9._-]"), "-")
         val agent = prop("agent") ?: "$provider-$safeModel"
-
         val root = layout.projectDirectory.asFile
-        val stubs = stubFiles(root)
-        val systemPrompt = root.resolve("tools/agent-prompt.md").readText()
-        val userPrompt = buildUserPrompt(root, stubs)
+
+        val systemPrompt = root.resolve(
+            if (mode == "tests") "tools/agent-prompt-tests.md" else "tools/agent-prompt.md",
+        ).readText()
+        val stubs = if (mode == "impl") stubFiles(root) else emptyList()
+        val userPrompt = if (mode == "tests") buildTestsPrompt(root) else buildImplPrompt(root, stubs)
+        val outDir = root.resolve(if (mode == "tests") "test-suites/$agent" else "solutions/$agent")
 
         val endpoint = when (provider) {
             "ollama" -> "http://localhost:11434/v1/chat/completions"
@@ -65,11 +69,10 @@ abstract class RunAgentTask @Inject constructor(
             else -> error("Unknown provider '$provider' (use ollama|mistral|anthropic)")
         }
 
-        val agentDir = root.resolve("solutions/$agent")
         if (dry) {
             logger.lifecycle("[runAgent] DRY RUN — no HTTP call, no files written.")
-            logger.lifecycle("[runAgent] provider=$provider model=$model agent=$agent endpoint=$endpoint")
-            logger.lifecycle("[runAgent] would write ${stubs.size} file(s) under ${agentDir.relativeTo(root)}: ${stubs.map { it.first }}")
+            logger.lifecycle("[runAgent] mode=$mode provider=$provider model=$model agent=$agent endpoint=$endpoint")
+            logger.lifecycle("[runAgent] would write under ${outDir.relativeTo(root)}")
             logger.lifecycle("\n===== SYSTEM =====\n$systemPrompt\n===== USER =====\n$userPrompt")
             return
         }
@@ -91,7 +94,7 @@ abstract class RunAgentTask @Inject constructor(
             }
         }
 
-        logger.lifecycle("[runAgent] POST $endpoint (model=$model) ...")
+        logger.lifecycle("[runAgent] mode=$mode POST $endpoint (model=$model) ...")
         val request = HttpRequest.newBuilder(URI.create(endpoint))
             .header("Content-Type", "application/json")
             .apply { if (authHeader != null) header("Authorization", authHeader) }
@@ -106,21 +109,33 @@ abstract class RunAgentTask @Inject constructor(
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
 
-        val written = writeSolutionFiles(agentDir, content, stubs.map { it.first })
-        agentDir.resolve("build.gradle.kts").writeText("plugins {\n    id(\"duck-shop.solution\")\n}\n")
-        agentDir.resolve("agent.json").writeText(
+        val written = if (mode == "tests") {
+            writeTestSuite(outDir, content)
+        } else {
+            writeSolutionFiles(outDir, content, stubs.map { it.first })
+        }
+        outDir.resolve("build.gradle.kts").writeText(
+            if (mode == "tests") CONSUMER_BUILD_SCRIPT else "plugins {\n    id(\"duck-shop.solution\")\n}\n",
+        )
+        outDir.resolve("agent.json").writeText(
             buildJsonObject {
                 put("agent", agent)
+                put("mode", mode)
                 put("provider", provider)
                 put("model", model)
                 put("checkedOn", LocalDate.now().toString())
                 put("temperature", 0)
                 put("promptSha256", sha256(systemPrompt + "\n" + userPrompt))
-            }.toString() + "\n"
+            }.toString() + "\n",
         )
 
-        logger.lifecycle("[runAgent] wrote ${written.size} file(s) to ${agentDir.relativeTo(root)}: $written")
-        logger.lifecycle("[runAgent] now run: ./gradlew checkPrimary -PprimaryAgent=$agent")
+        val next = if (mode == "tests") {
+            "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
+        } else {
+            "./gradlew checkPrimary -PprimaryAgent=$agent"
+        }
+        logger.lifecycle("[runAgent] wrote ${outDir.relativeTo(root)}: $written")
+        logger.lifecycle("[runAgent] now run: $next")
     }
 
     private fun prop(name: String): String? = providers.gradleProperty(name).orNull
@@ -138,7 +153,7 @@ abstract class RunAgentTask @Inject constructor(
             .toList()
     }
 
-    private fun buildUserPrompt(root: File, stubs: List<Pair<String, String>>): String {
+    private fun buildImplPrompt(root: File, stubs: List<Pair<String, String>>): String {
         val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
         val given = listOf("Domain.kt", "schedule/TimeTypes.kt")
             .map { coreBase.resolve(it) }
@@ -159,7 +174,23 @@ abstract class RunAgentTask @Inject constructor(
         }
     }
 
-    /** Parses `// FILE: <path>` + fenced blocks and writes each normalised file. */
+    private fun buildTestsPrompt(root: File): String {
+        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
+        val given = listOf("Domain.kt", "Leaves.kt", "Combinators.kt")
+            .map { coreBase.resolve(it) }
+            .filter { it.exists() }
+            .joinToString("\n\n") { it.readText() }
+        return buildString {
+            appendLine("The classes to test (already on the classpath — do not redeclare):")
+            appendLine("```kotlin")
+            appendLine(given)
+            appendLine("```")
+            appendLine()
+            append("Write one test file for these classes, per the output contract.")
+        }
+    }
+
+    /** Parses `// FILE: <path>` + fenced blocks and writes each normalised file (impl mode). */
     private fun writeSolutionFiles(agentDir: File, content: String, stubPaths: List<String>): List<String> {
         val srcRoot = agentDir.resolve("src/main/kotlin/$packagePath")
         val fileBlock = Regex(
@@ -171,9 +202,6 @@ abstract class RunAgentTask @Inject constructor(
         val units: List<Pair<String, String>> = if (matches.isNotEmpty()) {
             matches.map { it.groupValues[1].trim() to it.groupValues[2] }
         } else {
-            // Fallback: the model ignored the // FILE: contract (common with weak models). Merge
-            // all fenced code into one file under the stubs' common subpackage. Our stubs share a
-            // package, so a single combined file still compiles.
             val allFences = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
                 .findAll(content).map { it.groupValues[1] }.toList()
             val combined = if (allFences.isNotEmpty()) allFences.joinToString("\n\n") else content
@@ -193,10 +221,22 @@ abstract class RunAgentTask @Inject constructor(
         }
     }
 
+    /** Writes the generated test file into src/test (tests mode). */
+    private fun writeTestSuite(outDir: File, content: String): List<String> {
+        val fences = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
+            .findAll(content).map { it.groupValues[1] }.toList()
+        val code = if (fences.isNotEmpty()) fences.joinToString("\n\n") else content
+        val rel = "GeneratedPolicyTests.kt"
+        val target = outDir.resolve("src/test/kotlin/$packagePath/$rel")
+        target.parentFile.mkdirs()
+        target.writeText(normalizeCode(code, basePackage) + "\n")
+        return listOf("src/test/kotlin/$packagePath/$rel")
+    }
+
     /**
      * Normalises one file's code so the harness stays robust to models that don't honour the
-     * output contract: strips any `package`/`// Foo.kt` lines, hoists imports, and prepends the
-     * one correct package. Only wrapping is touched, never logic.
+     * output contract: strips any `package`/`import`/`// Foo.kt`/`// FILE:`/fence lines, hoists
+     * imports, and prepends the one correct package. Only wrapping is touched, never logic.
      */
     private fun normalizeCode(raw: String, pkg: String): String {
         val lines = raw.trim().lines()
@@ -219,4 +259,32 @@ abstract class RunAgentTask @Inject constructor(
     private fun sha256(s: String): String =
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        // Build script for a generated test-suite module (tests mode): a plain module that runs
+        // its own tests against the given :core algebra.
+        val CONSUMER_BUILD_SCRIPT = """
+            plugins {
+                kotlin("jvm")
+            }
+
+            kotlin {
+                jvmToolchain(21)
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            dependencies {
+                implementation(project(":core"))
+                testImplementation(kotlin("test"))
+            }
+
+            tasks.test {
+                useJUnitPlatform()
+            }
+
+        """.trimIndent()
+    }
 }

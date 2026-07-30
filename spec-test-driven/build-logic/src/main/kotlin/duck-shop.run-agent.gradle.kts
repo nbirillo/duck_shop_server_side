@@ -5,6 +5,6 @@ import duckshop.RunAgentTask
 
 tasks.register<RunAgentTask>("runAgent") {
     group = "duck-shop"
-    description = "Generate a solutions/<agent>/ implementation via an OpenAI-compatible chat " +
-        "API. Params: -Pprovider=ollama|mistral|anthropic -Pmodel=<m> [-Pagent=<name>] [-Pdry]."
+    description = "Generate an agent artifact via an OpenAI-compatible chat API. " +
+        "Params: -Pprovider=ollama|mistral|anthropic -Pmodel=<m> [-Pmode=impl|tests] [-Pagent=<name>] [-Pdry]."
 }
