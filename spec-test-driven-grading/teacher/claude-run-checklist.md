@@ -4,40 +4,41 @@ Step-by-step for the run that has to be done by hand, because there is no Anthro
 prompts themselves are in [`running-advanced-agents.md`](running-advanced-agents.md); this file is the
 operational order of events, including the two things that silently invalidate the measurement.
 
-## 0. Clear the folder of author-side answers (do this first)
+## 0. Run in a fresh export, not in the working copy
 
-`spec-test-driven/` contains, from our own harness runs:
+Do **not** measure in `<repo>/spec-test-driven`. Our working copy accumulates git-ignored artifacts of
+our own harness runs that a learner never receives — and one of them is fatal:
+`test-suites/claude-code/` is an 86-test suite that already scores 11/11 on the graded mutants, sitting
+right there for an agent to read. `test-suites/ollama-*` and `hardened/ollama-*` are other models'
+suites for the same algebra, and `solutions/ollama-*` are generated schedule implementations.
 
-- `test-suites/claude-code/` — an 86-test suite that already scores 11/11 on the graded mutants. A
-  perfect answer, sitting in the folder.
-- `test-suites/ollama-*` and `hardened/ollama-*` — other models' suites for the same algebra.
-
-An agent that reads any of these is not measuring anything. Move them out of the folder before the
-run and back afterwards:
-
-```bash
-cd <repo>/spec-test-driven
-mkdir -p ../.author-artifacts
-mv test-suites hardened ../.author-artifacts/          # before the run
-# ... run Claude ...
-mv ../.author-artifacts/test-suites ../.author-artifacts/hardened .   # after
-```
-
-`solutions/` can stay: those are opening-schedule implementations, unrelated to the policy tests.
-
-Also confirm the exercise starts from its committed, flawed state — a previous run may have left it
-hardened:
+Export exactly the tracked content instead — that *is* the learner's environment, and it also removes
+any risk of the run mutating our copy:
 
 ```bash
-git status --short exercises        # must print nothing
-git restore -- exercises            # if it printed something
+cd <repo>
+rm -rf ~/IdeaProjects/duck-shop-student-copy
+mkdir -p ~/IdeaProjects/duck-shop-student-copy
+git archive HEAD spec-test-driven | tar -x -C ~/IdeaProjects/duck-shop-student-copy
 ```
+
+The export is a self-contained Gradle build (own wrapper, own `build-logic`). Sanity-check it before
+handing it to the agent — the exercise must start from its flawed state:
+
+```bash
+cd ~/IdeaProjects/duck-shop-student-copy/spec-test-driven
+./gradlew verifyMutants --continue     # baseline INVALID (1 test), mutation score 1/4
+```
+
+This is also the answer to "what exactly do we hand out?": the handout is this export, nothing more.
+Directory isolation only holds because the export contains no `spec-test-driven-grading/`.
 
 ## 1. Open the right folder
 
-Open **`spec-test-driven/` itself** as the project in Claude Code — not the repository root. From that
-root the agent cannot reach `spec-test-driven-grading/`, which holds the reference implementation, the
-graded mutants, the answer key and this file.
+Open **`~/IdeaProjects/duck-shop-student-copy/spec-test-driven`** as the project in Claude Code — the
+export from step 0, and that folder itself rather than its parent. The export contains no grading build
+at all, so the reference implementation, the graded mutants, the answer key and this file are not
+merely hidden from the agent; they are not on disk anywhere near it.
 
 One more thing to check once: if you keep a global `~/.claude/CLAUDE.md` with notes about this module,
 the session will load it and may hand the agent exactly what we are trying to hide.
@@ -53,21 +54,23 @@ Note the deliberate conflict: `exercises/write-tests/README.md` tells the learne
 testing as step 3, and the prompt overrides that. If the agent runs `verifyMutants` anyway, say so — a
 frontier agent ignoring an explicit constraint is itself a finding worth recording.
 
-When it stops, tell me it is done and which run it was; I archive, score and restore. Manually it is:
+When it stops, say so and which run it was; the suite is then copied from the export back into the
+working copy for scoring. Manually, from `<repo>/spec-test-driven`:
 
 ```bash
-mkdir -p hardened/claude-code-promptC/src/test/kotlin/org/jetbrains/kotlin/course/duck/shop/admission
-cp exercises/write-tests/src/test/kotlin/org/jetbrains/kotlin/course/duck/shop/admission/PolicyTests.kt \
-   hardened/claude-code-promptC/src/test/kotlin/org/jetbrains/kotlin/course/duck/shop/admission/
-git restore -- exercises
+PKG=org/jetbrains/kotlin/course/duck/shop/admission
+EXPORT=~/IdeaProjects/duck-shop-student-copy/spec-test-driven
+mkdir -p hardened/claude-code-promptC/src/test/kotlin/$PKG
+cp $EXPORT/exercises/write-tests/src/test/kotlin/$PKG/PolicyTests.kt hardened/claude-code-promptC/src/test/kotlin/$PKG/
+cp hardened/ollama-qwen2.5-coder-7b/build.gradle.kts hardened/claude-code-promptC/
 ```
 
-The archive folder also needs a `build.gradle.kts`; copy one from any `hardened/ollama-*`.
+Nothing to restore in the working copy — the agent only ever touched the export.
 
 ## 3. Run B — with mutation-testing feedback
 
-Start again from the restored, flawed exercise, in a **fresh** Claude session (an existing session
-already knows what it wrote). Paste Prompt D: same task, but the agent may run
+Re-create the export (step 0) so the exercise is flawed again, and use a **fresh** Claude session — an
+existing one already knows what it wrote. Paste Prompt D: same task, but the agent may run
 `./gradlew verifyMutants --continue` and iterate until nothing survives.
 
 This is the realistic learner flow, and it answers a different question: not "what does it cover
