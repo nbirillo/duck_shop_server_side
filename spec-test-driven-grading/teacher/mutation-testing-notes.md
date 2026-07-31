@@ -67,6 +67,7 @@ harness sends.
 | qwen2.5-coder:32b | yes, 15 tests | 7/11 (63%) |
 | **this module's authored policy suite** | yes, 14 tests | **8/11 (72%)** |
 | Claude Code, blind harden of the flawed suite (47 tests) | yes | **11/11 (100%)** |
+| Claude Code, harden **with** practice-mutant feedback (47 tests) | yes | **10/11 (90%)** |
 | Claude Code (suite written from scratch, 86 tests) | yes | **11/11 (100%)** |
 
 ### Claude Code, blind regime — the honest frontier measurement
@@ -94,6 +95,39 @@ both De Morgan laws.
 ⇒ The isolation work did not change the verdict: mutation testing on this algebra confirms a frontier
 agent rather than challenging it. What it *did* change is that the verdict is now trustworthy — before,
 the folder contained the acceptance suite whose test names spell out the answers.
+
+### The feedback regime scored *worse* — the practice set anchors the agent
+
+Same task, same starting suite, fresh export, but this time the prompt let the agent run
+`verifyMutants` and iterate until nothing survived. It reached 4/4 on the practice set, `-PmutantsStrict`
+passing, and stopped there — and on the graded set it scored **10/11, one worse than the blind run**.
+
+The mutant it lost is `requires-accessory-prefix`. Blind, it had written `RequiresAccessory("hat")` against
+a duck wearing a `"hatband"` (and the reverse) precisely because nothing in the spec ruled prefix matching
+out. With the practice report in front of it, it still pinned name matching — but as case sensitivity and
+whitespace (`"Hat"`, `" hat"`), which no mutant tests, and dropped the prefix case.
+
+The two suites are both 47 tests and share only 17 test names, so this is not a small perturbation: given a
+visible target, the agent reorganised its effort around that target. It is Goodhart's law inside the
+exercise — **a visible mutant set turns into the specification of "done"**, and coverage of everything not
+in the set degrades. The blind run thought about the algebra; the feedback run optimised a metric.
+
+Three consequences worth carrying into the materials:
+
+1. For a strong agent the practice set is *not* additive: 4/4 green invites stopping. The graded set is
+   what keeps the exercise honest, which is another reason it stays hidden.
+2. The learner-facing framing should say that a clean practice report means "nothing known is missing",
+   not "the suite is complete" — the exercise README already says a perfect practice score is not a
+   thorough suite; this run is the evidence for that sentence.
+3. The practice tier contains **only must-kill mutants**, so the agent never saw a spec-dependent survivor
+   and the list-aliasing question never came up in either run. If we want the learner to meet the "some
+   mutants are supposed to survive" case in practice rather than only in prose, the practice catalog needs
+   a spec-dependent entry.
+
+It also made an accurate observation we had not: `min-accessories-strict` was already dying *before* it
+touched anything, because the AI's `MinAccessories(1).admits(hatDuck)` happens to sit exactly on the
+`size == min` boundary. An incidental kill, not an intentional one — the flawed starter suite therefore
+begins at 1/4 partly by luck, and its explicit boundary tests now carry that mutant on purpose.
 
 Reading of these numbers:
 
