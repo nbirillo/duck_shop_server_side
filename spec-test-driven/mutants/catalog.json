@@ -1,0 +1,41 @@
+{
+  "description": "PRACTICE mutant catalog for exercise 11.2 — visible on purpose: this is the feedback loop a learner iterates against. Each entry replaces one snippet in a :core file; ./gradlew generateMutants turns it into a module under mutants/<id>/. Patterns match whole `override` lines, since the KDoc above them quotes the same expression. The graded set (with subtler defects) lives outside this folder, in the teacher-only grading build.",
+  "mutants": [
+    {
+      "id": "max-budget-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.price <= maxPrice",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.price < maxPrice",
+      "bucket": "must-kill",
+      "what": "MaxBudget rejects a duck priced exactly at the limit (strict instead of inclusive).",
+      "hint": "a boundary test — a duck whose price equals the limit is admitted"
+    },
+    {
+      "id": "min-accessories-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.size >= min",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.size > min",
+      "bucket": "must-kill",
+      "what": "MinAccessories rejects a duck wearing exactly the minimum number of accessories.",
+      "hint": "a boundary test — exactly `min` accessories is enough"
+    },
+    {
+      "id": "allof-empty-false",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isNotEmpty() && policies.all { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AllOf over an empty list rejects every duck instead of admitting them (vacuous truth lost).",
+      "hint": "a vacuous-truth test — AllOf(emptyList()) admits any duck"
+    },
+    {
+      "id": "anyof-empty-true",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isEmpty() || policies.any { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AnyOf over an empty list admits every duck instead of rejecting them.",
+      "hint": "a vacuous-truth test — AnyOf(emptyList()) admits nobody"
+    }
+  ]
+}

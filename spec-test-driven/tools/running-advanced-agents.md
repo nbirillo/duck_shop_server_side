@@ -63,3 +63,47 @@ Prompt A results sit in the same regime as the `runAgent` runs (single pass, no 
 so a strong interactive agent and the API/local models can be compared on the same footing.
 Prompt B is a different regime (feedback loop) and is not directly comparable — it evaluates the
 workflow, not raw corner-case intuition.
+
+## Exercise 11.2 — verify & harden a suite, then score it by mutation testing
+
+The same setup applies (open `spec-test-driven/` as the project). The task lives in
+`exercises/write-tests/`: a flawed "AI-written" suite the agent must verify and harden. `runAgent
+-Pmode=verify-harden` covers the API models; for an interactive agent use one of the prompts below,
+then archive and score its suite exactly the same way.
+
+### Prompt C — blind harden (comparable with the `runAgent` results)
+
+```
+In exercises/write-tests/src/test/kotlin/.../PolicyTests.kt an AI wrote a test suite for the
+admission-policy algebra given in :core. Verify and harden it: fix any test that contradicts the
+correct behaviour, and add the cases it is missing. Do not change :core or any other module.
+Do NOT run ./gradlew verifyMutants and do not open mutants/ — I want to see what you cover on
+your own.
+```
+
+### Prompt D — with mutation-testing feedback (the realistic learner flow)
+
+```
+… same task, and then: run `./gradlew verifyMutants --continue` and keep strengthening the suite
+until every must-kill mutant is dead. Do not edit anything under mutants/ or :core.
+```
+
+Prompt C measures what the agent covers unaided; Prompt D measures whether it can *use* the
+feedback. Keep them as separate runs — they are different regimes.
+
+### Archiving and scoring
+
+```bash
+# archive the agent's suite the way runAgent does (hardened/ is git-ignored)
+mkdir -p hardened/<agent>/src/test/kotlin/org/jetbrains/kotlin/course/duck/shop/admission
+cp exercises/write-tests/src/test/kotlin/.../PolicyTests.kt hardened/<agent>/src/test/kotlin/.../
+cp hardened/ollama-qwen2.5-coder-7b/build.gradle.kts hardened/<agent>/   # same consumer script
+git restore -- exercises/write-tests                                     # put the flawed suite back
+
+./gradlew :hardened:<agent>:test                                         # validity on :core
+cd ../spec-test-driven-grading
+./gradlew verifyMutants -PmutantTests=../spec-test-driven/hardened/<agent>/src/test/kotlin --continue
+```
+
+The last command is the honest score: the graded mutant set lives in the teacher-only build, so the
+agent never saw which defects it would be measured against.

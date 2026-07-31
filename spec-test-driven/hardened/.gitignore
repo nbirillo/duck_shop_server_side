@@ -1,0 +1,5 @@
+# Agent-hardened test suites from `runAgent -Pmode=verify-harden` — reproducible, model-dependent,
+# not committed. Only this .gitignore is tracked. (The mutants they are scored against ARE committed,
+# under mutants/ and in the teacher-only grading build.)
+/*
+!/.gitignore

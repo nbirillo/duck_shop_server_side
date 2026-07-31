@@ -31,8 +31,12 @@ tests for at least:
 Check your suite actually catches broken implementations:
 
 ```bash
-./gradlew practiceCatch
+./gradlew verifyMutants --continue
 ```
+
+This is **mutation testing**: your tests are run against copies of the algebra with one defect each,
+and every defect your suite does not notice is reported as a surviving mutant. Read
+[`../../mutants/README.md`](../../mutants/README.md) for what the report means.
 
 ## 3. The spec is silent on two things — decide and pin them
 
@@ -45,3 +49,32 @@ flagging the ambiguity so a human resolves it).
 - **`AllOf` / `AnyOf` aliasing.** They keep the `List` you pass in. If you mutate that list *after*
   building the policy, should the policy's behaviour change? Is that part of the contract, or an
   accident of implementation? Decide, and either pin it with a test or flag it.
+
+## 4. Mutation testing — required if a strong agent wrote your suite
+
+Steps 1–3 leave an uncomfortable question open: your suite is green and catches the practice
+defects, but *what else* would it miss? Mutation testing answers that.
+
+```bash
+./gradlew verifyMutants --continue          # the practice set, with hints for survivors
+./gradlew verifyMutants -PmutantsStrict     # same, but fails until every must-kill mutant dies
+```
+
+Work until the report says every must-kill mutant is dead, and you have a deliberate answer for each
+spec-dependent one (see [`../../mutants/README.md`](../../mutants/README.md) — some mutants are
+*supposed* to survive).
+
+**Who has to do this step.** If you hardened the suite with a frontier agent (Claude Code, Junie, a
+large hosted model), treat this step as **mandatory**: such an agent usually clears steps 1–3 on the
+first try, and mutation testing is what keeps the exercise honest for you. If you worked with a
+small local model, steps 1–3 are already the hard part — mutation testing is then an **optional**
+extra, and a good way to see how much your own additions improved the suite.
+
+Two things worth knowing before you read your score:
+
+- The report first checks your suite against the **unmutated** code. A test that fails there
+  contradicts the correct behaviour, so it proves nothing about a mutant — those tests are excluded
+  from the score, which is why step 1 comes first.
+- A perfect score on the practice set is not the same as a thorough suite. The graded set your
+  teacher runs contains defects this one does not, and even the authored acceptance suite of this
+  module does not kill all of them.

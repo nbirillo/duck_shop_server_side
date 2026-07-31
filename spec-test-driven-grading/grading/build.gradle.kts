@@ -1,10 +1,11 @@
 // :grading — the teacher-only reference implementation + the shared acceptance suite. Depends on
 // :core from the sibling spec-test-driven build (substituted via the composite includeBuild) and
 // reuses the single shared test source by relative path. Not the duck-shop.solution convention
-// plugin: this build is standalone and must not reach back into the student project's wiring.
+// plugin: this build wires :core as a substituted dependency, not as a project of the student build.
+// The Kotlin plugin version is declared once in the root build script.
 
 plugins {
-    kotlin("jvm") version "2.2.20"
+    kotlin("jvm")
 }
 
 kotlin {

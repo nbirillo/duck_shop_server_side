@@ -83,6 +83,39 @@ cd ../spec-test-driven-grading
 > shared test suite via a composite build (`includeBuild("../spec-test-driven")`); the link only
 > points from grading INTO the student project, never the other way.
 
+## Exercise 11.2 and mutation testing
+
+`exercises/write-tests/` is the first learner-facing exercise: an "AI-written" test suite for the
+given `:core` algebra that the learner has to **verify and harden** (one test is invalid, several
+cases are missing, and the spec is deliberately silent on two details). See its README.
+
+Feedback comes from **mutation testing** — the learner's suite is run against copies of the algebra
+with one injected defect each, and every defect the suite fails to notice is reported:
+
+```bash
+./gradlew verifyMutants --continue          # mutation score + hints for the survivors
+./gradlew verifyMutants -PmutantsStrict     # fail until every must-kill mutant is dead
+./gradlew generateMutants                   # only after editing mutants/catalog.json
+```
+
+`mutants/catalog.json` is the single source of truth: each entry replaces one snippet of a `:core`
+file, and `generateMutants` turns it into a module that compiles the real `:core` sources with that
+one file swapped. The generated modules are committed so the folder is readable and self-contained;
+`mutants/README.md` explains the report, including why some mutants are *supposed* to survive.
+
+The set that a learner sees is a small practice set. The **graded set is larger and lives in the
+teacher-only build** (`../spec-test-driven-grading/mutants/`), outside this folder — a visible
+catalog would tell a learner's agent exactly which cases to test:
+
+```bash
+cd ../spec-test-driven-grading
+./gradlew verifyMutants --continue                       # scores exercises/write-tests
+./gradlew verifyMutants -PmutantTests=authored           # scores this module's own acceptance suite
+```
+
+Any suite can be scored by path, e.g. an archived agent run:
+`-PmutantTests=hardened/<agent>/src/test/kotlin`.
+
 ## Generate a solution with an AI agent (Ollama / Mistral)
 
 > **Author-side tool, not a student workflow.** `runAgent` and the `solutions/<agent>/` modules

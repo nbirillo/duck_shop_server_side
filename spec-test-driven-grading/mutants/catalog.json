@@ -1,0 +1,122 @@
+{
+  "description": "GRADED mutant catalog — teacher-only, deliberately kept outside the student's spec-test-driven/ folder so neither a learner nor their agent can read which cases matter. Superset of the visible practice catalog: it adds the subtle accessory-matching defects that separate a thorough suite from a merely green one, plus two spec-dependent mutants whose survival is acceptable. Regenerate with ./gradlew generateMutants in THIS build; score a suite with ./gradlew verifyMutants -PmutantTests=<learner|authored|path> --continue.",
+  "mutants": [
+    {
+      "id": "kotlin-only-always-true",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.hasKotlinAttribute",
+      "replace": "override fun admits(duck: Duck): Boolean = true",
+      "bucket": "must-kill",
+      "what": "KotlinOnly ignores the attribute and admits every duck.",
+      "hint": "a negative-direction test — a duck WITHOUT the Kotlin attribute is rejected"
+    },
+    {
+      "id": "max-budget-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.price <= maxPrice",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.price < maxPrice",
+      "bucket": "must-kill",
+      "what": "MaxBudget rejects a duck priced exactly at the limit (strict instead of inclusive).",
+      "hint": "a boundary test — a duck whose price equals the limit is admitted"
+    },
+    {
+      "id": "min-accessories-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.size >= min",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.size > min",
+      "bucket": "must-kill",
+      "what": "MinAccessories rejects a duck wearing exactly the minimum number of accessories.",
+      "hint": "a boundary test — exactly `min` accessories is enough"
+    },
+    {
+      "id": "requires-accessory-prefix",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name.startsWith(accessoryName) }",
+      "bucket": "must-kill",
+      "what": "RequiresAccessory matches any accessory whose name merely STARTS WITH the required one.",
+      "hint": "an exact-name test — a duck wearing only a \"hatband\" does not satisfy RequiresAccessory(\"hat\")"
+    },
+    {
+      "id": "requires-accessory-first-only",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.firstOrNull()?.name == accessoryName",
+      "bucket": "must-kill",
+      "what": "RequiresAccessory only looks at the FIRST accessory instead of all of them.",
+      "hint": "a test where the matching accessory is not the first one in the list"
+    },
+    {
+      "id": "requires-accessory-ignore-case",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name.equals(accessoryName, ignoreCase = true) }",
+      "bucket": "must-kill",
+      "what": "RequiresAccessory matches names case-insensitively.",
+      "hint": "a case-sensitivity test — \"HAT\" does not satisfy RequiresAccessory(\"hat\")"
+    },
+    {
+      "id": "allof-empty-false",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isNotEmpty() && policies.all { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AllOf over an empty list rejects every duck instead of admitting them (vacuous truth lost).",
+      "hint": "a vacuous-truth test — AllOf(emptyList()) admits any duck"
+    },
+    {
+      "id": "anyof-empty-true",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isEmpty() || policies.any { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AnyOf over an empty list admits every duck instead of rejecting them.",
+      "hint": "a vacuous-truth test — AnyOf(emptyList()) admits nobody"
+    },
+    {
+      "id": "allof-uses-any",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AllOf behaves like OR: one satisfied policy is enough.",
+      "hint": "a test where exactly one of several policies says no and AllOf must reject"
+    },
+    {
+      "id": "anyof-uses-all",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "bucket": "must-kill",
+      "what": "AnyOf behaves like AND: every policy has to agree.",
+      "hint": "a test where exactly one of several policies says yes and AnyOf must admit"
+    },
+    {
+      "id": "not-identity",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = !policy.admits(duck)",
+      "replace": "override fun admits(duck: Duck): Boolean = policy.admits(duck)",
+      "bucket": "must-kill",
+      "what": "Not forwards the wrapped decision instead of inverting it — the defect planted in the starter suite.",
+      "hint": "a test that Not really inverts, in both directions"
+    },
+    {
+      "id": "allof-no-short-circuit",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.all { it }",
+      "bucket": "spec-dependent",
+      "what": "AllOf evaluates every policy instead of stopping at the first rejection — same answers, no short-circuit.",
+      "hint": "only a spy policy counting its own calls can tell the difference; the spec never promises short-circuiting"
+    },
+    {
+      "id": "allof-defensive-copy",
+      "file": "Combinators.kt",
+      "find": "class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {",
+      "replace": "class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n    private val policies: List<AdmissionPolicy> = policies.toList()",
+      "bucket": "spec-dependent",
+      "what": "AllOf copies the list it is given, so mutating that list afterwards no longer changes the policy.",
+      "hint": "only a test that mutates the caller's list after construction can tell; the spec is silent — this is the under-specification the exercise asks about"
+    }
+  ]
+}

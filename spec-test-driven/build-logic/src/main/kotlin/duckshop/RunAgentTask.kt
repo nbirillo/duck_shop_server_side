@@ -23,9 +23,14 @@ import javax.inject.Inject
 
 /**
  * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
- * Anthropic). Two modes:
- *  - `impl`  (default) — implement the :starter stubs; writes to `solutions/<agent>/`.
- *  - `tests`           — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
+ * Anthropic). Four modes:
+ *  - `impl`  (default)  — implement the :starter stubs; writes to `solutions/<agent>/`.
+ *  - `tests`            — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
+ *  - `verify-exercise`  — author-side: regenerate the flawed starter suite of exercise 11.2 from a
+ *    model's real output, with one invalid test planted; overwrites the exercise file.
+ *  - `verify-harden`    — the 11.2 task itself: verify and harden that flawed suite. Archived to
+ *    `hardened/<agent>/`, which is then scored for validity (`:hardened:<agent>:test`) and for
+ *    coverage (`verifyMutants -PmutantTests=hardened/<agent>/src/test/kotlin`).
  *
  * The prompt is assembled here from :core (and, for impl, the :starter stubs) — never :grading —
  * so an API agent cannot copy a reference. In tests mode the prompt is deliberately generic
@@ -70,7 +75,15 @@ abstract class RunAgentTask @Inject constructor(
             "verify-harden" -> buildVerifyPrompt(root)
             else -> buildTestsPrompt(root)
         }
-        val outDir = root.resolve(if (mode == "tests") "test-suites/$agent" else "solutions/$agent")
+        val outDir = root.resolve(
+            when (mode) {
+                "tests" -> "test-suites/$agent"
+                // Archived per agent (instead of overwriting the exercise) so the same suite can be
+                // re-scored later — e.g. against the mutant set — without re-running the model.
+                "verify-harden" -> "hardened/$agent"
+                else -> "solutions/$agent"
+            },
+        )
         val exerciseFile = root.resolve("exercises/write-tests/src/test/kotlin/$packagePath/PolicyTests.kt")
 
         val endpoint = when (provider) {
@@ -121,28 +134,22 @@ abstract class RunAgentTask @Inject constructor(
             .jsonObject["choices"]!!.jsonArray[0]
             .jsonObject["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
 
-        if (mode == "verify-exercise" || mode == "verify-harden") {
-            val body = normalizeCode(extractCode(content), basePackage)
-            val suite = if (mode == "verify-exercise") injectPlantedDefect(body) else body
+        if (mode == "verify-exercise") {
+            val suite = injectPlantedDefect(normalizeCode(extractCode(content), basePackage))
             exerciseFile.parentFile.mkdirs()
             exerciseFile.writeText(suite + "\n")
-            if (mode == "verify-exercise") {
-                logger.lifecycle("[runAgent] wrote exercise starter ${exerciseFile.relativeTo(root)} from $model, with a planted invalid Not test.")
-                logger.lifecycle("[runAgent] review: git diff -- ${exerciseFile.relativeTo(root)} ; then ./gradlew :exercises:write-tests:test (should be RED on the planted test).")
-            } else {
-                logger.lifecycle("[runAgent] wrote $model's verified+hardened suite to ${exerciseFile.relativeTo(root)}.")
-                logger.lifecycle("[runAgent] score it: ./gradlew :exercises:write-tests:test (validity) then ./gradlew practiceCatch (coverage).")
-            }
+            logger.lifecycle("[runAgent] wrote exercise starter ${exerciseFile.relativeTo(root)} from $model, with a planted invalid Not test.")
+            logger.lifecycle("[runAgent] review: git diff -- ${exerciseFile.relativeTo(root)} ; then ./gradlew :exercises:write-tests:test (should be RED on the planted test).")
             return
         }
 
-        val written = if (mode == "tests") {
-            writeTestSuite(outDir, content)
-        } else {
-            writeSolutionFiles(outDir, content, stubs.map { it.first })
+        val written = when (mode) {
+            "tests" -> writeTestSuite(outDir, content)
+            "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
+            else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         outDir.resolve("build.gradle.kts").writeText(
-            if (mode == "tests") CONSUMER_BUILD_SCRIPT else "plugins {\n    id(\"duck-shop.solution\")\n}\n",
+            if (mode == "impl") "plugins {\n    id(\"duck-shop.solution\")\n}\n" else CONSUMER_BUILD_SCRIPT,
         )
         outDir.resolve("agent.json").writeText(
             buildJsonObject {
@@ -156,10 +163,11 @@ abstract class RunAgentTask @Inject constructor(
             }.toString() + "\n",
         )
 
-        val next = if (mode == "tests") {
-            "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
-        } else {
-            "./gradlew checkPrimary -PprimaryAgent=$agent"
+        val next = when (mode) {
+            "tests" -> "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
+            "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
+                "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
+            else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
         }
         logger.lifecycle("[runAgent] wrote ${outDir.relativeTo(root)}: $written")
         logger.lifecycle("[runAgent] now run: $next")
@@ -270,12 +278,16 @@ abstract class RunAgentTask @Inject constructor(
         }
     }
 
-    /** Writes the generated test file into src/test (tests mode). */
-    private fun writeTestSuite(outDir: File, content: String): List<String> {
+    /** Writes the generated test file into src/test (tests and verify-harden modes). */
+    private fun writeTestSuite(
+        outDir: File,
+        content: String,
+        fileName: String = "GeneratedPolicyTests.kt",
+    ): List<String> {
         val fences = Regex("```(?:kotlin|kt)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
             .findAll(content).map { it.groupValues[1] }.toList()
         val code = if (fences.isNotEmpty()) fences.joinToString("\n\n") else content
-        val rel = "GeneratedPolicyTests.kt"
+        val rel = fileName
         val target = outDir.resolve("src/test/kotlin/$packagePath/$rel")
         target.parentFile.mkdirs()
         target.writeText(normalizeCode(code, basePackage) + "\n")
