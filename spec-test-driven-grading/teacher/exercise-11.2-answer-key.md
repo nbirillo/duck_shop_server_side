@@ -33,6 +33,14 @@ on purpose: the name reads as if forwarding were the contract.
    flagging it for a human. Claude, unprompted, called it "an unspecified detail rather than intended
    contract" and recommended a defensive copy — a good exemplar to show.
 
+## Order of the steps is part of the design
+
+The exercise tells the learner to finish hardening **before** running mutation testing, and to keep the
+pre-mutation version. That is not neatness: a frontier agent given the practice report early scored
+*worse* on the graded set than the same agent working blind, because it optimised the visible target
+(see `mutation-testing-notes.md`). Expect the same from a learner. When grading, it is worth asking
+which gaps they closed by reasoning about the algebra and which ones the report had to point at.
+
 ## Grading
 
 ```bash

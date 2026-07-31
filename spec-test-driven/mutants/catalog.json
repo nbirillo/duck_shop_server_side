@@ -28,6 +28,13 @@
       "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
       "replace": "override fun admits(duck: Duck): Boolean = policies.isEmpty() || policies.any { it.admits(duck) }",
       "bucket": "must-kill"
+    },
+    {
+      "id": "allof-defensive-copy",
+      "file": "Combinators.kt",
+      "find": "class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {",
+      "replace": "class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n    private val policies: List<AdmissionPolicy> = policies.toList()",
+      "bucket": "spec-dependent"
     }
   ]
 }

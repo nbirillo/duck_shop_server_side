@@ -23,7 +23,7 @@ Two tiers, on purpose:
 
 | Tier | Where | Content |
 | --- | --- | --- |
-| Practice | `spec-test-driven/mutants/` (visible, committed) | 4 mutants, boundary + vacuous truth. No prose: `what`/`hint` are omitted so the catalog is not a list of the tests to write |
+| Practice | `spec-test-driven/mutants/` (visible, committed) | 5 mutants: 4 must-kill (boundary + vacuous truth) and `allof-defensive-copy` as a **spec-dependent** one, so the learner meets a legitimately surviving mutant in practice and not only in prose. No prose in the catalog: `what`/`hint` are omitted so it is not a list of the tests to write |
 | Graded | `mutants/` here (hidden) | 13 mutants: 11 must-kill incl. three subtle accessory-matching defects, plus 2 spec-dependent |
 
 ## Why some mutants must survive
@@ -119,10 +119,20 @@ Three consequences worth carrying into the materials:
 2. The learner-facing framing should say that a clean practice report means "nothing known is missing",
    not "the suite is complete" — the exercise README already says a perfect practice score is not a
    thorough suite; this run is the evidence for that sentence.
-3. The practice tier contains **only must-kill mutants**, so the agent never saw a spec-dependent survivor
-   and the list-aliasing question never came up in either run. If we want the learner to meet the "some
-   mutants are supposed to survive" case in practice rather than only in prose, the practice catalog needs
-   a spec-dependent entry.
+3. The practice tier contained **only must-kill mutants**, so the agent never saw a spec-dependent
+   survivor and the list-aliasing question never came up in either run.
+
+**Both were acted on (2026-07-31):**
+
+- `allof-defensive-copy` was added to the practice catalog as a spec-dependent entry. A learner now
+  meets a legitimately surviving mutant while practising, and the aliasing question is put in front of
+  them instead of depending on whether their agent happens to raise it. Verified: the learner's starter
+  suite reports it separately and still scores 1/4 on the must-kill set; Claude's blind suite scores 4/4
+  with that one surviving — the intended shape of a good result.
+- The exercise now **fixes the order**: harden the suite without mutation testing and keep that version,
+  then run `verifyMutants`. The README says why in one line — a checklist is hard to think past — and asks
+  the learner to notice which gaps they found by reasoning and which the report had to point at. That
+  turns this very finding into part of the lesson instead of a trap.
 
 It also made an accurate observation we had not: `min-accessories-strict` was already dying *before* it
 touched anything, because the AI's `MinAccessories(1).admits(hatDuck)` happens to sit exactly on the
