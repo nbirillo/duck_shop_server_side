@@ -52,6 +52,12 @@ Graded set, 11 must-kill mutants. Blind regime: each model was given the flawed 
 verify and harden it with a generic prompt (`runAgent -Pmode=verify-harden`), then scored against a
 mutant set it never saw.
 
+These numbers were re-measured from scratch after the answer keys were moved out of the student
+folder, and they came out identical (same scores, same surviving mutants) — as expected, since
+`runAgent` assembles its prompt from `:core` and the flawed suite rather than from the folder's
+documentation. The isolation work changes what an *interactive* agent can see, not what the API
+harness sends.
+
 | Agent | Suite valid on `:core` | Mutation score |
 | --- | --- | --- |
 | qwen2.5-coder:1.5b | yes, 10 tests | 4/11 (36%) |
