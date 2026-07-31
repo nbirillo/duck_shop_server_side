@@ -66,7 +66,34 @@ harness sends.
 | qwen2.5-coder:14b | yes, 15 tests | 5/11 (45%) |
 | qwen2.5-coder:32b | yes, 15 tests | 7/11 (63%) |
 | **this module's authored policy suite** | yes, 14 tests | **8/11 (72%)** |
+| Claude Code, blind harden of the flawed suite (47 tests) | yes | **11/11 (100%)** |
 | Claude Code (suite written from scratch, 86 tests) | yes | **11/11 (100%)** |
+
+### Claude Code, blind regime — the honest frontier measurement
+
+Run in a fresh export of the tracked student content (no grading build, no other agent's suites, no
+answer key), with the prompt forbidding `mutants/` and `verifyMutants`. It fixed the planted `Not`
+test — and renamed it to say what it actually checks — then added 37 tests and reached 100% of the
+must-kill set without ever seeing a mutant. Notably it covered, unprompted, the three defects every
+local model misses: exact-name matching (`"hatband"` does not satisfy `"hat"`), case sensitivity, and
+"the accessory is deliberately the third in the list" — it explicitly reasoned that the original suite
+would pass an implementation consulting only `policies.first()`.
+
+On the two spec-dependent mutants: it left **short-circuiting** unpinned *deliberately*, arguing every
+policy here is pure so evaluation order is unobservable and a test freezing it would block legitimate
+reordering — it recorded that in the KDoc instead. That is exactly the intended answer. It did **not**
+address **list aliasing** at all this time (an earlier from-scratch run had spontaneously flagged it and
+recommended a defensive copy), so that mutant survives unaddressed rather than by decision. Useful
+teaching material: even a frontier agent's coverage of under-specification is not stable run to run.
+
+It also volunteered four decisions the exercise never asks for — `MinAccessories(0)` and negative
+minimums admit everything (no input validation, pinned as-is rather than pretending it throws),
+duplicate accessory names count towards `MinAccessories`, single-element combinators as identity, and
+both De Morgan laws.
+
+⇒ The isolation work did not change the verdict: mutation testing on this algebra confirms a frontier
+agent rather than challenging it. What it *did* change is that the verdict is now trustworthy — before,
+the folder contained the acceptance suite whose test names spell out the answers.
 
 Reading of these numbers:
 
