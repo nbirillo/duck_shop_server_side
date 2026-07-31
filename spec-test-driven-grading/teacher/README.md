@@ -9,10 +9,28 @@ agent. The student folder therefore holds only the task statement and the comman
 | --- | --- |
 | [`exercise-11.2-answer-key.md`](exercise-11.2-answer-key.md) | 11.2: the planted defect, the gaps, the two under-specifications, how to grade |
 | [`mutation-testing-notes.md`](mutation-testing-notes.md) | How the mutant machinery works, the graded catalog, why some mutants must survive, measured scores |
+| [`running-api-agents.md`](running-api-agents.md) | `runAgent` (all four modes), `solutions/`, `compareAgents`, difficulty calibration |
 | [`running-advanced-agents.md`](running-advanced-agents.md) | Driving a strong interactive agent (Claude Code, Junie) without an API key, and the prompts |
 
 When the slides exist, the narrative parts of these notes become slide content; the commands and the
 answer keys stay here, next to the code they refer to.
+
+## Reference implementation and grading
+
+```bash
+# in spec-test-driven-grading/
+./gradlew :grading:test        # the reference implementation against both acceptance suites
+./gradlew verifyMutants --continue                      # graded mutants vs the learner's 11.2 suite
+./gradlew verifyMutants -PmutantTests=tests/kotlin      # graded mutants vs the authored policy suite
+```
+
+This build lives outside `spec-test-driven/` on purpose: a learner opens that folder, so an agent
+working from it cannot reach the reference implementation, the graded mutants or these notes — not
+even as readable files. It links back to `:core` and the shared test suite through a composite build
+(`includeBuild("../spec-test-driven")`); the link only points from here INTO the student project,
+never the other way, so the student build knows nothing about grading.
+
+To hand out the module, export the `spec-test-driven/` folder only.
 
 ## What stays in the student folder, and why
 
