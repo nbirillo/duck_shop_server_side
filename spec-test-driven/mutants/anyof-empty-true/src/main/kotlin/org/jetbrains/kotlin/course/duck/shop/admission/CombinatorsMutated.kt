@@ -2,9 +2,6 @@
 //
 // Mutant anyof-empty-true (must-kill)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.isEmpty() || policies.any { it.admits(duck) }
-//
-// AnyOf over an empty list admits every duck instead of rejecting them.
-// A suite that kills this mutant: a vacuous-truth test — AnyOf(emptyList()) admits nobody
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

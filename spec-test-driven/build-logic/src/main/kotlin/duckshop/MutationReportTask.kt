@@ -29,15 +29,10 @@ abstract class MutationReportTask @Inject constructor(
         val catalogPath = pathProp("mutantsCatalog", "mutants/catalog.json")
         val outPath = pathProp("mutantsOut", "mutants")
         val learnerTests = pathProp("mutantsLearnerTests", "exercises/write-tests/src/test/kotlin")
-        val authoredTests = pathProp("mutantsAuthoredTests", "tests/kotlin")
 
         val catalog = loadCatalog(root.resolve(catalogPath))
         val selected = providers.gradleProperty("mutantTests").getOrElse("learner")
-        val suitePath = when (selected) {
-            "learner" -> learnerTests
-            "authored" -> authoredTests
-            else -> selected
-        }
+        val suitePath = if (selected == "learner") learnerTests else selected
 
         logger.lifecycle("")
         logger.lifecycle("Mutation testing — suite: $selected ($suitePath)")
@@ -76,9 +71,16 @@ abstract class MutationReportTask @Inject constructor(
             logger.lifecycle("")
             logger.lifecycle(title)
             group.forEach { (mutant, status) ->
-                logger.lifecycle("  ${status.label.padEnd(10)}${mutant.id.padEnd(width)}${mutant.what}")
+                logger.lifecycle("  ${status.label.padEnd(10)}${mutant.id.padEnd(width)}${mutant.what}".trimEnd())
+                // The learner-visible catalog carries no prose: a survivor is reported as a fact,
+                // and working out which test kills it is the exercise.
                 if (status == Status.SURVIVED && bucket == Mutant.MUST_KILL) {
-                    logger.lifecycle("  ${" ".padEnd(10)}${" ".padEnd(width)}-> add: ${mutant.hint}")
+                    val advice = if (mutant.hint.isEmpty()) {
+                        "-> nothing in this suite notices that change"
+                    } else {
+                        "-> add: ${mutant.hint}"
+                    }
+                    logger.lifecycle("  ${" ".padEnd(10)}${" ".padEnd(width)}$advice")
                 }
                 if (status == Status.NOT_RUN) {
                     logger.lifecycle(

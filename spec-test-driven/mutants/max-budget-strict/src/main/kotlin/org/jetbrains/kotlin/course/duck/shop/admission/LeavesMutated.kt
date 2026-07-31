@@ -2,9 +2,6 @@
 //
 // Mutant max-budget-strict (must-kill)
 //   Leaves.kt:  override fun admits(duck: Duck): Boolean = duck.price <= maxPrice  ->  override fun admits(duck: Duck): Boolean = duck.price < maxPrice
-//
-// MaxBudget rejects a duck priced exactly at the limit (strict instead of inclusive).
-// A suite that kills this mutant: a boundary test — a duck whose price equals the limit is admitted
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

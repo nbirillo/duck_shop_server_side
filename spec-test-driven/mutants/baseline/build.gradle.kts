@@ -10,11 +10,10 @@ plugins {
     kotlin("jvm")
 }
 
-// Which suite runs against the mutant: "learner" (default), "authored", or any path
-// relative to this build's root — set with -PmutantTests=<learner|authored|path>.
+// Which suite runs against the mutant: "learner" (default) or any test source dir given as
+// a path relative to this build's root — set with -PmutantTests=<learner|path>.
 val suite: String = when (val selected = providers.gradleProperty("mutantTests").getOrElse("learner")) {
     "learner" -> "exercises/write-tests/src/test/kotlin"
-    "authored" -> "tests/kotlin"
     else -> selected
 }
 

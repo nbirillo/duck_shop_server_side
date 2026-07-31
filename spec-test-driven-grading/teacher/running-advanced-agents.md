@@ -4,6 +4,10 @@ Author-side notes for evaluating a **strong, interactive** agent (Claude Code, J
 Cursor, …) on the module task **without an API key** — the counterpart to `runAgent`, which
 covers the OpenAI-compatible API providers (Ollama / Mistral / Anthropic).
 
+This guide lives in the teacher pack rather than in `spec-test-driven/tools/` because it names the
+planted defects and the prompts: an agent working inside the student folder must not be able to read
+it. Unless stated otherwise, run the commands below from **`spec-test-driven/`**.
+
 ## Setup (this also enforces the reference isolation)
 
 Open the **`spec-test-driven/` folder itself** as the project in the agent's CLI/IDE — **not** the
@@ -94,16 +98,18 @@ feedback. Keep them as separate runs — they are different regimes.
 ### Archiving and scoring
 
 ```bash
-# archive the agent's suite the way runAgent does (hardened/ is git-ignored)
+# in spec-test-driven/ — archive the agent's suite the way runAgent does (hardened/ is git-ignored)
 mkdir -p hardened/<agent>/src/test/kotlin/org/jetbrains/kotlin/course/duck/shop/admission
 cp exercises/write-tests/src/test/kotlin/.../PolicyTests.kt hardened/<agent>/src/test/kotlin/.../
 cp hardened/ollama-qwen2.5-coder-7b/build.gradle.kts hardened/<agent>/   # same consumer script
 git restore -- exercises/write-tests                                     # put the flawed suite back
 
 ./gradlew :hardened:<agent>:test                                         # validity on :core
-cd ../spec-test-driven-grading
+
+# then, in spec-test-driven-grading/ — the graded score
 ./gradlew verifyMutants -PmutantTests=../spec-test-driven/hardened/<agent>/src/test/kotlin --continue
 ```
 
 The last command is the honest score: the graded mutant set lives in the teacher-only build, so the
-agent never saw which defects it would be measured against.
+agent never saw which defects it would be measured against. Expected results and how to read them are
+in `mutation-testing-notes.md`.

@@ -2,9 +2,6 @@
 //
 // Mutant min-accessories-strict (must-kill)
 //   Leaves.kt:  override fun admits(duck: Duck): Boolean = duck.accessories.size >= min  ->  override fun admits(duck: Duck): Boolean = duck.accessories.size > min
-//
-// MinAccessories rejects a duck wearing exactly the minimum number of accessories.
-// A suite that kills this mutant: a boundary test — exactly `min` accessories is enough
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

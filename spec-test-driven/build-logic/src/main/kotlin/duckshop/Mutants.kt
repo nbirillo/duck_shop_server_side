@@ -24,8 +24,12 @@ internal const val BASELINE = "baseline"
  * @property replace what to put in its place.
  * @property bucket `must-kill` (a faithful suite has to kill it) or `spec-dependent`
  *   (survival is acceptable — the behaviour it changes is not part of the specification).
- * @property what one line describing the injected defect.
- * @property hint what kind of test kills it; printed for survivors.
+ * @property what one line describing the injected defect; **optional**.
+ * @property hint what kind of test kills it; printed for survivors. **Optional**.
+ *
+ * `what` and `hint` are omitted from the catalog a learner can see: spelling out the defect and the
+ * test that catches it would hand the exercise's answers to the learner — and to any agent reading
+ * the folder. They are filled in only in the teacher-only catalog.
  */
 internal data class Mutant(
     val id: String,
@@ -33,8 +37,8 @@ internal data class Mutant(
     val find: String,
     val replace: String,
     val bucket: String,
-    val what: String,
-    val hint: String,
+    val what: String = "",
+    val hint: String = "",
 ) {
     val mustKill: Boolean get() = bucket == MUST_KILL
 
@@ -56,6 +60,7 @@ internal fun loadCatalog(catalog: File): List<Mutant> {
         val o = element.jsonObject
         fun str(name: String): String =
             o[name]?.jsonPrimitive?.content ?: error("Mutant entry in $catalog is missing \"$name\": $o")
+        fun optional(name: String): String = o[name]?.jsonPrimitive?.content.orEmpty()
         Mutant(
             id = str("id"),
             file = str("file"),
@@ -66,8 +71,8 @@ internal fun loadCatalog(catalog: File): List<Mutant> {
                     "Mutant '${str("id")}' has bucket '$it' (use ${Mutant.MUST_KILL} or ${Mutant.SPEC_DEPENDENT})"
                 }
             },
-            what = str("what"),
-            hint = str("hint"),
+            what = optional("what"),
+            hint = optional("hint"),
         )
     }.also { list ->
         val duplicates = list.groupBy { it.id }.filterValues { it.size > 1 }.keys

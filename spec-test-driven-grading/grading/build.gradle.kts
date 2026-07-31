@@ -11,9 +11,13 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
-    // Run the exact same shared acceptance suite the student modules run.
     sourceSets.named("test") {
+        // The exact same shared acceptance suite the student implementation modules run.
         kotlin.srcDir(rootDir.resolve("../spec-test-driven/tests/kotlin"))
+        // Plus the acceptance suite for the GIVEN policy algebra. It lives here, not in the student
+        // folder: its test names spell out the boundary and vacuous-truth cases that exercise 11.2
+        // asks the learner to discover, so in the student folder it was an answer key.
+        kotlin.srcDir(rootDir.resolve("tests/kotlin"))
     }
 }
 

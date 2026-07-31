@@ -2,9 +2,6 @@
 //
 // Mutant allof-empty-false (must-kill)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.isNotEmpty() && policies.all { it.admits(duck) }
-//
-// AllOf over an empty list rejects every duck instead of admitting them (vacuous truth lost).
-// A suite that kills this mutant: a vacuous-truth test — AllOf(emptyList()) admits any duck
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 
