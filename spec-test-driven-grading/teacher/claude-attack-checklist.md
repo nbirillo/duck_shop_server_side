@@ -87,7 +87,12 @@ Save the result: `cp -R attacks/claude-code ~/…/duck-shop/spec-test-driven/att
 
 ## 3. Round 2 — with feedback
 
-Fresh export again, fresh session, same suite. This time the agent may iterate:
+**Recreate the export from scratch — do not reuse round 1's.** Scoring round 1 ran the reference
+module, so that export now holds `attacks/reference/build/probe.txt`: two thousand correct verdicts,
+sitting in a file the agent can read. Handing an attacker the oracle's answers would end the
+experiment before it starts. Recreating also picks up any change to the probe itself.
+
+Fresh export, fresh session, same suite — same commands as step 1. This time the agent may iterate:
 
 ### Prompt F — attack with feedback
 
