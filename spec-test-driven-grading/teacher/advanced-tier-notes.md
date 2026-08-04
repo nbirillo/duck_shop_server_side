@@ -93,6 +93,33 @@ the readability of one-assertion-per-test suites for the skill of choosing the d
 and it only works while the graded set stays hidden: a learner who knew the mutants would simply
 write those seven.
 
+### Nothing in the archive satisfies it (2026-08-04)
+
+Every archived suite scored against the graded set with `-PtestBudget=12`:
+
+| Suite | Tests | Graded score | Must-kills per test |
+| --- | --- | --- | --- |
+| greedy cover of the graded set | 7 | 11/11 | 1.57 |
+| qwen2.5-coder:1.5b | **10 — within budget** | 4/11 | 0.40 |
+| qwen2.5-coder:7b | 13 | 5/11 | 0.38 |
+| this module's authored suite | 14 | 8/11 | 0.57 |
+| qwen2.5-coder:14b | 15 | 5/11 | 0.33 |
+| qwen2.5-coder:32b | 15 | 7/11 | 0.47 |
+| Claude, blind harden | 47 | 11/11 | 0.23 |
+| Claude, harden with feedback | 47 | 10/11 | 0.21 |
+
+The only suite that fits is the weakest one, and it fits because it barely tests anything. Nobody in
+the archive achieves both at once — which is what makes the constraint worth setting rather than
+decorative.
+
+Note also that efficiency runs *backwards* against strength here: the frontier suites are the least
+economical per mutant killed, roughly a seventh of what the greedy cover manages. That is not a
+criticism of them — a test suite is documentation as well as a detector, and 47 readable tests may
+well be the better artifact to maintain. It does mean the budget measures something the mutation
+score alone never sees, and that no agent has yet been asked to optimise for it. Whether any can is
+still open: these numbers are the budget applied *after the fact*, to suites written without knowing
+about it.
+
 ## 3. The adversary
 
 `runAgent -Pmode=attack` then `verifyAttack -Pagent=<name> --continue`. A second agent is given the
