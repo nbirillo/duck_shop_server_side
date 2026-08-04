@@ -3,6 +3,7 @@ package org.jetbrains.kotlin.course.duck.shop.admission
 import java.io.File
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 /**
  * Records what THIS module's algebra answers for a fixed set of cases, so two modules can be
@@ -24,15 +25,42 @@ class DifferentialProbe {
 
     @Test
     fun record() {
+        File("build/probe.txt").apply { parentFile.mkdirs() }.writeText(corpus().joinToString("\n") + "\n")
+    }
+
+    /**
+     * Guards the generator's reach. Twice now a defect has been invisible not because the check was
+     * wrong but because one bound was too small — first combinator arity, then the argument
+     * [MinAccessories] is built with — and both times the report said "identical" about a real hole.
+     * A silent blind spot is the worst possible failure for an oracle, so the ranges this file claims
+     * to cover are asserted rather than assumed: narrow one and this test says so.
+     */
+    @Test
+    fun `the corpus reaches the values it claims to`() {
+        val cases = corpus()
+        fun some(what: String, predicate: (String) -> Boolean) =
+            assertTrue(cases.any(predicate), "no probed case has $what — the check is blind to it")
+
+        some("a negative price") { it.contains("price=-") }
+        some("an empty required accessory name") { it.contains("RequiresAccessory(\"\")") }
+        some("a duck wearing four or more accessories") {
+            it.substringAfter("accessories=[").substringBefore(']').count { c -> c == ',' } >= 3
+        }
+        // Combinator arity shares MAX_WIDTH with the accessory count, so the check above covers it.
+        some("a MinAccessories demanding more than three") {
+            Regex("MinAccessories\\((\\d+)\\)").findAll(it).any { m -> m.groupValues[1].toInt() > 3 }
+        }
+    }
+
+    private fun corpus(): List<String> {
         val random = Random(SEED)
-        val lines = (1..CASES).map { index ->
+        return (1..CASES).map { index ->
             val (policy, description) = randomPolicy(random, depth = 3)
             val duck = randomDuck(random)
             val verdict = runCatching { policy.admits(duck) }
                 .fold({ it.toString() }, { "threw ${it::class.simpleName}" })
             "$index\t$description | ${describe(duck)} -> $verdict"
         }
-        File("build/probe.txt").apply { parentFile.mkdirs() }.writeText(lines.joinToString("\n") + "\n")
     }
 
     private fun randomDuck(random: Random): Duck = Duck(
@@ -70,7 +98,11 @@ class DifferentialProbe {
             1 -> random.nextInt(-1, 12).let { MaxBudget(it) to "MaxBudget($it)" }
             2 -> ACCESSORY_NAMES[random.nextInt(ACCESSORY_NAMES.size)]
                 .let { RequiresAccessory(it) to "RequiresAccessory(\"$it\")" }
-            else -> random.nextInt(0, 4).let { MinAccessories(it) to "MinAccessories($it)" }
+            // Every bound here is a blind spot: a leaf the generator never builds with a given
+            // argument is a leaf no disagreement can be found in. This one has to reach past the
+            // longest accessory list [MAX_WIDTH] produces, or a policy counting only the first few
+            // accessories answers identically on everything the probe can construct.
+            else -> random.nextInt(0, MAX_WIDTH + 1).let { MinAccessories(it) to "MinAccessories($it)" }
         }
 
     private fun describe(duck: Duck): String =

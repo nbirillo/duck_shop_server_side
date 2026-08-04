@@ -225,5 +225,55 @@ Two things to carry forward:
   verbatim; it is the clearest example in the whole module of a metric shaping the work rather than
   describing it.
 
-**Still owed:** round 2 (prompt F, with feedback) to see whether feedback narrows the attacker the way
-it narrowed the hardener, and a re-run of the local Ollama matrix under the budget.
+### Round 2, with feedback: succeeded on the first iteration
+
+Prompt F, fresh export, same suite. The attack got through immediately — suite green at 47/47, probe
+disagreeing in 45 of 2000 — so **the feedback loop never engaged and the Goodhart question is still
+open for attackers.** We did not learn whether a visible disagreement count narrows an adversary,
+because this one never needed a second look.
+
+The attack itself is more economical than the blind one: a single change, `duck.price >= 0 &&
+duck.price <= maxPrice`, on the reasoning that a negatively priced duck has no meaningful price. The
+suite misses it because every duck in it costs 0 or more — 0, 1, 20, 30, 40, 60, 100, 10 000. The
+boundary *at* the limit and one *above* it are both pinned; the bottom of the range is not.
+
+To test the anchoring question properly, the suite has to be patched against the known holes first,
+so that iteration is actually required. That is the next run, not a repeat of this one.
+
+### The real finding: four holes, all the same shape
+
+Between the two rounds the agents named four gaps, and all four check out. Two they exploited, two
+they described and I confirmed:
+
+| Hole | Found | Verified |
+| --- | --- | --- |
+| `RequiresAccessory("")` admits everyone | round 1, exploited | 45/2000 |
+| `MaxBudget` refusing negative prices | rounds 1 and 2, exploited | 45/2000 |
+| `AllOf` consulting only `policies.take(3)` | round 1, declined as unmeasurable | 17/2000 |
+| `MinAccessories` counting only the first three | round 2, described | 37/2000 |
+
+Not one is a code perturbation. Every one is **an input value the suite never constructs**: an empty
+string, a negative number, a collection longer than three. That is why mutation testing scored the
+suite 11/11 and missed all four — a mutant is a change to the code, so it can only be caught or
+missed *within the inputs the suite already builds*. Mutation testing measures how sharply a suite
+discriminates over the values it imagines. It says nothing about the values it never imagined.
+
+That sentence is the one to put in front of learners, and it is what the adversary adds that no
+catalog can.
+
+### The oracle's own blind spots, twice
+
+Widening the generator after round 1 was not enough. `MinAccessories` was still being built with
+arguments 0..3, so a policy counting only the first three accessories answered identically on every
+case the probe could construct — a second silent false negative, in a different dimension of the same
+generator, found one step after fixing the first.
+
+Every bound in the generator is a blind spot, so the ranges are now **asserted rather than assumed**:
+`DifferentialProbe` carries a second test that fails if the corpus does not actually contain a
+negative price, an empty required name, a duck wearing four or more accessories, and a
+`MinAccessories` above three. Narrow a bound and the build says so instead of quietly going blind.
+Checked by narrowing `MAX_WIDTH` back to 3 and watching it fail.
+
+**Still owed:** round 3 — patch the suite against these four, then attack again, which is the run that
+would actually answer the anchoring question; and the local Ollama matrix written *under* the budget
+rather than measured against it afterwards.
