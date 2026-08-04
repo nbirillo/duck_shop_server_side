@@ -267,6 +267,18 @@ abstract class RunAgentTask @Inject constructor(
             appendLine("```")
             appendLine()
             append("Verify and harden it, per the output contract.")
+            // The budget is only meaningful if the agent knows about it while writing. Measuring an
+            // unconstrained suite against a ceiling afterwards says how economical agents happen to
+            // be; telling them first asks whether they can choose.
+            prop("testBudget")?.toIntOrNull()?.let { budget ->
+                appendLine()
+                appendLine()
+                append(
+                    "Keep the suite to at most $budget tests. That is a hard limit, so spend them on the " +
+                        "cases that tell correct code apart from wrong code, and drop anything that only " +
+                        "repeats a distinction another test already makes.",
+                )
+            }
         }
     }
 

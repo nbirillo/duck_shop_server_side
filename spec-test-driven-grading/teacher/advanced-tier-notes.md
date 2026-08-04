@@ -93,6 +93,36 @@ the readability of one-assertion-per-test suites for the skill of choosing the d
 and it only works while the graded set stays hidden: a learner who knew the mutants would simply
 write those seven.
 
+### Told the budget in advance, the local tier just writes less (2026-08-04)
+
+`runAgent -Pmode=verify-harden` now appends the limit to the prompt when `-PtestBudget` is set, so the
+agent knows about it while writing rather than meeting it afterwards. The whole Ollama matrix, rerun
+at `-PtestBudget=12` and scored against the graded set:
+
+| Model | Unconstrained | Under the budget |
+| --- | --- | --- |
+| qwen2.5-coder:1.5b | 10 tests, 4/11 | 10 tests, 4/11 |
+| llama3.2:3b | did not compile | 12 tests, 4/11 — but **baseline invalid**, one test contradicts `:core` |
+| qwen2.5-coder:7b | 13 tests, 5/11 | 10 tests, **4/11** |
+| qwen2.5-coder:14b | 15 tests, 5/11 | 10 tests, **4/11** |
+| qwen2.5-coder:32b | 15 tests, 7/11 | 12 tests, **5/11** |
+
+Every one of them now fits. Every one that had anything to lose lost it. They obey the constraint by
+writing fewer tests, not by choosing better ones — 32b's efficiency even slipped, from 0.47 must-kills
+per test to 0.42. The budget does not make a weak agent sharper; it makes it smaller.
+
+(Amusing side effect: llama3.2:3b compiles for the first time. Its earlier suite failed on duplicate
+test names, and a shorter suite has fewer chances to repeat one. Its baseline is still red, so the
+4/11 is honest arithmetic on a broken suite.)
+
+So the budget joins the other two: **all three advanced-tier elements are frontier-only.** A learner
+working with a local model gets nothing from any of them, which is worth saying once, plainly, in the
+tier's framing rather than discovering three times.
+
+The target is provably reachable, though, which matters for fairness: the structurally hardened suite
+written for round 4 scores **11/11 on the graded set with 11 tests**, and 10/10 on the conformant
+variants at the same time. Twelve is not a trick. Still untested: a frontier agent asked to hit it.
+
 ### Nothing in the archive satisfies it (2026-08-04)
 
 Every archived suite scored against the graded set with `-PtestBudget=12`:
