@@ -61,7 +61,8 @@ abstract class MutationReportTask @Inject constructor(
         // A suite that is red on the unmutated :core would "kill" every mutant with that same
         // failure, so validity comes first — this mirrors step 1 of the exercise. Tests that already
         // fail on the correct code are excluded below, so the score stays honest either way.
-        val baselineFailures = failingTests(root.resolve("$outDir/$BASELINE/build/test-results/test"))
+        val baselineResults = root.resolve("$outDir/$BASELINE/build/test-results/test")
+        val baselineFailures = failingTests(baselineResults)
         val baseline = when {
             baselineFailures == null -> Status.NOT_RUN
             baselineFailures.isEmpty() -> Status.SURVIVED
@@ -161,12 +162,34 @@ abstract class MutationReportTask @Inject constructor(
                     if (falseAlarms == 0) "." else ", $falseAlarms false alarm(s).",
             )
         }
+        // The size of the suite, and the budget the advanced tier of 11.2 puts on it. Without a
+        // ceiling a suite can reach a perfect score by writing a test per case it can think of;
+        // spending a fixed number of tests forces the learner to pick the discriminating ones.
+        val tests = countTests(baselineResults)
+        val budget = providers.gradleProperty("testBudget").orNull?.toIntOrNull()
+        val overBudget = budget != null && tests != null && tests > budget
+        if (tests != null) {
+            logger.lifecycle(
+                "Suite size: $tests test(s)" + when {
+                    budget == null -> "."
+                    overBudget -> " — over the budget of $budget by ${tests - budget}."
+                    else -> " — within the budget of $budget."
+                },
+            )
+        }
         if (baseline != Status.SURVIVED) {
             logger.lifecycle("The baseline is not green, so the numbers above cannot be trusted — see above.")
         }
         if (notRun > 0) logger.lifecycle("$notRun entr(y/ies) never ran — the numbers above are incomplete.")
+        if (overBudget) {
+            logger.lifecycle(
+                "Cut the suite down to $budget: look for tests that cover the same distinction more than " +
+                    "once, and keep the one that discriminates.",
+            )
+        }
 
-        val clean = killed == mustKill.size && falseAlarms == 0 && notRun == 0 && baseline == Status.SURVIVED
+        val clean = killed == mustKill.size && falseAlarms == 0 && notRun == 0 &&
+            baseline == Status.SURVIVED && !overBudget
         when {
             clean && conformanceOnly ->
                 logger.lifecycle("No test pins a detail the contract leaves free. ✅")
@@ -178,6 +201,15 @@ abstract class MutationReportTask @Inject constructor(
             )
             else -> logger.lifecycle(
                 "Strengthen the suite: each surviving mutant is a behaviour no test pins down.",
+            )
+        }
+
+        // Naming a budget is opting in to it, so exceeding it fails on its own rather than only under
+        // -PmutantsStrict. The whole report is printed above first, so the failure hides nothing.
+        if (overBudget) {
+            error(
+                "Suite size $tests exceeds -PtestBudget=$budget. The budget is part of the task: a suite " +
+                    "that pins the contract in fewer tests is the one worth keeping.",
             )
         }
 
@@ -210,6 +242,14 @@ abstract class MutationReportTask @Inject constructor(
         val failing = failingTests(resultsDir) ?: return Outcome(Status.NOT_RUN, emptySet())
         val new = failing - baselineFailures
         return Outcome(if (new.isNotEmpty()) Status.KILLED else Status.SURVIVED, new)
+    }
+
+    /** How many tests the suite contains, read off the baseline run, or null if it did not run. */
+    private fun countTests(resultsDir: File): Int? {
+        val xmls = resultsDir.listFiles { f -> f.name.startsWith("TEST-") && f.extension == "xml" }
+            ?: return null
+        if (xmls.isEmpty()) return null
+        return xmls.sumOf { xml -> xml.readText().split("<testcase ").size - 1 }
     }
 
     /** Names of the tests that failed or errored in a run, or null if the run produced no results. */

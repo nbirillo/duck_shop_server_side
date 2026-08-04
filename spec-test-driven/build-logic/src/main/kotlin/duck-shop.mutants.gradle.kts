@@ -20,7 +20,7 @@ tasks.register<GenerateMutantsTask>("generateMutants") {
 tasks.register<MutationReportTask>("verifyMutants") {
     group = "verification"
     description = "Mutation testing: run a suite against every mutant and report the mutation score. " +
-        "Params: [-PmutantTests=learner|<test source dir>] [-PmutantsStrict]."
+        "Params: [-PmutantTests=learner|<test source dir>] [-PtestBudget=<n>] [-PmutantsStrict]."
     catalogPath.convention(providers.gradleProperty("mutantsCatalog").orElse("mutants/catalog.json"))
     outPath.convention(providers.gradleProperty("mutantsOut").orElse("mutants"))
     // Task paths are resolved lazily, so the mutant modules do not need to be evaluated yet.
