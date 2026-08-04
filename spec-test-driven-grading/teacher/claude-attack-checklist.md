@@ -112,7 +112,45 @@ search. The probe reports the *number* of disagreeing cases, which is a target a
 towards; a run that maximises that number rather than finding a subtle single case would be the same
 Goodhart effect in a new place, and worth writing up.
 
-## 4. What to record
+## 4. Round 3 — against a suite that already knows
+
+Rounds 1 and 2 both broke the suite on their first try, so neither told us anything about iteration.
+Round 3 removes the easy answers first: `hardened/round3-target/` is the blind suite with five tests
+added, closing all four holes the two rounds surfaced — the empty required name, prices below zero,
+combinators past the third policy, and `MinAccessories` past the third accessory. It is 52 tests,
+still 11/11 on the graded mutants, still 10/10 on the conformant variants, and it catches every
+attack produced so far. Like the other hardened suites it is git-ignored, so it exists only in the
+working checkout.
+
+Now the outcome is genuinely open, and either answer is worth having: another hole means the loop has
+not converged and the adversary keeps its teeth; nothing found, after a real attempt, means this
+algebra can be pinned down completely and the escalation has to come from depth instead.
+
+Run **both regimes on this same suite**, blind first, in separate exports and separate sessions —
+that is the comparison rounds 1 and 2 could not give us.
+
+```bash
+cd ~/IdeaProjects/duck_shop_server_side_slides/duck-shop
+rm -rf ~/IdeaProjects/duck-shop-attack-run && mkdir -p ~/IdeaProjects/duck-shop-attack-run
+git archive HEAD spec-test-driven | tar -x -C ~/IdeaProjects/duck-shop-attack-run
+cp -R spec-test-driven/hardened/round3-target \
+      ~/IdeaProjects/duck-shop-attack-run/spec-test-driven/hardened/
+```
+
+Prompts E and F unchanged, with `hardened/claude-code-blind` replaced by `hardened/round3-target`
+throughout. Score with:
+
+```bash
+./gradlew prepareAttack -Pagent=claude-code -PmutantTests=hardened/round3-target/src/test/kotlin
+./gradlew verifyAttack  -Pagent=claude-code -PmutantTests=hardened/round3-target/src/test/kotlin --continue
+```
+
+What to compare afterwards: whether the feedback run needed more than one iteration, whether it found
+the same hole as the blind one, and whether it started chasing the probe's disagreement count rather
+than the subtlest case. That count is exactly the sort of number a capable agent optimises towards,
+and it is the last untested corner of the Goodhart story.
+
+## 5. What to record
 
 In [`advanced-tier-notes.md`](advanced-tier-notes.md), next to the local-model table: which round, what
 the attack changed, whether the suite caught it, how many of the 2000 probed cases disagreed, and the
