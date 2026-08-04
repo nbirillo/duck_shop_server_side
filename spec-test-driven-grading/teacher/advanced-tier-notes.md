@@ -402,5 +402,50 @@ corpus is now **20 000 cases**, which costs nothing measurable (the probe still 
 second) and moves the same two attacks to 91 and 290. Numbers recorded before this change were taken
 at 2000 and are not directly comparable.
 
-**Still owed:** the structurally hardened round, and the local Ollama matrix written *under* the budget
-rather than measured against it afterwards.
+### Round 4: structural hardening held everywhere except one seam
+
+`round4-target` is the suite rebuilt the structural way — every interesting value in one shared
+corpus, the combinators checked at every arity with the deciding policy at every position, each leaf
+pinned as a formula rather than by examples. It is **11 tests**, scores 11/11 on the graded set, 10/10
+on the variants, fits the budget, and catches all six attacks that came before it.
+
+It fell anyway, first attempt, 239 disagreements in 20 000 — but the attack had to work for it, and
+the agent's own account of what it had to discard is the most useful part of the run: symmetric
+`trim()` (indistinguishable from `:core`, so invisible even to the probe), case-insensitive matching,
+`startsWith`, `contains`, `distinct()` in `MinAccessories`, "negative price means free" in
+`MaxBudget`, an off-by-one tolerance on the budget, "the last policy decides", "exactly one policy
+decides" — the structural suite catches every one.
+
+What got through is a **one-sided `trim()`**: normalise the name the policy requires, leave the name
+the duck wears alone. A duck wearing `Accessory("Scarf ")` no longer satisfies
+`RequiresAccessory("Scarf ")`.
+
+The suite covered that value. It had `"Scarf "` in `names`. But `names` fed only the *argument* side —
+no duck in the corpus ever wore a padded name — so the padded string was permanently in the "must not
+match" role, where a trimmed comparison and an exact one agree. **The axis looked covered and was
+covered in one direction only.**
+
+So the escalation continues, and it is getting sharper each time:
+
+| Round | How the suite was hardened | What got through |
+| --- | --- | --- |
+| 3 | one test per counterexample | a **missing combination** — empty name × `MinAccessories` |
+| 4 | one shared corpus, parameterised | a **role asymmetry** — a value present as an argument, never as data |
+
+That is the finding to build the exercise's framing on. Each round closes a class of defect and
+uncovers a subtler one, and the subtler one is always about a *relationship* between axes rather than
+a missing value on any single axis.
+
+### Round 5 is the terminating experiment
+
+`round5-target` fixes the seam: both sides are now built from one `names` alphabet, so every name is
+worn by some duck and required by some policy, and the alphabet gains ` hat` and `hat ` so padding
+appears in both roles. It also adds a mid-range price, a three-accessory duck and distinct duck names,
+which closes the three gaps the round-4 attacker listed as reachable only by a magic-number backdoor.
+Still 11 tests, still 11/11 graded, still 10/10 conformant, and it catches all seven attacks to date.
+
+The round-4 agent predicted that after this fix only class (b) attacks remain — arbitrary special
+cases on a value the corpus does not contain. Round 5 tests that prediction, and either answer ends
+the line cleanly: another plausible defect means the escalation continues and "how far can you push
+it" is the honest framing; only a backdoor means the exercise has a definable ceiling, reached when a
+suite pins the contract as a formula over an alphabet used symmetrically in every role.
