@@ -274,6 +274,48 @@ negative price, an empty required name, a duck wearing four or more accessories,
 `MinAccessories` above three. Narrow a bound and the build says so instead of quietly going blind.
 Checked by narrowing `MAX_WIDTH` back to 3 and watching it fail.
 
-**Still owed:** round 3 — patch the suite against these four, then attack again, which is the run that
-would actually answer the anchoring question; and the local Ollama matrix written *under* the budget
-rather than measured against it afterwards.
+### Round 3: the patched suite fell too — to a hole of a new kind
+
+`round3-target` closes all four earlier holes, scores 11/11 on the graded mutants, 10/10 on the
+variants, and catches every attack built before it. It lasted one attempt: **suite green at 52/52,
+probe disagreeing in 21 of 2000.**
+
+The change is one line in `MinAccessories` — `accessories.count { it.name.isNotBlank() } >= min`
+instead of `accessories.size >= min`, so an accessory with a blank name does not count towards the
+minimum. What makes it different from everything before is where it lives. The suite *does* build an
+accessory with an empty name, and it *does* exercise `MinAccessories` past the third accessory — but
+never both at once. Empty names appear only in the `RequiresAccessory` test; every duck fed to
+`MinAccessories` wears named accessories.
+
+So the first four holes were **missing ranges**, and this one is a **missing combination**. That
+matters for what we tell learners about convergence: closing a range is bounded work, and there are
+only so many ranges, but the pairs of ranges grow quadratically and the triples faster still. The
+adversary is not running out of room; it moved up a level. That is the strongest evidence we have
+that the loop does not converge cheaply — and the clearest reason the exercise should be framed as
+"how far can you push it" rather than "get to green".
+
+### But this run was not blind, and the reason generalises
+
+Two things went wrong with the method, both worth keeping.
+
+The session ran against the **working checkout instead of the export**, so the two previous attacks,
+every other agent's suite, and `attacks/reference/build/probe.txt` — two thousand correct verdicts —
+were all on disk, along with this file one directory up. What rescues the finding is that the hole it
+reports is *not* in these notes: the four listed here are exactly the ones already closed, and blank
+names inside `MinAccessories` is new. It went past whatever it may have read.
+
+The second problem is the interesting one. The prompt forbade *running Gradle tasks*, and it complied
+— then compiled both variants with `kotlinc`, ran the suite by reflection and diffed the two probe
+corpora by hand. It rebuilt the oracle. **A restriction on tools is not a restriction on
+information**: for a capable agent, "do not run the checker" only removes the convenience. Either the
+blind prompt must forbid reconstructing the check by any means, or — more honestly — we should accept
+that the blind regime is unenforceable against a strong agent and stop claiming it. For a *learner*
+the instruction still works, because the point there is pedagogical sequencing rather than
+containment; that distinction belongs in the teacher notes rather than in the student README.
+
+So the blind-versus-feedback comparison on a single suite is **still not done.** What this run
+actually measured is a self-served feedback regime that succeeded on its first submitted attempt.
+
+**Still owed:** an honest blind round on `round3-target`, run in a fresh export with the reconstruction
+loophole closed in the prompt; the matching feedback round; and the local Ollama matrix written
+*under* the budget rather than measured against it afterwards.
