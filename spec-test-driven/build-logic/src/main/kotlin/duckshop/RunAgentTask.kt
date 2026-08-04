@@ -163,7 +163,7 @@ abstract class RunAgentTask @Inject constructor(
         outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
-                "attack" -> attackBuildScript(root, written, attackSuite)
+                "attack" -> attackBuildScript(root, outDir, attackSuite)
                 else -> CONSUMER_BUILD_SCRIPT
             },
         )
@@ -306,14 +306,34 @@ abstract class RunAgentTask @Inject constructor(
      * the change came from a model rather than from a catalog. It also compiles the differential
      * probe, so `verifyAttack` can compare its answers with the reference module's.
      */
-    private fun attackBuildScript(root: File, written: List<String>, suitePath: String): String {
+    private fun attackBuildScript(root: File, outDir: File, suitePath: String): String {
         val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
-        val replaced = written.filter { coreBase.resolve(it).isFile }
-        if (replaced.size != written.size) {
+        val attackBase = outDir.resolve("src/main/kotlin/$packagePath")
+        val declaredByAttack = attackBase.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { declarations(it.readText()) }
+            .toSet()
+
+        // Which :core files the attack has taken over. Deciding this by the class names it declares
+        // rather than by the file name it claimed keeps weak models in the measurement: they routinely
+        // drop the `// FILE:` marker, and inferring the target is wrapping, not logic. A file is
+        // replaced only if EVERY declaration in it was rewritten — excluding one whose other classes
+        // nobody supplied would simply delete them.
+        val replaced = coreBase.listFiles { f: File -> f.isFile && f.extension == "kt" }
+            .orEmpty()
+            .sortedBy { it.name }
+            .filter { file ->
+                val declared = declarations(file.readText())
+                declared.isNotEmpty() && declaredByAttack.containsAll(declared)
+            }
+            .map { it.name }
+
+        val unclaimed = declaredByAttack - replaced.flatMap { declarations(coreBase.resolve(it).readText()) }.toSet()
+        if (replaced.isEmpty() || unclaimed.isNotEmpty()) {
             logger.warn(
-                "[runAgent] the model returned file(s) that do not exist in :core: " +
-                    "${written - replaced.toSet()}. They will clash with the originals and the module " +
-                    "will not compile — inspect the output before scoring.",
+                "[runAgent] the attack declares ${declaredByAttack.sorted()} but only fully replaces " +
+                    "${replaced.ifEmpty { "nothing" }}. Declarations that clash with a :core file still " +
+                    "compiled in will not build — inspect attacks/${outDir.name}/src before scoring.",
             )
         }
         val excludes = replaced.joinToString("\n        ") { """kotlin.exclude("**/$it")""" }
@@ -489,6 +509,14 @@ abstract class RunAgentTask @Inject constructor(
             append(body)
         }
     }
+
+    /** Names of the top-level types a Kotlin source declares — enough to tell two files apart. */
+    private fun declarations(code: String): Set<String> =
+        Regex(
+            "^(?:@\\w+\\s+)*(?:public |internal |private )?(?:abstract |open |sealed |data |value |fun )*" +
+                "(?:class|interface|object)\\s+(\\w+)",
+            RegexOption.MULTILINE,
+        ).findAll(code).map { it.groupValues[1] }.toSet()
 
     private fun sha256(s: String): String =
         MessageDigest.getInstance("SHA-256").digest(s.toByteArray())

@@ -118,5 +118,40 @@ test would claim every attack as a catch.
 machinery can be demonstrated without an API key: the flawed starter suite accepts it while the probe
 disagrees in 36 of 2000 cases, and Claude's blind suite catches it.
 
-**Still owed:** a live `-Pmode=attack` run — the mode is dry-verified only — and a re-run of the local
-Ollama matrix under the budget.
+### Measured: the local tier cannot attack (2026-08-04)
+
+All five Ollama models were run live with `-Pmode=attack` against Claude's blind 47-test suite — the
+strongest artifact we have, 11/11 on the graded mutants. None of them produced a usable attack:
+
+| Attacker | What it returned | Verdict |
+| --- | --- | --- |
+| qwen2.5-coder:1.5b | `:core` verbatim | identical to `:core` — no attack |
+| llama3.2:3b | `:core` verbatim | identical to `:core` — no attack |
+| qwen2.5-coder:7b | `:core` verbatim | identical to `:core` — no attack |
+| qwen2.5-coder:14b | **refused the task** | no code at all |
+| qwen2.5-coder:32b | `RequiresAccessory` admits any duck wearing anything, commented `// Incorrect implementation` | differs in 222/2000, but caught by every suite tried |
+
+Only 32b understood the task, and its attack is blunt rather than subtle: it was caught by Claude's
+suite (3 tests), by its own hardened suite (1 test), and even by the flawed starter suite (3 tests).
+
+So the adversary is a **frontier-versus-frontier** exercise. That is the same asymmetry the variant
+check has, and it should be stated in the tier's framing: a learner with only a local model can do
+the basic tier and the budget, but not this. Do not present the adversary as optional-but-equivalent
+— without a capable attacker it produces a reassuring green that means nothing.
+
+The 14b refusal is worth keeping as a per-agent note in its own right: asked to write code that
+deliberately violates a specification, it answered *"I will not provide an implementation that
+deliberately violates the specification or tests in a way that could cause harm or confusion."* An
+adversarial-testing exercise can trip a model's refusal behaviour even though the task is ordinary
+test engineering. Learners will hit this, and the materials should say what it looks like and that
+rephrasing the request as "find an implementation this suite fails to distinguish from the correct
+one" usually gets past it.
+
+Two harness facts from the same runs: only 32b honoured the `// FILE:` contract, so the attack
+builder infers which `:core` file was taken over from the **class names declared** in the reply, and
+replaces a file only when every declaration in it was rewritten. Three of the five models returned
+`:core` unchanged, which the probe reports as "identical" rather than as a pass — a copied reference
+is a failed attack, not a clean suite.
+
+**Still owed:** a live attack from a frontier agent, and a re-run of the local Ollama matrix under the
+budget.
