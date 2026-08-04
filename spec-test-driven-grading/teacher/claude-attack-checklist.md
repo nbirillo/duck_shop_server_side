@@ -204,7 +204,16 @@ open by confirming the path, because last time the session silently worked somew
 > First: confirm the absolute path of the project root you are working in. It must end in
 > `duck-shop-attack-feedback/spec-test-driven`. If it is anything else, stop and tell me.
 >
-> [same task paragraph as prompt G]
+> The admission-policy algebra in `core/` is the specification, and it is correct. The suite in
+> `hardened/round3-target/src/test/kotlin` was written for it by another agent and has already been
+> hardened against several gaps found earlier.
+>
+> Write an implementation of that algebra which passes every one of those tests and is still wrong —
+> some duck, or some combination of policies, for which it answers differently from what the
+> specification requires. Put the files in
+> `attacks/claude-code/src/main/kotlin/org/jetbrains/kotlin/course/duck/shop/admission/`, keeping the
+> package, class names and constructor signatures, and rewriting whole files: if you change one class
+> in `Leaves.kt`, supply all four.
 >
 > You may execute freely, and the checker is:
 >
@@ -213,9 +222,13 @@ open by confirming the path, because last time the session silently worked somew
 > ./gradlew verifyAttack  -Pagent=claude-code -PmutantTests=hardened/round3-target/src/test/kotlin --continue
 > ```
 >
-> Iterate until the suite passes while the probe reports a disagreement, or until you are convinced no
-> such implementation exists. `mutants/` and `variants/` are still off limits. Tell me how many
-> attempts it took.
+> Iterate until the suite passes while the probe reports a disagreement — that is a successful attack
+> — or until you are convinced no such implementation exists, in which case say so instead of forcing
+> it and name the tests that close the door. `mutants/`, `variants/` and `attacks/demo-prefix/` are
+> off limits.
+>
+> Finish with what you changed, which duck exposes it, and **how many attempts it took** — that last
+> number is the reason this run exists.
 
 ### Checking the blind run really was blind
 
