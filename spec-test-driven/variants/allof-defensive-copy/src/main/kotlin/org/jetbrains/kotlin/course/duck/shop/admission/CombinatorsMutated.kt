@@ -2,8 +2,6 @@
 //
 // Mutant allof-defensive-copy (conformant)
 //   Combinators.kt:  class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {  ->  class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n private val policies: List<AdmissionPolicy> = policies.toList()
-//
-// AllOf copies the list it is handed instead of holding on to the caller's.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

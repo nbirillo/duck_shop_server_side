@@ -9,8 +9,9 @@ agent. The student folder therefore holds only the task statement and the comman
 | --- | --- |
 | [`exercise-11.2-answer-key.md`](exercise-11.2-answer-key.md) | 11.2: the planted defect, the gaps, the two under-specifications, how to grade |
 | [`mutation-testing-notes.md`](mutation-testing-notes.md) | How the mutant machinery works, the graded catalog, why some mutants must survive, measured scores |
+| [`advanced-tier-notes.md`](advanced-tier-notes.md) | 11.2 advanced: the contract addendum, the conformant variants and what each one frees, the calibrated test budget, the adversary |
 | [`claude-run-checklist.md`](claude-run-checklist.md) | Step-by-step for the by-hand Claude Code measurement of 11.2, incl. what to clear out first |
-| [`running-api-agents.md`](running-api-agents.md) | `runAgent` (all four modes), `solutions/`, `compareAgents`, difficulty calibration |
+| [`running-api-agents.md`](running-api-agents.md) | `runAgent` (all five modes), `solutions/`, `compareAgents`, difficulty calibration |
 | [`running-advanced-agents.md`](running-advanced-agents.md) | Driving a strong interactive agent (Claude Code, Junie) without an API key, and the prompts |
 
 When the slides exist, the narrative parts of these notes become slide content; the commands and the

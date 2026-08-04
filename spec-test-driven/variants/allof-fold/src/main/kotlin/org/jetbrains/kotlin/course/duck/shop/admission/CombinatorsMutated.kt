@@ -2,8 +2,6 @@
 //
 // Mutant allof-fold (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.fold(true) { verdict, policy -> verdict && policy.admits(duck) }
-//
-// AllOf is written as a fold rather than with all {}.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

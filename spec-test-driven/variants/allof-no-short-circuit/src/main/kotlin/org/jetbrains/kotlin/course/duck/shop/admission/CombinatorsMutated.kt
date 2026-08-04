@@ -2,8 +2,6 @@
 //
 // Mutant allof-no-short-circuit (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.all { it }
-//
-// AllOf asks every policy instead of stopping at the first rejection.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

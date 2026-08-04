@@ -2,8 +2,6 @@
 //
 // Mutant anyof-no-short-circuit (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.any { it }
-//
-// AnyOf asks every policy instead of stopping at the first acceptance.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

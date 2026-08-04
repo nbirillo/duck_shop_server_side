@@ -2,8 +2,6 @@
 //
 // Mutant max-budget-negated (conformant)
 //   Leaves.kt:  override fun admits(duck: Duck): Boolean = duck.price <= maxPrice  ->  override fun admits(duck: Duck): Boolean = !(duck.price > maxPrice)
-//
-// MaxBudget states the same limit the other way round.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

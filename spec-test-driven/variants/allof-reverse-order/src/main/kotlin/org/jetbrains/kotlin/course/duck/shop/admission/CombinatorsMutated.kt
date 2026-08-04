@@ -2,8 +2,6 @@
 //
 // Mutant allof-reverse-order (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }  ->  override fun admits(duck: Duck): Boolean = policies.reversed().all { it.admits(duck) }
-//
-// AllOf consults its policies back to front.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

@@ -2,8 +2,6 @@
 //
 // Mutant min-accessories-count (conformant)
 //   Leaves.kt:  override fun admits(duck: Duck): Boolean = duck.accessories.size >= min  ->  override fun admits(duck: Duck): Boolean = duck.accessories.count() >= min
-//
-// MinAccessories counts the accessories instead of reading size.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

@@ -2,8 +2,6 @@
 //
 // Mutant requires-accessory-contains (conformant)
 //   Leaves.kt:  override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }  ->  override fun admits(duck: Duck): Boolean = accessoryName in duck.accessories.map { it.name }
-//
-// RequiresAccessory collects the names first and then looks for the required one.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

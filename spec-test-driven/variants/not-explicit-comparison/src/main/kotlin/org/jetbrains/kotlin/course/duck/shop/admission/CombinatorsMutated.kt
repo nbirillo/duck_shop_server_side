@@ -2,8 +2,6 @@
 //
 // Mutant not-explicit-comparison (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = !policy.admits(duck)  ->  override fun admits(duck: Duck): Boolean = policy.admits(duck) == false
-//
-// Not inverts by comparing against false rather than with !.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 

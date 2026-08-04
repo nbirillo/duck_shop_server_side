@@ -146,8 +146,10 @@ Reading of these numbers:
 - The authored suite of this module misses exactly those three. Worth showing to learners: mutation
   testing exposes gaps in a hand-written, test-first suite too.
 - On this algebra, mutation testing **discriminates the weak and mid tier but does not challenge a
-  frontier agent**. For strong agents the escalation still has to come from depth (11.7, the
-  API/OpenAPI scenario) or from harder mutants. Hence the rule in the exercise: mandatory after a
+  frontier agent**. That is what the advanced tier answers, and not with more mutants of the same
+  kind — see [`advanced-tier-notes.md`](advanced-tier-notes.md) for the three directions it adds
+  (conformant variants, a calibrated test budget, an adversary) and what each one measures. Depth
+  (11.7, the API/OpenAPI scenario) remains the other escalation. Hence the rule in the exercise: mandatory after a
   strong agent, optional after a weak one — the weak-agent learner is already fully occupied by
   verifying and hardening.
 - Still open: Claude in the *harden* regime rather than write-from-scratch. See

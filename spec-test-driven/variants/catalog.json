@@ -1,85 +1,75 @@
 {
-  "description": "CONFORMANT variants of the admission-policy algebra, for the advanced tier of exercise 11.2. Each entry rewrites one :core snippet WITHOUT changing what the algebra decides, so a suite that pins only the contract stays green on all of them; a test that fails here is a false alarm. Legality rests on the advanced tier's contract addendum: policies are pure, so evaluation order and the number of evaluations are outside the contract, and a combinator captures its list at construction. Two entries (allof-no-short-circuit, allof-defensive-copy) also appear in the mutant catalogs as spec-dependent: in the basic tier the learner decides those questions, in the advanced tier the addendum has decided them. Regenerate with ./gradlew generateVariants; score a suite with ./gradlew verifyVariants -PmutantTests=<learner|path> --continue.",
+  "description": "Conformant variants for the advanced tier of exercise 11.2. Each entry rewrites one snippet of a :core source file WITHOUT changing what the algebra decides; ./gradlew generateVariants turns it into a module that compiles the real :core with that one file swapped, and ./gradlew verifyVariants runs your suite against each. A suite that pins only the contract stays green on all of them, so a failure is reported as a false alarm together with the tests to relax. Entries carry no description on purpose — saying which behaviour each one frees would tell you which tests to drop before you have found out for yourself. What makes these legal is the contract addendum for this tier, and nothing else. Patterns match whole `override` lines, since the KDoc above them quotes the same expression.",
   "variants": [
     {
       "id": "allof-no-short-circuit",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
       "replace": "override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.all { it }",
-      "bucket": "conformant",
-      "what": "AllOf asks every policy instead of stopping at the first rejection."
+      "bucket": "conformant"
     },
     {
       "id": "anyof-no-short-circuit",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
       "replace": "override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.any { it }",
-      "bucket": "conformant",
-      "what": "AnyOf asks every policy instead of stopping at the first acceptance."
+      "bucket": "conformant"
     },
     {
       "id": "allof-reverse-order",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
       "replace": "override fun admits(duck: Duck): Boolean = policies.reversed().all { it.admits(duck) }",
-      "bucket": "conformant",
-      "what": "AllOf consults its policies back to front."
+      "bucket": "conformant"
     },
     {
       "id": "allof-memoized",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
       "replace": "private val decided = HashMap<Duck, Boolean>()\n\n    override fun admits(duck: Duck): Boolean = decided.getOrPut(duck) { policies.all { it.admits(duck) } }",
-      "bucket": "conformant",
-      "what": "AllOf caches its verdict per duck, so a repeated question consults nobody."
+      "bucket": "conformant"
     },
     {
       "id": "allof-defensive-copy",
       "file": "Combinators.kt",
       "find": "class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {",
       "replace": "class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n    private val policies: List<AdmissionPolicy> = policies.toList()",
-      "bucket": "conformant",
-      "what": "AllOf copies the list it is handed instead of holding on to the caller's."
+      "bucket": "conformant"
     },
     {
       "id": "allof-fold",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
       "replace": "override fun admits(duck: Duck): Boolean = policies.fold(true) { verdict, policy -> verdict && policy.admits(duck) }",
-      "bucket": "conformant",
-      "what": "AllOf is written as a fold rather than with all {}."
+      "bucket": "conformant"
     },
     {
       "id": "not-explicit-comparison",
       "file": "Combinators.kt",
       "find": "override fun admits(duck: Duck): Boolean = !policy.admits(duck)",
       "replace": "override fun admits(duck: Duck): Boolean = policy.admits(duck) == false",
-      "bucket": "conformant",
-      "what": "Not inverts by comparing against false rather than with !."
+      "bucket": "conformant"
     },
     {
       "id": "max-budget-negated",
       "file": "Leaves.kt",
       "find": "override fun admits(duck: Duck): Boolean = duck.price <= maxPrice",
       "replace": "override fun admits(duck: Duck): Boolean = !(duck.price > maxPrice)",
-      "bucket": "conformant",
-      "what": "MaxBudget states the same limit the other way round."
+      "bucket": "conformant"
     },
     {
       "id": "requires-accessory-contains",
       "file": "Leaves.kt",
       "find": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }",
       "replace": "override fun admits(duck: Duck): Boolean = accessoryName in duck.accessories.map { it.name }",
-      "bucket": "conformant",
-      "what": "RequiresAccessory collects the names first and then looks for the required one."
+      "bucket": "conformant"
     },
     {
       "id": "min-accessories-count",
       "file": "Leaves.kt",
       "find": "override fun admits(duck: Duck): Boolean = duck.accessories.size >= min",
       "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.count() >= min",
-      "bucket": "conformant",
-      "what": "MinAccessories counts the accessories instead of reading size."
+      "bucket": "conformant"
     }
   ]
 }

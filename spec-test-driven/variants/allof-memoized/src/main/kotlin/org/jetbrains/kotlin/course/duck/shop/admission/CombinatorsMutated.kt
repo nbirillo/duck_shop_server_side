@@ -2,8 +2,6 @@
 //
 // Mutant allof-memoized (conformant)
 //   Combinators.kt:  override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }  ->  private val decided = HashMap<Duck, Boolean>()\n\n override fun admits(duck: Duck): Boolean = decided.getOrPut(duck) { policies.all { it.admits(duck) } }
-//
-// AllOf caches its verdict per duck, so a repeated question consults nobody.
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 
