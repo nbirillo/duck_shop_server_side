@@ -10,6 +10,7 @@
 import duckshop.AttackReportTask
 import duckshop.GenerateMutantsTask
 import duckshop.MutationReportTask
+import duckshop.PrepareAttackTask
 
 tasks.register<GenerateMutantsTask>("generateMutants") {
     group = "duck-shop"
@@ -43,6 +44,15 @@ tasks.register<MutationReportTask>("verifyVariants") {
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
     dependsOn(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
+}
+
+// For an interactive agent, which writes the attacking sources itself and has no API call to hang
+// the scaffolding off. runAgent -Pmode=attack does the same thing for an API agent.
+tasks.register<PrepareAttackTask>("prepareAttack") {
+    group = "duck-shop"
+    description = "Turn hand-placed sources in attacks/<agent>/src/main into a module verifyAttack can " +
+        "score. Params: -Pagent=<name> [-PmutantTests=<dir>]."
+    agent.convention(providers.gradleProperty("agent"))
 }
 
 // The third direction, and the only one without a ceiling: an agent writes an implementation that
