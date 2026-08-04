@@ -22,8 +22,10 @@ internal const val BASELINE = "baseline"
  * @property file the `:core` file to mutate, relative to the admission package dir (e.g. `Leaves.kt`).
  * @property find the exact snippet to replace; must occur exactly once in [file].
  * @property replace what to put in its place.
- * @property bucket `must-kill` (a faithful suite has to kill it) or `spec-dependent`
- *   (survival is acceptable — the behaviour it changes is not part of the specification).
+ * @property bucket `must-kill` (a faithful suite has to kill it), `spec-dependent` (survival is
+ *   acceptable — the behaviour it changes is not part of the specification), or `conformant`
+ *   (a legal refactoring: the suite must stay GREEN, and a failure here is a FALSE ALARM — a test
+ *   pinning an implementation detail the contract leaves free).
  * @property what one line describing the injected defect; **optional**.
  * @property hint what kind of test kills it; printed for survivors. **Optional**.
  *
@@ -41,25 +43,33 @@ internal data class Mutant(
     val hint: String = "",
 ) {
     val mustKill: Boolean get() = bucket == MUST_KILL
+    val conformant: Boolean get() = bucket == CONFORMANT
 
     companion object {
         const val MUST_KILL = "must-kill"
         const val SPEC_DEPENDENT = "spec-dependent"
+        const val CONFORMANT = "conformant"
+
+        val BUCKETS = listOf(MUST_KILL, SPEC_DEPENDENT, CONFORMANT)
     }
 }
 
-/** Reads a mutant catalog (see `mutants/catalog.json`). */
+/**
+ * Reads a catalog of generated modules — `mutants/catalog.json` (injected defects) or
+ * `variants/catalog.json` (legal refactorings). The array is named after what the catalog holds, so
+ * either key is accepted; the entries have the same shape and the bucket says which way to read them.
+ */
 internal fun loadCatalog(catalog: File): List<Mutant> {
-    require(catalog.isFile) { "Mutant catalog not found: $catalog" }
-    val mutants = Json.parseToJsonElement(catalog.readText())
-        .jsonObject["mutants"]
+    require(catalog.isFile) { "Catalog not found: $catalog" }
+    val root = Json.parseToJsonElement(catalog.readText()).jsonObject
+    val mutants = (root["mutants"] ?: root["variants"])
         ?.jsonArray
-        ?: error("Mutant catalog $catalog has no \"mutants\" array")
+        ?: error("Catalog $catalog has no \"mutants\" or \"variants\" array")
 
     return mutants.map { element ->
         val o = element.jsonObject
         fun str(name: String): String =
-            o[name]?.jsonPrimitive?.content ?: error("Mutant entry in $catalog is missing \"$name\": $o")
+            o[name]?.jsonPrimitive?.content ?: error("Entry in $catalog is missing \"$name\": $o")
         fun optional(name: String): String = o[name]?.jsonPrimitive?.content.orEmpty()
         Mutant(
             id = str("id"),
@@ -67,8 +77,8 @@ internal fun loadCatalog(catalog: File): List<Mutant> {
             find = str("find"),
             replace = str("replace"),
             bucket = str("bucket").also {
-                require(it == Mutant.MUST_KILL || it == Mutant.SPEC_DEPENDENT) {
-                    "Mutant '${str("id")}' has bucket '$it' (use ${Mutant.MUST_KILL} or ${Mutant.SPEC_DEPENDENT})"
+                require(it in Mutant.BUCKETS) {
+                    "Mutant '${str("id")}' has bucket '$it' (use one of ${Mutant.BUCKETS})"
                 }
             },
             what = optional("what"),
