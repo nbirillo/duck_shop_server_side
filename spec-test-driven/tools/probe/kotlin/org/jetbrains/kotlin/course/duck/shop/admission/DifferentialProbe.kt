@@ -39,7 +39,9 @@ class DifferentialProbe {
         name = "duck-${random.nextInt(100)}",
         price = random.nextInt(-2, 12),
         hasKotlinAttribute = random.nextBoolean(),
-        accessories = List(random.nextInt(0, 4)) { Accessory(ACCESSORY_NAMES[random.nextInt(ACCESSORY_NAMES.size)]) },
+        accessories = List(random.nextInt(0, MAX_WIDTH)) {
+            Accessory(ACCESSORY_NAMES[random.nextInt(ACCESSORY_NAMES.size)])
+        },
     )
 
     /** A random policy tree, returned together with a rendering of itself — policies have no toString. */
@@ -58,7 +60,7 @@ class DifferentialProbe {
     }
 
     private fun children(random: Random, depth: Int): Pair<List<AdmissionPolicy>, String> {
-        val generated = List(random.nextInt(0, 3)) { randomPolicy(random, depth - 1) }
+        val generated = List(random.nextInt(0, MAX_WIDTH)) { randomPolicy(random, depth - 1) }
         return generated.map { it.first } to generated.joinToString(", ") { it.second }
     }
 
@@ -78,6 +80,14 @@ class DifferentialProbe {
     private companion object {
         const val SEED = 20260804L
         const val CASES = 2000
+
+        /**
+         * Exclusive upper bound on how many policies a combinator gets, and how many accessories a
+         * duck wears. Keep it generous. Whatever this generator cannot build, the check cannot see,
+         * so a narrow bound quietly turns "no disagreement found" into "no disagreement reachable" —
+         * and the generator is readable by whoever is attacking, since it compiles into their module.
+         */
+        const val MAX_WIDTH = 6
 
         /**
          * Deliberately includes names that differ only in case, only by a prefix, and an empty one:

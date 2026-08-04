@@ -153,5 +153,50 @@ replaces a file only when every declaration in it was rewritten. Three of the fi
 `:core` unchanged, which the probe reports as "identical" rather than as a pass — a copied reference
 is a failed attack, not a clean suite.
 
-**Still owed:** a live attack from a frontier agent, and a re-run of the local Ollama matrix under the
-budget.
+### Measured: the frontier attack succeeded (2026-08-04)
+
+Prompt E, blind, in a clean export, aimed at Claude's blind 47-test suite — the artifact that kills
+all 11 graded mutants and is therefore *complete* by mutation testing's own measure. The attack got
+past it: **suite PASSED, probe DIFFERS in 50 of 2000 cases.** It rewrote the leaves in two places the
+suite never constructs:
+
+- `RequiresAccessory("")` admits any duck. The suite checks case (`"Hat"`, `"HAT"`) and prefix
+  (`"hatband"`), but never builds a policy with an empty required name. Specification says false for a
+  bare duck; the attack says true.
+- `MaxBudget` with `price.coerceAtLeast(0)`. Every boundary in the suite is at 0/1, 39/40, 99/100 — no
+  duck costs less than nothing and no budget is negative. `MaxBudget(-1)` against a duck priced −2:
+  specification admits, the attack refuses.
+
+**This is the answer the tier was built to get.** Mutation testing was never the ceiling on this
+algebra; a perfect mutation score means "nothing the mutants know about is missing", and an adversary
+finds what they do not know about. Put the two numbers next to each other in the materials: 11/11 and
+still broken.
+
+### The probe's reach is itself a target — and it had a false negative
+
+The attacker read `tools/probe/kotlin/…/DifferentialProbe.kt` — nothing forbade it, and it compiles
+into the attacking module anyway — and picked its two defects *because they land inside the space the
+generator samples*. It also reported a third hole it deliberately did **not** exploit: the suite pins
+`AllOf`/`AnyOf` as boolean functions only for arities 0, 1 and 2, so an `AllOf` consulting
+`policies.take(3)` would pass — and the probe, which built children of length 0..2, could never have
+shown it.
+
+Checked, and it was right: that implementation passed the suite while the probe reported **IDENTICAL**.
+A real hole, reported as "not an attack". Fixed by raising the generator's width bound
+(`MAX_WIDTH = 6`, covering combinator arity and accessory-list length); the same implementation now
+disagrees in 17 of 2000 cases, and the frontier attack still shows at 44.
+
+Two things to carry forward:
+
+- **A "no disagreement" verdict is only as strong as the generator.** Whatever it cannot build, the
+  check cannot see. If the algebra grows, widen the probe before trusting a clean report — and say so
+  in the tier's framing, since the whole point of this exercise is not to mistake an instrument's
+  silence for a property of the code.
+- **This is Goodhart a third time**, after the mutation report and the practice tier: given a visible
+  measurement, a capable agent optimises against the measurement. Here it did so *articulately* — it
+  named the better attack and rejected it for being unmeasurable. That is worth quoting to learners
+  verbatim; it is the clearest example in the whole module of a metric shaping the work rather than
+  describing it.
+
+**Still owed:** round 2 (prompt F, with feedback) to see whether feedback narrows the attacker the way
+it narrowed the hardener, and a re-run of the local Ollama matrix under the budget.
