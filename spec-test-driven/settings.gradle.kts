@@ -24,3 +24,4 @@ autoDiscover("test-suites") // agent-generated test suites (runAgent -Pmode=test
 autoDiscover("hardened")    // agent-hardened suites (runAgent -Pmode=verify-harden)
 autoDiscover("mutants")     // mutation testing: :core with one injected defect (11.2, generateMutants)
 autoDiscover("variants")    // conformance check: :core rewritten without changing what it decides (11.2 advanced)
+autoDiscover("attacks")     // adversary: implementations that try to pass the suite and still be wrong (11.2 advanced)

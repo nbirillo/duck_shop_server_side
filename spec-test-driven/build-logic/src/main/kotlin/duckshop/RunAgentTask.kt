@@ -23,7 +23,7 @@ import javax.inject.Inject
 
 /**
  * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
- * Anthropic). Four modes:
+ * Anthropic). Five modes:
  *  - `impl`  (default)  — implement the :starter stubs; writes to `solutions/<agent>/`.
  *  - `tests`            — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
  *  - `verify-exercise`  — author-side: regenerate the flawed starter suite of exercise 11.2 from a
@@ -31,6 +31,9 @@ import javax.inject.Inject
  *  - `verify-harden`    — the 11.2 task itself: verify and harden that flawed suite. Archived to
  *    `hardened/<agent>/`, which is then scored for validity (`:hardened:<agent>:test`) and for
  *    coverage (`verifyMutants -PmutantTests=hardened/<agent>/src/test/kotlin`).
+ *  - `attack`           — the advanced tier of 11.2: given a suite, write an implementation that
+ *    PASSES it and still contradicts the specification. Writes to `attacks/<agent>/`, scored by
+ *    `verifyAttack -Pagent=<agent>`. Unlike a mutant catalog, an adversary cannot be saturated.
  *
  * The prompt is assembled here from :core (and, for impl, the :starter stubs) — never :grading —
  * so an API agent cannot copy a reference. In tests mode the prompt is deliberately generic
@@ -53,8 +56,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -66,13 +69,20 @@ abstract class RunAgentTask @Inject constructor(
             when (mode) {
                 "impl" -> "tools/agent-prompt.md"
                 "verify-harden" -> "tools/agent-prompt-verify.md"
+                "attack" -> "tools/agent-prompt-attack.md"
                 else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
         val stubs = if (mode == "impl") stubFiles(root) else emptyList()
+        // Which suite the attack has to get past. An attack is always aimed at one specific suite,
+        // so the path is baked into the generated module rather than re-read at verification time.
+        val attackSuite = prop("mutantTests")
+            ?.takeIf { it != "learner" }
+            ?: "exercises/write-tests/src/test/kotlin"
         val userPrompt = when (mode) {
             "impl" -> buildImplPrompt(root, stubs)
             "verify-harden" -> buildVerifyPrompt(root)
+            "attack" -> buildAttackPrompt(root, attackSuite)
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -81,6 +91,7 @@ abstract class RunAgentTask @Inject constructor(
                 // Archived per agent (instead of overwriting the exercise) so the same suite can be
                 // re-scored later — e.g. against the mutant set — without re-running the model.
                 "verify-harden" -> "hardened/$agent"
+                "attack" -> "attacks/$agent"
                 else -> "solutions/$agent"
             },
         )
@@ -146,10 +157,15 @@ abstract class RunAgentTask @Inject constructor(
         val written = when (mode) {
             "tests" -> writeTestSuite(outDir, content)
             "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
+            "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         outDir.resolve("build.gradle.kts").writeText(
-            if (mode == "impl") "plugins {\n    id(\"duck-shop.solution\")\n}\n" else CONSUMER_BUILD_SCRIPT,
+            when (mode) {
+                "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
+                "attack" -> attackBuildScript(root, written, attackSuite)
+                else -> CONSUMER_BUILD_SCRIPT
+            },
         )
         outDir.resolve("agent.json").writeText(
             buildJsonObject {
@@ -158,6 +174,7 @@ abstract class RunAgentTask @Inject constructor(
                 put("provider", provider)
                 put("model", model)
                 put("checkedOn", LocalDate.now().toString())
+                if (mode == "attack") put("attackedSuite", attackSuite)
                 put("temperature", 0)
                 put("promptSha256", sha256(systemPrompt + "\n" + userPrompt))
             }.toString() + "\n",
@@ -165,6 +182,8 @@ abstract class RunAgentTask @Inject constructor(
 
         val next = when (mode) {
             "tests" -> "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
+            "attack" -> "./gradlew verifyAttack -Pagent=$agent   (does the suite catch it, and does it " +
+                "really differ from :core?)"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
             else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
@@ -247,8 +266,126 @@ abstract class RunAgentTask @Inject constructor(
         }
     }
 
-    /** Parses `// FILE: <path>` + fenced blocks and writes each normalised file (impl mode). */
-    private fun writeSolutionFiles(agentDir: File, content: String, stubPaths: List<String>): List<String> {
+    /**
+     * The attack prompt: the algebra as it really is, plus the suite the attack has to get past.
+     * Handing over the correct sources is deliberate — they are given to the learner too, and an
+     * adversary that cannot see what the right answer is cannot aim at the gaps around it. What it
+     * never sees is a mutant catalog, which would name the defects we happen to care about.
+     */
+    private fun buildAttackPrompt(root: File, suitePath: String): String {
+        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
+        val algebra = listOf("Domain.kt", "Leaves.kt", "Combinators.kt")
+            .map { coreBase.resolve(it) }
+            .filter { it.exists() }
+            .joinToString("\n\n") { "// FILE: ${it.name}\n${it.readText()}" }
+        val suiteDir = root.resolve(suitePath)
+        val suite = suiteDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .sortedBy { it.path }
+            .joinToString("\n\n") { it.readText() }
+        require(suite.isNotBlank()) { "No test sources found under $suitePath — nothing to attack." }
+
+        return buildString {
+            appendLine("The specification, as the reference implementation states it:")
+            appendLine("```kotlin")
+            appendLine(algebra)
+            appendLine("```")
+            appendLine()
+            appendLine("The suite you have to pass:")
+            appendLine("```kotlin")
+            appendLine(suite)
+            appendLine("```")
+            appendLine()
+            append("Rewrite whichever of the files above you need, per the output contract.")
+        }
+    }
+
+    /**
+     * Build script for an attack module: the real `:core` sources with the rewritten files left out
+     * and the agent's versions compiled in their place — the same shape a mutant module has, except
+     * the change came from a model rather than from a catalog. It also compiles the differential
+     * probe, so `verifyAttack` can compare its answers with the reference module's.
+     */
+    private fun attackBuildScript(root: File, written: List<String>, suitePath: String): String {
+        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
+        val replaced = written.filter { coreBase.resolve(it).isFile }
+        if (replaced.size != written.size) {
+            logger.warn(
+                "[runAgent] the model returned file(s) that do not exist in :core: " +
+                    "${written - replaced.toSet()}. They will clash with the originals and the module " +
+                    "will not compile — inspect the output before scoring.",
+            )
+        }
+        val excludes = replaced.joinToString("\n        ") { """kotlin.exclude("**/$it")""" }
+
+        return """
+            // GENERATED by `./gradlew runAgent -Pmode=attack` — do not edit by hand.
+            //
+            // Compiles the real :core sources with ${replaced.joinToString(", ")} replaced by the
+            // attacking implementation under src/main, then runs the suite it was aimed at. The
+            // attack succeeds only if that suite stays GREEN while the probe shows the behaviour
+            // really did change.
+
+            plugins {
+                kotlin("jvm")
+            }
+
+            kotlin {
+                jvmToolchain(21)
+
+                sourceSets.named("main") {
+                    kotlin.srcDir(rootDir.resolve("core/src/main/kotlin"))
+                    $excludes
+                }
+                sourceSets.named("test") {
+                    // Same selector the mutant modules use, so one -PmutantTests drives the whole
+                    // check. The suite this attack was aimed at is recorded in agent.json.
+                    kotlin.srcDir(
+                        rootDir.resolve(
+                            when (val selected = providers.gradleProperty("mutantTests").getOrElse("learner")) {
+                                "learner" -> "$suitePath"
+                                else -> selected
+                            },
+                        ),
+                    )
+                    kotlin.srcDir(rootDir.resolve("tools/probe/kotlin"))
+                    kotlin.exclude("**/schedule/**")
+                }
+            }
+
+            repositories {
+                mavenCentral()
+            }
+
+            dependencies {
+                testImplementation(kotlin("test"))
+            }
+
+            tasks.test {
+                useJUnitPlatform()
+                // verifyAttack reads the XML results, so a suite that catches the attack must not
+                // break the build before the report is written.
+                ignoreFailures = true
+            }
+
+        """.trimIndent()
+    }
+
+    /**
+     * Parses `// FILE: <path>` + fenced blocks and writes each normalised file (impl and attack).
+     *
+     * [nameSuffix] renames the file on disk without changing the path reported back. An attack module
+     * excludes the `:core` file it replaces, and that exclude applies to every source dir in the set —
+     * so a replacement stored under its original name would be excluded along with the original and
+     * the class would simply vanish. Writing it as `LeavesAttack.kt` keeps both the exclude and the
+     * replacement working, exactly as the mutant generator does with `LeavesMutated.kt`.
+     */
+    private fun writeSolutionFiles(
+        agentDir: File,
+        content: String,
+        stubPaths: List<String>,
+        nameSuffix: String = "",
+    ): List<String> {
         val srcRoot = agentDir.resolve("src/main/kotlin/$packagePath")
         val fileBlock = Regex(
             "//\\s*FILE:\\s*(\\S+)[^\\n]*\\n```(?:kotlin|kt)?\\s*\\n(.*?)```",
@@ -271,7 +408,8 @@ abstract class RunAgentTask @Inject constructor(
         return units.map { (rel, code) ->
             val sub = rel.substringBeforeLast('/', "").replace('/', '.')
             val pkg = if (sub.isEmpty()) basePackage else "$basePackage.$sub"
-            val target = srcRoot.resolve(rel)
+            val onDisk = if (nameSuffix.isEmpty()) rel else rel.removeSuffix(".kt") + nameSuffix + ".kt"
+            val target = srcRoot.resolve(onDisk)
             target.parentFile.mkdirs()
             target.writeText(normalizeCode(code, pkg) + "\n")
             rel

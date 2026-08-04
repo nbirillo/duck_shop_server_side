@@ -7,6 +7,7 @@
 //   mutants/  — injected defects, a faithful suite KILLS them (exercise 11.2, both tiers)
 //   variants/ — legal refactorings, a faithful suite stays GREEN on them (11.2 advanced tier only)
 
+import duckshop.AttackReportTask
 import duckshop.GenerateMutantsTask
 import duckshop.MutationReportTask
 
@@ -42,4 +43,18 @@ tasks.register<MutationReportTask>("verifyVariants") {
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
     dependsOn(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
+}
+
+// The third direction, and the only one without a ceiling: an agent writes an implementation that
+// passes the suite and still contradicts the spec. Run with --continue, so an attack that does not
+// compile still reaches the report.
+tasks.register<AttackReportTask>("verifyAttack") {
+    group = "verification"
+    description = "Score one attacking implementation from attacks/<agent>/: does the suite catch it, " +
+        "and does it really differ from :core? Params: -Pagent=<name> [-PmutantsStrict]."
+    agent.convention(providers.gradleProperty("agent"))
+    val attacked = providers.gradleProperty("agent").orNull
+    listOfNotNull(attacked?.let { ":attacks:$it" }, ":attacks:reference")
+        .filter { findProject(it) != null }
+        .forEach { dependsOn("$it:test") }
 }

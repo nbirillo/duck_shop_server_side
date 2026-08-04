@@ -1,0 +1,7 @@
+# Attacking implementations from `runAgent -Pmode=attack` — model-dependent and reproducible, so
+# they are not committed. Tracked here: this file, the reference/ module the probe is compared
+# against, and demo-prefix/, a hand-written attack that lets the machinery be shown without a key.
+/*
+!/.gitignore
+!/reference/
+!/demo-prefix/
