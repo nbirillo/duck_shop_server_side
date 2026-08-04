@@ -316,6 +316,61 @@ containment; that distinction belongs in the teacher notes rather than in the st
 So the blind-versus-feedback comparison on a single suite is **still not done.** What this run
 actually measured is a self-served feedback regime that succeeded on its first submitted attempt.
 
-**Still owed:** an honest blind round on `round3-target`, run in a fresh export with the reconstruction
-loophole closed in the prompt; the matching feedback round; and the local Ollama matrix written
-*under* the budget rather than measured against it afterwards.
+### The paired round, run properly — and the answer is "no difference"
+
+Prompts G and H, one clean export each, same target. The blind arm was **verified blind**: no `.class`
+file, no `build/`, no `.gradle`, no `probe.txt` anywhere in its export, and the only source it wrote
+was the attack itself. Forbidding *execution* rather than a named tool turned out to be enforceable
+after all — the earlier failure was our prompt, not the regime.
+
+Both arms succeeded **on the first attempt**, and found different holes:
+
+| Arm | Attack | Disagreements | Attempts |
+| --- | --- | --- | --- |
+| Blind (no execution at all) | `AllOf` splits its list in two passes with an off-by-one, so the **fourth** policy is never consulted | 7 / 2000 | 1 |
+| Feedback (checker available) | `KotlinOnly` also requires `price >= 0` | 26 / 2000 | 1 |
+
+So the feedback arm gained nothing measurable, and the anchoring question **cannot be answered at this
+difficulty**: anchoring needs iteration, iteration needs the task to be hard, and attacking this suite
+is not hard. The harden experiment produced anchoring because reaching 100% there is genuinely
+difficult. That is a real finding about when the effect appears, not a failed run.
+
+Worth noting how sharp the blind analysis was: with nothing executed, it enumerated every `AllOf`
+construction in the suite by line number, showed that arity 4 is never built and that in the only
+two length-5 lists index 3 holds an admitting policy, and predicted the probe would see it because
+`MAX_WIDTH` is 6. All of it correct.
+
+### The diagnosis is about the patch, not the agents
+
+Both holes exist because of how `round3-target` was hardened — by us, adding one test per
+counterexample, right next to the counterexample that motivated it.
+
+- "Combinators must look past the third policy" was closed with a length-5 list whose deciding policy
+  sits at index 4. **Index 3 was left untested**, and that is exactly where the blind attack went.
+- "Prices below zero" was closed inside the `MaxBudget` test, using a local helper. **No
+  negatively-priced duck reaches any other leaf**, and none is in `allDucks`, the shared corpus that
+  drives the De Morgan, double-negation and `Shop` tests — so `KotlinOnly` had never seen one.
+- The same shape is still open: the suite builds accessory lists of size 1 and one of size 5, and
+  **never one of exactly 4**. The feedback arm pointed this out unprompted.
+
+**Hardening against a counterexample closes the instance, not the class.** That sentence is the most
+transferable thing the adversary work has produced, and it is a lesson about how people patch rather
+than about how agents attack. The structural fix is to put the interesting values into the *shared
+fixture corpus* every test already runs over, and to parameterise over arity and position instead of
+picking one, so closing a hole closes its neighbours too.
+
+That also makes the next experiment obvious and worth doing: harden `round3-target` structurally
+rather than instance-wise, and attack again. If a structurally hardened suite survives, the loop
+converges after all and instance-patching was the whole problem. If it falls again, the exercise's
+framing as "how far can you push it" is the honest one.
+
+### Probe sensitivity
+
+The blind attack disagreed in only 7 cases out of 2000 — it survives 99.65% of the corpus, far subtler
+than anything before it, and a slightly subtler one could have slipped through on another seed. The
+corpus is now **20 000 cases**, which costs nothing measurable (the probe still runs in about a
+second) and moves the same two attacks to 91 and 290. Numbers recorded before this change were taken
+at 2000 and are not directly comparable.
+
+**Still owed:** the structurally hardened round, and the local Ollama matrix written *under* the budget
+rather than measured against it afterwards.

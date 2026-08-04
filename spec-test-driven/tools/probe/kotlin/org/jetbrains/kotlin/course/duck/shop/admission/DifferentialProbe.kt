@@ -111,7 +111,7 @@ class DifferentialProbe {
 
     private companion object {
         const val SEED = 20260804L
-        const val CASES = 2000
+        const val CASES = 20_000
 
         /**
          * Exclusive upper bound on how many policies a combinator gets, and how many accessories a
