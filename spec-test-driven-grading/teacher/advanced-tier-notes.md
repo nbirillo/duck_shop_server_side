@@ -4,6 +4,8 @@ The basic tier of 11.2 is unchanged: fix the invalid test, harden the suite by r
 it with mutation testing. It discriminates the local model tier well (36–63%) and a learner working
 with a weak agent is fully occupied by it.
 
+**Which frontier agent.** Every "frontier" result in these notes is **Claude Opus 5** (`claude-opus-5`), driven interactively through Claude Code on its default model, checked 2026-08-05. That was recorded late: the runs themselves only ever said `claude-code`, which breaks the same pin-the-version rule we apply to the Ollama tier and would have made the numbers irreproducible. The artefacts under `attacks/` and `hardened/` have been backfilled.
+
 It does not challenge a frontier agent. Claude reaches 11/11 blind on the graded mutant set, and more
 mutants of the same kind would not change that: the specification is complete and machine-readable,
 the object is a pure boolean function of four fields, so the defect space is enumerable by a
