@@ -445,7 +445,63 @@ which closes the three gaps the round-4 attacker listed as reachable only by a m
 Still 11 tests, still 11/11 graded, still 10/10 conformant, and it catches all seven attacks to date.
 
 The round-4 agent predicted that after this fix only class (b) attacks remain — arbitrary special
-cases on a value the corpus does not contain. Round 5 tests that prediction, and either answer ends
-the line cleanly: another plausible defect means the escalation continues and "how far can you push
-it" is the honest framing; only a backdoor means the exercise has a definable ceiling, reached when a
-suite pins the contract as a formula over an alphabet used symmetrically in every role.
+cases on a value the corpus does not contain.
+
+### Round 5: the prediction was wrong, and how it was wrong is the whole lesson
+
+The suite fell again — 11/11 green, **165 disagreements in 20 000** — and to a class (a) defect. But
+the hole is no longer on any value axis. The attack drops composite children that "state no
+requirement":
+
+```kotlin
+private fun AdmissionPolicy.statesNoRequirement(): Boolean = when (this) {
+    is AllOf -> policies.isEmpty()
+    is AnyOf -> policies.isEmpty()
+    else -> false
+}
+```
+
+An empty `AllOf` and an empty `AnyOf` are the identity elements of **different** operations — one says
+yes, the other says no — so treating both as "no opinion" is wrong exactly across types. Within a type
+the simplification is sound, which is what would get it through review. The witness is not a duck at
+all: `AnyOf(AllOf())` is `true` in the specification and `false` in the attack **for every duck**. The
+shape of the policy is the counterexample.
+
+The suite misses it for a reason that can be stated precisely: it checks `AllOf(emptyList())` and
+`AnyOf(emptyList())` **only at the root**. Verified — an empty composite appears nowhere as a child,
+and in the arity unfolding the children are always `always`/`never`. The probe meanwhile builds them
+freely at any depth, since `children()` may draw zero children.
+
+**The law the three rounds add up to, and what the exercise should teach:**
+
+| Round | What the suite had corpus-ised | Where the next hole lived |
+| --- | --- | --- |
+| 3 | nothing — one test per counterexample | a missing **combination** of values |
+| 4 | values, but per role | a **role asymmetry** — present as an argument, never as data |
+| 5 | values, symmetrically, from one alphabet | **tree shape** — the one axis still written out example by example |
+
+**Whatever axis you enumerate by example rather than by corpus is where the next defect lives.** The
+round-5 attacker diagnosed this itself: the suite lifted every interesting *value* into a shared
+corpus and ran every leaf over it, but a shape is not a value, there is no corpus of shapes, and each
+one is hand-written in its own test. The instance-to-structure move made for ducks was never made for
+trees.
+
+Its patch is the right one and generalises: put `AllOf(emptyList())` and `AnyOf(emptyList())` into
+`leaves()` and into the pool the arity unfolding draws children from, so an empty composite reaches
+every position at every arity the way `never` already does.
+
+### Two things worth quoting to learners
+
+**It graded its own plausibility, unprompted, and was right to.** It called this "class (a) in the
+sense of a plausible mistake in a plausibly *extended* implementation, not a typo in a one-liner" —
+because `:core` needs no normalisation step at all, so the defect is *added* code rather than
+*altered* code. That is a signal in itself: the space of plausible modifications is exhausted, and
+what is left requires inventing a reason to touch the code first. Defect density per unit of
+plausibility is falling, even though it has not reached zero.
+
+**It rejected a real hole because our instrument could not see it** — the fourth time this has
+happened. `MaxBudget` written as `maxPrice - duck.price >= 0` overflows at `MaxBudget(Int.MAX_VALUE)`
+against a negative price; the suite does not catch it, but the probe only builds limits in −1..11, so
+the report would have said IDENTICAL. We therefore knowingly hold a genuine hole this oracle
+structurally cannot report. Say that out loud in the materials: the check's reach is part of the
+result, and a clean report is a statement about the instrument as much as about the suite.
