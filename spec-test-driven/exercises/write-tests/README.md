@@ -39,3 +39,7 @@ hard to think past it — so steps 1 and 2 have to happen first, without it.
      The mutants are a sample of the ways an implementation can be wrong, not the definition of a
      good suite. This is also why step 2 came first: it is worth noticing which gaps you found by
      thinking about the algebra, and which ones only the report pointed at.
+
+---
+
+Done, and it barely put up a fight? Your agent may simply be stronger than this task. [`README-advanced.md`](README-advanced.md) asks three harder questions — whether your suite forbids changes that were allowed, whether it could have been shorter, and whether another agent can get past it on purpose.

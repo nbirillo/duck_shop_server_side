@@ -50,7 +50,8 @@ tests.
 
 - `:core` — contract + domain + **given** algebra & time types (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DailyWindow`/`SpecialClosure`).
 - `:starter` — the stubs to implement (`schedule/WindowMatching.kt`, `schedule/OpeningSchedule.kt`), `TODO()`. Red until implemented.
-- `exercises/write-tests/` — exercise 11.2: verify and harden an AI-written test suite.
+- `exercises/write-tests/` — exercise 11.2: verify and harden an AI-written test suite. Its
+  `README-advanced.md` is the harder tier, for when your agent found the basic one easy.
 - `mutants/` — the practice mutants that exercise 11.2 scores against: `:core` with one defect injected, and a good suite notices.
 - `variants/` — the same idea inverted, for the advanced tier: `:core` rewritten **without** changing what it decides, and a good suite stays green. See `variants/README.md`.
 - `attacks/` — also advanced: implementations written to pass your suite while still contradicting the specification. `reference/` is the unmodified algebra the differential probe compares against, and `demo-prefix/` is a worked example.
