@@ -2,15 +2,13 @@
 
 Until now the contract was handed to you. This time you write it.
 
-The shop wants promotions. Here is the whole of what the business told us:
+The shop wants promotions, and your teacher will give you the whole of what the business said about
+them — a few lines, no more.
 
-> Each shop keeps a list of discount rules, and they apply to a duck's shelf price.
->
-> - **Percentage off** — for example, 10% off.
-> - **Amount off** — for example, 5 off.
-> - **Big-spender bonus** — a duck priced from 100 gets a further 20 off.
->
-> Prices are whole units. The shop does not deal in fractions.
+> **The brief is not in this repository, on purpose.** It is a short piece of business text — a few
+> If it were, the agent you later hand your specification to could read it — and then it
+> would be answering the business, not you. Whatever it built would tell you nothing about
+> your own text, which is the only thing this exercise measures.
 
 That is a normal amount of detail to be given, and it is **not enough to implement from**. Your job
 is to turn it into a contract precise enough that somebody — a colleague, or an agent — can implement
@@ -74,18 +72,11 @@ claim as missing that the text states twice.
 So if the report says something is absent and you are sure it is there, do not add a paragraph to
 satisfy the tool. Treat it as a question rather than a verdict, and settle it:
 
-1. **Say what you claim, and have it checked.** Write the claims yourself — `claims.txt` beside your
-   spec, one per line, by number or by name — and run
-
-   ```
-   ./gradlew verifyClaims -Pspec=<your SPEC.md> -Pagent=<the extraction run>
-   ```
-
-   From your declaration onward there is no model in the loop: those exact properties run against a
-   correct implementation and against the broken ones, and you get the same answer the grading build
-   would compute. It also prints where you and the checker disagree, in both directions — claims you
-   declare that it did not find, and claims it found that you did not declare. The second list is
-   usually the more interesting one.
+1. **Say what you claim, and hand that in.** Write the claims yourself — one per line, by number or
+   by name. From that list onward there is no model in the loop: those exact properties are run
+   against a correct implementation and against deliberately broken ones, and the report comes back
+   with both disagreements spelled out — claims you declared that the checker did not find, and
+   claims it found that you never declared. The second list is usually the more interesting one.
 2. **Let the later steps answer it.** The property run and the implement-from-your-spec run do not
    depend on the checker's reading. If the property holds, and an agent given only your text builds
    the thing you meant, then the claim was in there.

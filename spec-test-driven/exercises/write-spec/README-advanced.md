@@ -9,14 +9,10 @@ never has to.
 
 Here is the whole of what the business said this time:
 
-> Promotions are getting complicated, so shops want to build them out of smaller ones.
->
-> - Run one promotion, then another on what is left.
-> - Offer several and give the customer whichever comes out best.
-> - Apply a promotion only to ducks that qualify — the shop already describes "qualifies" with an
->   admission policy.
->
-> The three promotions from before still exist, and everything said before still holds.
+> **Your teacher gives you the brief.** It is a short piece of business text — a few
+> lines about what the shop wants — and it is deliberately not in this repository: if it
+> were, the agent you hand your specification to could read it, and you would learn
+> nothing from what it builds.
 
 ## What you are specifying
 

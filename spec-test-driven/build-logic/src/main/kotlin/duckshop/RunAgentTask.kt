@@ -90,8 +90,8 @@ abstract class RunAgentTask @Inject constructor(
             "impl" -> buildImplPrompt(root, stubs)
             "verify-harden" -> buildVerifyPrompt(root)
             "attack" -> buildAttackPrompt(root, attackSuite)
-            "spec" -> buildSpecPrompt(root, "README.md", "SPEC-template.md")
-            "spec-advanced" -> buildSpecPrompt(root, "README-advanced.md", "SPEC-template-advanced.md")
+            "spec" -> buildSpecPrompt(root, "briefs/11.4-basic.md", "SPEC-template.md")
+            "spec-advanced" -> buildSpecPrompt(root, "briefs/11.4-advanced.md", "SPEC-template-advanced.md")
             "spec-compress" -> buildCompressPrompt(root)
             "spec-extract" -> buildExtractPrompt(root)
             "impl-from-spec" -> buildImplFromSpecPrompt(root)
@@ -311,11 +311,39 @@ abstract class RunAgentTask @Inject constructor(
      * and nothing else. No reference implementation exists yet and none is shown — the point is to
      * see what an agent determines from an under-determined brief.
      */
+    /**
+     * The corpus-generation prompt (teacher-side). The **brief** is read from this build, not from
+     * the student folder: the business text was moved out of `exercises/write-spec/` precisely so an
+     * agent pointed at a learner's project cannot find it. What stays there is the signature and the
+     * instructions, which is what the surface check and the implement prompt actually read.
+     */
     private fun buildSpecPrompt(root: File, briefFile: String, templateFile: String): String {
-        val brief = root.resolve("exercises/write-spec/$briefFile").readText()
-        val template = root.resolve("exercises/write-spec/$templateFile").readText()
+        val briefFileResolved = root.resolve(prop("brief") ?: briefFile)
+        require(briefFileResolved.isFile) {
+            "Brief not found: $briefFileResolved — it lives in the grading build (briefs/), not the " +
+                "student folder. Run this from spec-test-driven-grading/, or pass -Pbrief=<path>."
+        }
+        // Everything above the `---` in a brief file is a note to the teacher about why the business
+        // text is kept out of the student folder. Sending that to the agent would prompt it with our
+        // commentary on the exercise instead of the exercise.
+        val brief = briefFileResolved.readText().substringAfter("\n---\n").trim()
+        require(brief.isNotBlank()) { "Brief $briefFileResolved has no content after its --- separator." }
+
+        // A learner receives the brief AND the instructions, so the prompt carries both — this is
+        // what the whole README used to supply before the business text was moved out, and the
+        // committed corpus was generated from exactly that.
+        fun student(name: String) = root.resolve("../spec-test-driven/exercises/write-spec/$name")
+            .let { if (it.isFile) it else root.resolve("exercises/write-spec/$name") }
+            .readText()
+        val instructions = student(if (templateFile.contains("advanced")) "README-advanced.md" else "README.md")
+        val template = student(templateFile)
         return buildString {
             appendLine("The task, exactly as the learner receives it:")
+            appendLine("```markdown")
+            appendLine(instructions)
+            appendLine("```")
+            appendLine()
+            appendLine("The brief the learner is given in class:")
             appendLine("```markdown")
             appendLine(brief)
             appendLine("```")
