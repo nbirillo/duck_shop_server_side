@@ -13,8 +13,14 @@ plugins {
 // they need their own source root, package and output dir. Same task classes, different wiring —
 // the shared convention plugin stays generic.
 tasks.named<duckshop.SpecReportTask>("verifySpec") {
-    // this build sits one level over, so the surface file is across the sibling
-    surfaceFile.convention("../spec-test-driven/exercises/write-spec/README.md")
+    // This build sits one level over, so the surface file is across the sibling. Keep -PspecSurface
+    // ahead of it: setting a bare convention here REPLACES the plugin's, which silently killed the
+    // flag — the advanced fixture was then checked against the basic surface, so nothing ever
+    // verified that it covers Then, BestOf and OnlyIf.
+    surfaceFile.convention(
+        providers.gradleProperty("specSurface")
+            .orElse("../spec-test-driven/exercises/write-spec/README.md"),
+    )
 }
 
 tasks.register<duckshop.GenerateMutantsTask>("generatePricingMutants") {
