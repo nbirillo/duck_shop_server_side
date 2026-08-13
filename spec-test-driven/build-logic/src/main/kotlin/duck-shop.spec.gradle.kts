@@ -1,6 +1,10 @@
 // The deterministic half of checking a specification (11.4). Applied by both builds: it reads text
 // and declarations only, so there is nothing in it a learner should not run on their own work.
+//
+// scoreExtraction is the exception and is teacher-only in practice: it needs the hand-authored key,
+// which lives with the fixtures in the grading build.
 
+import duckshop.ExtractionScoreTask
 import duckshop.SpecReportTask
 
 tasks.register<SpecReportTask>("verifySpec") {
@@ -11,4 +15,11 @@ tasks.register<SpecReportTask>("verifySpec") {
         providers.gradleProperty("specSurface")
             .orElse("exercises/write-spec/README.md"),
     )
+}
+
+tasks.register<ExtractionScoreTask>("scoreExtraction") {
+    group = "verification"
+    description = "Score the claim extractor against the hand-authored key — how often layer 2 is " +
+        "right, as opposed to merely repeatable. Params: -Pagent=<name> [-Pkey=<key.json>]."
+    keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
 }

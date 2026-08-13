@@ -56,8 +56,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced|spec-compress)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress", "spec-extract")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced|spec-compress|spec-extract)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -65,14 +65,17 @@ abstract class RunAgentTask @Inject constructor(
         val agent = prop("agent") ?: "$provider-$safeModel"
         val root = layout.projectDirectory.asFile
 
+        // The prompts live in the student build; the grading build reaches them across the sibling.
+        val promptDir = prop("promptDir") ?: "tools"
         val systemPrompt = root.resolve(
             when (mode) {
-                "impl" -> "tools/agent-prompt.md"
-                "verify-harden" -> "tools/agent-prompt-verify.md"
-                "attack" -> "tools/agent-prompt-attack.md"
-                "spec", "spec-advanced" -> "tools/agent-prompt-spec.md"
-                "spec-compress" -> "tools/agent-prompt-compress.md"
-                else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
+                "impl" -> "$promptDir/agent-prompt.md"
+                "verify-harden" -> "$promptDir/agent-prompt-verify.md"
+                "attack" -> "$promptDir/agent-prompt-attack.md"
+                "spec", "spec-advanced" -> "$promptDir/agent-prompt-spec.md"
+                "spec-compress" -> "$promptDir/agent-prompt-compress.md"
+                "spec-extract" -> "$promptDir/agent-prompt-extract.md"
+                else -> "$promptDir/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
         val stubs = if (mode == "impl") stubFiles(root) else emptyList()
@@ -88,6 +91,7 @@ abstract class RunAgentTask @Inject constructor(
             "spec" -> buildSpecPrompt(root, "README.md", "SPEC-template.md")
             "spec-advanced" -> buildSpecPrompt(root, "README-advanced.md", "SPEC-template-advanced.md")
             "spec-compress" -> buildCompressPrompt(root)
+            "spec-extract" -> buildExtractPrompt(root)
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -100,6 +104,7 @@ abstract class RunAgentTask @Inject constructor(
                 "spec" -> "specs/$agent"
                 "spec-advanced" -> "specs-advanced/$agent"
                 "spec-compress" -> "specs-short/$agent"
+                "spec-extract" -> "extractions/$agent"
                 else -> "solutions/$agent"
             },
         )
@@ -167,10 +172,11 @@ abstract class RunAgentTask @Inject constructor(
             "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
             "spec", "spec-advanced", "spec-compress" -> writeSpec(outDir, content)
+            "spec-extract" -> writeExtraction(outDir, content, prop("spec")!!)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         // A spec is a document, so specs/<agent>/ is deliberately not a Gradle module.
-        if (mode !in setOf("spec", "spec-advanced", "spec-compress")) outDir.resolve("build.gradle.kts").writeText(
+        if (mode !in setOf("spec", "spec-advanced", "spec-compress", "spec-extract")) outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
                 "attack" -> attackBuildScript(
@@ -314,6 +320,52 @@ abstract class RunAgentTask @Inject constructor(
             appendLine()
             append("Write the specification.")
         }
+    }
+
+    /**
+     * The extraction prompt (11.4 layer 2). Claim ids come from the property catalog's test names, so
+     * the two can never drift: renaming a property renames the claim. This is **matching against the
+     * author's rubric**, not understanding a specification, and the prompt says so — a learner cannot
+     * be credited for a claim outside the list, which is the price of a check that is comparable
+     * between learners.
+     */
+    private fun buildExtractPrompt(root: File): String {
+        val specFile = root.resolve(prop("spec") ?: error("Missing -Pspec=<SPEC.md>"))
+        val propsFile = root.resolve(
+            prop("propertyFile")
+                ?: "../spec-test-driven-grading/pricing-properties/kotlin/org/jetbrains/kotlin/course/duck/shop/pricing/PricingProperties.kt",
+        )
+        val claims = Regex("fun `([^`]+)`").findAll(propsFile.readText()).map { it.groupValues[1] }.toList()
+        require(claims.isNotEmpty()) { "No claims found in $propsFile" }
+        return buildString {
+            appendLine("The claims:")
+            claims.forEachIndexed { i, c -> appendLine("${i + 1}. $c") }
+            appendLine()
+            appendLine("The specification:")
+            appendLine("```markdown")
+            appendLine(specFile.readText())
+            appendLine("```")
+            appendLine()
+            append("One line per claim, ${claims.size} lines, nothing else.")
+        }
+    }
+
+    /**
+     * Writes the verdict lines, named after the spec they are about so repeats can be compared.
+     *
+     * The **parent directory is part of the name**, and has to be: the fixture corpus holds
+     * `written/claude-code.md` and `compressed/claude-code.md`, and on the basename alone the second
+     * extraction silently overwrote the first. `scoreExtraction` then read one file as the answer to
+     * two different key entries and reported a clean 18/20 for a run that had only covered one spec.
+     */
+    private fun writeExtraction(outDir: File, content: String, specPath: String): List<String> {
+        val lines = content.lines().map { it.trim() }.filter { Regex("^\\d+\\s*:").containsMatchIn(it) }
+        val parts = specPath.trimEnd('/').removeSuffix(".md").split('/').filter { it.isNotEmpty() }
+        val relative = parts.takeLast(2).joinToString("/")
+        val target = outDir.resolve("$relative.txt")
+        target.parentFile.mkdirs()
+        target.writeText(lines.joinToString("\n") + "\n")
+        return listOf("$relative.txt (${lines.size} verdicts)")
     }
 
     /**

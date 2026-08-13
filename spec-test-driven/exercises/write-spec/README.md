@@ -63,3 +63,27 @@ to be able to say why** — and to be honest in the last two sections about what
   about some part of it, that shows up.
 - And an agent implements the feature **from your text alone**. What it gets wrong is the most direct
   answer you will get to "was that enough?"
+
+## The checker can be wrong, and you are allowed to say so
+
+Checking a specification is hard — harder than checking code, and our tooling does not manage it
+perfectly. One of those four steps, the one that turns your sentences into a list of claims, asks a
+model to read your prose, and it makes mistakes. On the best specification we have, it reported a
+claim as missing that the text states twice.
+
+So if the report says something is absent and you are sure it is there, do not add a paragraph to
+satisfy the tool. Treat it as a question rather than a verdict, and settle it:
+
+1. **Let the later steps answer it.** The property run and the implement-from-your-spec run do not
+   depend on that reading. If the property holds, and an agent given only your text builds the thing
+   you meant, then the claim was in there.
+2. **Check by hand.** Find the sentence and point at it. If it is there, the checker was wrong. If
+   what you find is vaguer than you remembered, then the checker read it the way a stranger would —
+   and that is worth more to you than a clean report was.
+
+Either outcome teaches you something, which is why this is written down rather than quietly fixed.
+It is also the module's own point turned around and aimed at us: **a result from a tool is a claim,
+and a claim gets verified.** That holds for the tool marking your work exactly as much as for the
+agent writing your code.
+
+Verification is what stays human — including verification of the thing doing the verifying.
