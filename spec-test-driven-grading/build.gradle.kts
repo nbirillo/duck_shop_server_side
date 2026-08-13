@@ -68,3 +68,15 @@ tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
     outPath.set("pricing-mutants")
     dependsOn("verifyPricingMutants")
 }
+
+// 11.4 step 3e: what an agent builds when the specification is all it has.
+tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
+    group = "verification"
+    description = "Report where implementations written from a specification alone diverge from the " +
+        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]."
+    keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+    dependsOn(
+        subprojects.filter { it.path.startsWith(":implementations:") && it.buildFile.exists() }
+            .map { "${it.path}:test" },
+    )
+}

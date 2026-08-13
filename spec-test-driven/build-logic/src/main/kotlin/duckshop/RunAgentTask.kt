@@ -56,8 +56,9 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress", "spec-extract")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced|spec-compress|spec-extract)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress", "spec-extract", "impl-from-spec")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|" +
+                    "spec-advanced|spec-compress|spec-extract|impl-from-spec)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -75,6 +76,7 @@ abstract class RunAgentTask @Inject constructor(
                 "spec", "spec-advanced" -> "$promptDir/agent-prompt-spec.md"
                 "spec-compress" -> "$promptDir/agent-prompt-compress.md"
                 "spec-extract" -> "$promptDir/agent-prompt-extract.md"
+                "impl-from-spec" -> "$promptDir/agent-prompt-impl-spec.md"
                 else -> "$promptDir/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
@@ -92,6 +94,7 @@ abstract class RunAgentTask @Inject constructor(
             "spec-advanced" -> buildSpecPrompt(root, "README-advanced.md", "SPEC-template-advanced.md")
             "spec-compress" -> buildCompressPrompt(root)
             "spec-extract" -> buildExtractPrompt(root)
+            "impl-from-spec" -> buildImplFromSpecPrompt(root)
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -105,6 +108,7 @@ abstract class RunAgentTask @Inject constructor(
                 "spec-advanced" -> "specs-advanced/$agent"
                 "spec-compress" -> "specs-short/$agent"
                 "spec-extract" -> "extractions/$agent"
+                "impl-from-spec" -> "implementations/$agent/${specKey(prop("spec"))}"
                 else -> "solutions/$agent"
             },
         )
@@ -173,12 +177,15 @@ abstract class RunAgentTask @Inject constructor(
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
             "spec", "spec-advanced", "spec-compress" -> writeSpec(outDir, content)
             "spec-extract" -> writeExtraction(outDir, content, prop("spec")!!)
+            "impl-from-spec" -> writeImplementation(outDir, content)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
-        // A spec is a document, so specs/<agent>/ is deliberately not a Gradle module.
+        // A spec is a document; an extraction is a list of verdicts. Neither is a Gradle module.
+        // An implementation IS one — it has to compile and be tested.
         if (mode !in setOf("spec", "spec-advanced", "spec-compress", "spec-extract")) outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
+                "impl-from-spec" -> implFromSpecBuildScript()
                 "attack" -> attackBuildScript(
                     coreBase = root.resolve("core/src/main/kotlin/$packagePath"),
                     attackBase = outDir.resolve("src/main/kotlin/$packagePath"),
@@ -348,6 +355,168 @@ abstract class RunAgentTask @Inject constructor(
             appendLine()
             append("One line per claim, ${claims.size} lines, nothing else.")
         }
+    }
+
+    /** Directory name for one spec's implementation: the fixture's parent dir and file name. */
+    private fun specKey(specPath: String?): String {
+        val path = specPath ?: error("Missing -Pspec=<the specification to implement from>")
+        return path.trimEnd('/').removeSuffix(".md").split('/').filter { it.isNotEmpty() }
+            .takeLast(2).joinToString("-")
+    }
+
+    /**
+     * The 11.4 implement-from-spec prompt: the learner's specification, the shape of the data, and
+     * **nothing else**.
+     *
+     * Three things are deliberately withheld, and each was a real leak before it was closed.
+     *
+     *  - **The original business brief.** The worst of the three: hand the agent the brief and a
+     *    vague specification still produces a correct implementation, because the agent answers from
+     *    the brief. What is being measured is what the specification alone conveys.
+     *  - **The reference and the property catalog**, for the obvious reason.
+     *  - **`:core`'s `DiscountRule.kt` itself.** Its KDoc says in as many words that defining this
+     *    behaviour *is* exercise 11.4, and it declares all six rule kinds — so an author working from
+     *    the basic brief, which shows three, would be implemented against a surface they never saw.
+     *    The declaration comes from **the brief the specification was written against**, exactly as
+     *    the surface check does, and for the same reason.
+     *
+     * The file still compiles against the real six-case type, so the closing note tells the agent
+     * what to do with cases the specification does not reach — without saying what they mean.
+     */
+    private fun buildImplFromSpecPrompt(root: File): String {
+        val spec = root.resolve(prop("spec") ?: error("Missing -Pspec=<SPEC.md>"))
+        require(spec.isFile) { "Specification not found: $spec" }
+
+        val briefFile = root.resolve(prop("implSurface") ?: DEFAULT_IMPL_SURFACE)
+        require(briefFile.isFile) { "Brief not found: $briefFile" }
+        val surface = withUnshownCasesNoted(
+            root,
+            Regex("```kotlin\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
+                .findAll(briefFile.readText()).joinToString("\n\n") { it.groupValues[1].trim() }
+                .ifBlank { error("No kotlin block in $briefFile to take the surface from") },
+        )
+
+        val typeFiles = (prop("implTypes") ?: DEFAULT_IMPL_TYPES).split(',')
+            .map { it.trim() }.filter { it.isNotEmpty() }
+            .map { root.resolve(it) }
+        typeFiles.forEach { require(it.isFile) { "Type source not found: $it" } }
+
+        return buildString {
+            appendLine("The data types, already declared and on your compile path:")
+            typeFiles.forEach {
+                appendLine()
+                appendLine("```kotlin")
+                appendLine(it.readText().trim())
+                appendLine("```")
+            }
+            appendLine()
+            appendLine("The surface to implement:")
+            appendLine()
+            appendLine("```kotlin")
+            appendLine(surface)
+            appendLine("```")
+            appendLine()
+            appendLine("The specification:")
+            appendLine()
+            appendLine("```markdown")
+            appendLine(spec.readText().trim())
+            appendLine("```")
+            appendLine()
+            appendLine(
+                "If `DiscountRule` turns out to have cases the specification above does not " +
+                    "describe, leave the price unchanged for them so that the file compiles.",
+            )
+            appendLine()
+            append("Return the implementation file, and nothing else.")
+        }
+    }
+
+    /**
+     * A basic-tier brief shows three rule kinds; the real `DiscountRule` is sealed and has six, so a
+     * `when` over three of them does not compile. Saying so in a closing sentence did not work —
+     * both agents in the first run ignored it and produced a non-exhaustive `when`. The note has to
+     * be **inside the declaration**, where the agent is looking when it writes the branches.
+     *
+     * It names no case and no behaviour, so the advanced tier is not given away; it only says that
+     * more exist and that this specification does not reach them. Emitted only when the brief really
+     * does show fewer cases than the type has, so the advanced brief gets nothing.
+     */
+    private fun withUnshownCasesNoted(root: File, surface: String): String {
+        val declared = root.resolve(prop("implRuleType") ?: DEFAULT_IMPL_RULE_TYPE)
+        if (!declared.isFile) return surface
+        fun cases(text: String) =
+            Regex("""data class (\w+)""").findAll(text).map { it.groupValues[1] }.toSet()
+        val unshown = cases(declared.readText()) - cases(surface)
+        if (unshown.isEmpty()) return surface
+        val marker = Regex("""(sealed interface DiscountRule \{[\s\S]*?)\n\}""")
+        return marker.replace(surface) {
+            it.groupValues[1] +
+                "\n\n    // ...and ${unshown.size} further case(s) this specification does not" +
+                "\n    // describe. Your `when` must still be exhaustive: leave the price unchanged" +
+                "\n    // for them.\n}"
+        }
+    }
+
+    /** Writes the agent's file into the pricing package of a fresh module. */
+    private fun writeImplementation(outDir: File, content: String): List<String> {
+        val pkg = prop("implPackage") ?: DEFAULT_IMPL_PACKAGE
+        // Drop anything from a previous run first, so a shorter answer cannot leave stale
+        // declarations behind and quietly keep the module compiling.
+        outDir.resolve("src").deleteRecursively()
+        val target = outDir.resolve("src/main/kotlin/$pkg/Pricing.kt")
+        target.parentFile.mkdirs()
+        val code = normalizeCode(extractCode(content), pkg.replace('/', '.'))
+        target.writeText(code + "\n")
+        return listOf("src/main/kotlin/$pkg/Pricing.kt (${code.lines().size} lines)")
+    }
+
+    /**
+     * One implementation module: the agent's file plus the unmutated shared types, with the property
+     * catalog as its test suite.
+     *
+     * `ignoreFailures` is on because a failing property here is a **finding, not a build error** —
+     * the report has to reach the point where it can say which properties diverged, and a divergence
+     * may well be legitimate (the specification decided something differently, or left it open).
+     */
+    private fun implFromSpecBuildScript(): String {
+        val types = prop("implCoreSrc") ?: DEFAULT_IMPL_CORE_SRC
+        val tests = prop("implTests") ?: DEFAULT_IMPL_TESTS
+        return """
+        // GENERATED by `./gradlew runAgent -Pmode=impl-from-spec` — do not edit by hand.
+        //
+        // Compiles ONE agent's implementation, written from a specification alone, against the same
+        // shared types the reference uses, and runs the property catalog over it. A red property is
+        // a divergence to be read, not a failure to be fixed.
+
+        plugins {
+            kotlin("jvm")
+        }
+
+        kotlin {
+            jvmToolchain(21)
+
+            sourceSets.named("main") {
+                kotlin.srcDir(rootDir.resolve("$types"))
+            }
+            sourceSets.named("test") {
+                kotlin.srcDir(rootDir.resolve("$tests"))
+            }
+        }
+
+        repositories {
+            mavenCentral()
+        }
+
+        dependencies {
+            testImplementation(kotlin("test"))
+        }
+
+        tasks.test {
+            useJUnitPlatform()
+            ignoreFailures = true
+        }
+
+        """.trimIndent()
     }
 
     /**
@@ -563,6 +732,20 @@ abstract class RunAgentTask @Inject constructor(
     private companion object {
         // Build script for a generated test-suite module (tests mode): a plain module that runs
         // its own tests against the given :core algebra.
+        /** Shared types the agent is shown verbatim. NOT DiscountRule — see buildImplFromSpecPrompt. */
+        const val DEFAULT_IMPL_TYPES =
+            "../spec-test-driven/core/src/main/kotlin/org/jetbrains/kotlin/course/duck/shop/admission/Domain.kt"
+
+        /** The real sealed type, read only to count how many cases the brief leaves unshown. */
+        const val DEFAULT_IMPL_RULE_TYPE =
+            "../spec-test-driven/core/src/main/kotlin/org/jetbrains/kotlin/course/duck/shop/pricing/DiscountRule.kt"
+
+        /** The brief the specification was written against; the rule surface is read from it. */
+        const val DEFAULT_IMPL_SURFACE = "../spec-test-driven/exercises/write-spec/README.md"
+        const val DEFAULT_IMPL_CORE_SRC = "../spec-test-driven/core/src/main/kotlin"
+        const val DEFAULT_IMPL_TESTS = "pricing-properties/kotlin"
+        const val DEFAULT_IMPL_PACKAGE = "org/jetbrains/kotlin/course/duck/shop/pricing"
+
         val CONSUMER_BUILD_SCRIPT = """
             plugins {
                 kotlin("jvm")

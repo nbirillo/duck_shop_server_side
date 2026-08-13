@@ -140,7 +140,10 @@ class PricingProperties {
         ducks().forEach { duck ->
             val options = List(3) { DiscountRule.Percentage(percent()) }
             val best = options.minOf { priceFor(duck, listOf(it)) }
-            assertEquals(best, priceFor(duck, DiscountRule.BestOf(options)), duck.name)
+            // The LIST form on purpose, even for a single rule: the basic-tier brief only ever
+            // shows priceFor(duck, List<DiscountRule>), so an implementation written from a basic
+            // specification has no single-rule overload and this file would not compile against it.
+            assertEquals(best, priceFor(duck, listOf(DiscountRule.BestOf(options))), duck.name)
         }
     }
 
@@ -148,8 +151,8 @@ class PricingProperties {
     fun `OnlyIf leaves a duck its condition rejects untouched`() {
         ducks().forEach { duck ->
             val rule = DiscountRule.OnlyIf(KotlinOnly(), DiscountRule.AmountOff(random.nextInt(1, 500)))
-            val expected = if (duck.hasKotlinAttribute) priceFor(duck, rule.rule) else duck.price
-            assertEquals(expected, priceFor(duck, rule), duck.name)
+            val expected = if (duck.hasKotlinAttribute) priceFor(duck, listOf(rule.rule)) else duck.price
+            assertEquals(expected, priceFor(duck, listOf(rule)), duck.name)
         }
     }
 

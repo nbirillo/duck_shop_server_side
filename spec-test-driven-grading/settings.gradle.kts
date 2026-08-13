@@ -30,3 +30,15 @@ file("pricing-mutants").listFiles()
     ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
     ?.sortedBy { it.name }
     ?.forEach { include(":pricing-mutants:${it.name}") }
+
+// Implementations written by an agent from a specification alone (11.4, exercise step 3e), one
+// module per (agent, specification) pair: implementations/<agent>/<written-claude-code>/.
+file("implementations").listFiles()
+    ?.filter { it.isDirectory }
+    ?.sortedBy { it.name }
+    ?.forEach { agent ->
+        agent.listFiles()
+            ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
+            ?.sortedBy { it.name }
+            ?.forEach { include(":implementations:${agent.name}:${it.name}") }
+    }
