@@ -23,3 +23,9 @@ tasks.register<ExtractionScoreTask>("scoreExtraction") {
         "right, as opposed to merely repeatable. Params: -Pagent=<name> [-Pkey=<key.json>]."
     keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
 }
+
+tasks.register<duckshop.SandboxTask>("sandbox") {
+    group = "duck-shop"
+    description = "Lay out a folder with the data types and your SPEC.md and nothing else, to point " +
+        "an agent at. Params: -Pspec=<SPEC.md> [-Pname=<folder>]."
+}

@@ -48,6 +48,17 @@ abstract class PrepareImplementationTask @Inject constructor(
         val pkg = providers.gradleProperty("implPackage").getOrElse(IMPL_PACKAGE)
         val moduleDir = root.resolve("implementations/$name/$key")
         val source = moduleDir.resolve("src/main/kotlin/$pkg/Pricing.kt")
+
+        // -Pfrom=<sandbox dir> collects the file the agent wrote where it worked, so nobody has to
+        // copy it by hand into a path five directories deep and get it subtly wrong.
+        providers.gradleProperty("from").orNull?.let { from ->
+            val written = root.resolve(from).resolve("src/main/kotlin/$pkg/Pricing.kt")
+            require(written.isFile) { "Nothing at $written — has the agent written it yet?" }
+            source.parentFile.mkdirs()
+            written.copyTo(source, overwrite = true)
+            logger.lifecycle("[prepareImplementation] took ${written.relativeTo(root)}")
+        }
+
         if (!source.isFile) {
             logger.lifecycle("")
             logger.lifecycle("Nothing to prepare yet. Put the agent's file here:")
