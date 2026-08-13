@@ -73,10 +73,18 @@ tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
 tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     group = "verification"
     description = "Report where implementations written from a specification alone diverge from the " +
-        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]."
+        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]. Add --continue if any " +
+        "implementation does not compile — that is a result, not a build failure."
     keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+    // Scoped to the agent being reported on. Depending on every implementation meant that one
+    // agent's non-compiling module broke the report for every other agent — and made the report's
+    // own "DID NOT BUILD" branch unreachable, since the build died before it could say so.
+    // A broken implementation inside the requested set is the case that branch exists for: run with
+    // --continue and it gets reported instead of aborting.
+    val reported = providers.gradleProperty("agent").orNull
     dependsOn(
-        subprojects.filter { it.path.startsWith(":implementations:") && it.buildFile.exists() }
+        subprojects
+            .filter { it.path.startsWith(":implementations:${reported ?: ""}") && it.buildFile.exists() }
             .map { "${it.path}:test" },
     )
 }
