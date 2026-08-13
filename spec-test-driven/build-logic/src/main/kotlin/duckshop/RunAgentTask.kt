@@ -56,8 +56,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -70,7 +70,7 @@ abstract class RunAgentTask @Inject constructor(
                 "impl" -> "tools/agent-prompt.md"
                 "verify-harden" -> "tools/agent-prompt-verify.md"
                 "attack" -> "tools/agent-prompt-attack.md"
-                "spec" -> "tools/agent-prompt-spec.md"
+                "spec", "spec-advanced" -> "tools/agent-prompt-spec.md"
                 else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
@@ -84,7 +84,8 @@ abstract class RunAgentTask @Inject constructor(
             "impl" -> buildImplPrompt(root, stubs)
             "verify-harden" -> buildVerifyPrompt(root)
             "attack" -> buildAttackPrompt(root, attackSuite)
-            "spec" -> buildSpecPrompt(root)
+            "spec" -> buildSpecPrompt(root, "README.md", "SPEC-template.md")
+            "spec-advanced" -> buildSpecPrompt(root, "README-advanced.md", "SPEC-template-advanced.md")
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -95,6 +96,7 @@ abstract class RunAgentTask @Inject constructor(
                 "verify-harden" -> "hardened/$agent"
                 "attack" -> "attacks/$agent"
                 "spec" -> "specs/$agent"
+                "spec-advanced" -> "specs-advanced/$agent"
                 else -> "solutions/$agent"
             },
         )
@@ -161,11 +163,11 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> writeTestSuite(outDir, content)
             "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
-            "spec" -> writeSpec(outDir, content)
+            "spec", "spec-advanced" -> writeSpec(outDir, content)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         // A spec is a document, so specs/<agent>/ is deliberately not a Gradle module.
-        if (mode != "spec") outDir.resolve("build.gradle.kts").writeText(
+        if (mode != "spec" && mode != "spec-advanced") outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
                 "attack" -> attackBuildScript(
@@ -193,7 +195,7 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
             "attack" -> "./gradlew verifyAttack -Pagent=$agent   (does the suite catch it, and does it " +
                 "really differ from :core?)"
-            "spec" -> "read specs/$agent/SPEC.md — at this stage it is judged by eye, not by machine"
+            "spec", "spec-advanced" -> "read ${outDir.relativeTo(root)}/SPEC.md — at this stage it is judged by eye, not by machine"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
             else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
@@ -293,9 +295,9 @@ abstract class RunAgentTask @Inject constructor(
      * and nothing else. No reference implementation exists yet and none is shown — the point is to
      * see what an agent determines from an under-determined brief.
      */
-    private fun buildSpecPrompt(root: File): String {
-        val brief = root.resolve("exercises/write-spec/README.md").readText()
-        val template = root.resolve("exercises/write-spec/SPEC-template.md").readText()
+    private fun buildSpecPrompt(root: File, briefFile: String, templateFile: String): String {
+        val brief = root.resolve("exercises/write-spec/$briefFile").readText()
+        val template = root.resolve("exercises/write-spec/$templateFile").readText()
         return buildString {
             appendLine("The task, exactly as the learner receives it:")
             appendLine("```markdown")
