@@ -20,6 +20,7 @@ tasks.register<GenerateMutantsTask>("generateMutants") {
     alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
     packagePath.convention(providers.gradleProperty("mutantsPackage")
         .orElse("org/jetbrains/kotlin/course/duck/shop/admission"))
+    defaultTests.convention("learner")
 }
 
 tasks.register<MutationReportTask>("verifyMutants") {
@@ -40,6 +41,7 @@ tasks.register<GenerateMutantsTask>("generateVariants") {
     alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
     packagePath.convention(providers.gradleProperty("mutantsPackage")
         .orElse("org/jetbrains/kotlin/course/duck/shop/admission"))
+    defaultTests.convention("learner")
 }
 
 tasks.register<MutationReportTask>("verifyVariants") {

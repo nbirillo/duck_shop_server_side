@@ -16,6 +16,32 @@ internal const val ADMISSION_PACKAGE_PATH = "org/jetbrains/kotlin/course/duck/sh
 internal const val BASELINE = "baseline"
 
 /**
+ * Every test in a module's JUnit XML results, whether it passed or failed. Empty if it never ran.
+ */
+internal fun everyTest(dir: File): List<String> =
+    (dir.listFiles { f -> f.name.startsWith("TEST-") && f.extension == "xml" } ?: emptyArray())
+        .flatMap { xml ->
+            Regex("<testcase name=\"([^\"]*)\"").findAll(xml.readText())
+                .map { it.groupValues[1].removeSuffix("()") }
+        }
+
+/**
+ * The tests that failed in a module, or `null` if the module has no results at all — which is a
+ * different fact from "nothing failed" and the callers treat it as one.
+ */
+internal fun failingTests(dir: File): Set<String>? {
+    val xmls = dir.listFiles { f -> f.name.startsWith("TEST-") && f.extension == "xml" } ?: return null
+    if (xmls.isEmpty()) return null
+    return xmls.flatMap { xml ->
+        xml.readText().split("<testcase ").drop(1).mapNotNull { chunk ->
+            val n = Regex("name=\"([^\"]*)\"").find(chunk)?.groupValues?.get(1) ?: return@mapNotNull null
+            val body = chunk.substringBefore("</testcase>")
+            if (body.contains("<failure") || body.contains("<error")) n.removeSuffix("()") else null
+        }
+    }.toSet()
+}
+
+/**
  * One entry of a mutant catalog: a single textual change applied to one `:core` source file.
  *
  * @property id the mutant's folder name, e.g. `max-budget-strict`.

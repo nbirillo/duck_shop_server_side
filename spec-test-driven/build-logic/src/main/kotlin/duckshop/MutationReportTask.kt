@@ -5,6 +5,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import javax.inject.Inject
@@ -39,6 +40,11 @@ abstract class MutationReportTask @Inject constructor(
     @get:Input
     abstract val outPath: Property<String>
 
+    /** Must match the `defaultTests` the modules were generated with. See [GenerateMutantsTask]. */
+    @get:Input
+    @get:Optional
+    abstract val defaultTests: Property<String>
+
     @TaskAction
     fun run() {
         val root = layout.projectDirectory.asFile
@@ -47,7 +53,10 @@ abstract class MutationReportTask @Inject constructor(
         val learnerTests = pathProp("mutantsLearnerTests", "exercises/write-tests/src/test/kotlin")
 
         val catalog = loadCatalog(root.resolve(catalogFile))
-        val selected = providers.gradleProperty("mutantTests").getOrElse("learner")
+        // The same default the modules were GENERATED with, or the report names a suite that did
+        // not run: the pricing modules default to the property catalog while this line said
+        // "learner", and the two disagreeing is invisible unless you read the failures.
+        val selected = providers.gradleProperty("mutantTests").getOrElse(defaultTests.getOrElse("learner"))
         val suitePath = if (selected == "learner") learnerTests else selected
 
         // A catalog of legal refactorings measures the opposite property, so it gets its own wording.

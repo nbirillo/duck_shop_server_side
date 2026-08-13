@@ -42,6 +42,33 @@ opposite". It answers a yes/no question, so on a `contra` cell it says NO, which
 absence and silent about the more serious fault*. `scoreExtraction` counts those as agreement and
 lists them separately. A reader catches what the extractor structurally cannot.
 
+## The appeal — `verifyClaims`
+
+A learner who thinks the extractor misread them can declare their claims directly:
+
+```
+./gradlew verifyClaims -Pclaims=1,3,4,6
+./gradlew verifyClaims -Pspec=<SPEC.md> -Pagent=<run>   # reads claims.txt beside the spec
+```
+
+Numbers, full claim names, or any unambiguous fragment. Everything after the declaration is
+deterministic: those properties run against the reference and the mutants, and the report says which
+mutants each claim kills. No model, and no key needed — which is why this path stays trustworthy on
+a catalog of your own.
+
+What to look at in the output is the **disagreement**, not the score:
+
+- **CONTESTED** — declared, not extracted. Ask them to show you the sentence. Either the checker
+  misread it, or the claim lives in the learner's head and not in the text. Both are worth the
+  conversation, and the report deliberately does not decide which it is.
+- **NOT DECLARED** — extracted, not declared. They wrote something down that pins an implementation
+  and did not realise they had. Usually the more instructive of the two.
+
+Note the honest failure mode this preserves: a learner can win the appeal and still lose the point.
+On our best fixture, claim 2 is genuinely stated, the extractor genuinely missed it — and the
+property kills no mutant, so the claim they were defending constrains nobody. The report says both
+things in the same run.
+
 ## Making your own property catalog
 
 Supported, and it is the honest way to use this material — our catalog is a default, not a

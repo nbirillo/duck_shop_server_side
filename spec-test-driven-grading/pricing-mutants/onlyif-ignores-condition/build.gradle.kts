@@ -10,9 +10,11 @@ plugins {
     kotlin("jvm")
 }
 
-// Which suite runs against the mutant: "learner" (default) or any test source dir given as
-// a path relative to this build's root — set with -PmutantTests=<learner|path>.
-val suite: String = when (val selected = providers.gradleProperty("mutantTests").getOrElse("learner")) {
+// Which suite runs against the mutant: "learner", or any test source dir given as a path
+// relative to this build's root — set with -PmutantTests=<learner|path>. The default below
+// is baked in per catalog at generation time, because -PmutantTests is global to the build
+// and a build with two catalogs needs two different answers.
+val suite: String = when (val selected = providers.gradleProperty("mutantTests").getOrElse("pricing-properties/kotlin")) {
     "learner" -> "../spec-test-driven/exercises/write-tests/src/test/kotlin"
     else -> selected
 }

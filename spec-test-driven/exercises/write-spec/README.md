@@ -74,12 +74,29 @@ claim as missing that the text states twice.
 So if the report says something is absent and you are sure it is there, do not add a paragraph to
 satisfy the tool. Treat it as a question rather than a verdict, and settle it:
 
-1. **Let the later steps answer it.** The property run and the implement-from-your-spec run do not
-   depend on that reading. If the property holds, and an agent given only your text builds the thing
-   you meant, then the claim was in there.
-2. **Check by hand.** Find the sentence and point at it. If it is there, the checker was wrong. If
+1. **Say what you claim, and have it checked.** Write the claims yourself — `claims.txt` beside your
+   spec, one per line, by number or by name — and run
+
+   ```
+   ./gradlew verifyClaims -Pspec=<your SPEC.md> -Pagent=<the extraction run>
+   ```
+
+   From your declaration onward there is no model in the loop: those exact properties run against a
+   correct implementation and against the broken ones, and you get the same answer the grading build
+   would compute. It also prints where you and the checker disagree, in both directions — claims you
+   declare that it did not find, and claims it found that you did not declare. The second list is
+   usually the more interesting one.
+2. **Let the later steps answer it.** The property run and the implement-from-your-spec run do not
+   depend on the checker's reading. If the property holds, and an agent given only your text builds
+   the thing you meant, then the claim was in there.
+3. **Check by hand.** Find the sentence and point at it. If it is there, the checker was wrong. If
    what you find is vaguer than you remembered, then the checker read it the way a stranger would —
    and that is worth more to you than a clean report was.
+
+Declaring a claim does not make it true, and the report will not pretend otherwise. A property you
+declare still has to hold against correct code — one that fails there is a claim contradicting the
+feature — and it still has to rule something out to be worth anything. You can win the argument with
+the checker and discover in the same run that the claim you were defending constrains nobody.
 
 Either outcome teaches you something, which is why this is written down rather than quietly fixed.
 It is also the module's own point turned around and aimed at us: **a result from a tool is a claim,

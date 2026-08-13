@@ -41,7 +41,7 @@ abstract class PropertyMatrixTask @Inject constructor(
         val catalog = loadCatalog(root.resolve(catalogPath.get().trim('/')))
         val out = outPath.get().trim('/')
 
-        val baseline = failing(root.resolve("$out/$BASELINE/build/test-results/test"))
+        val baseline = failingTests(root.resolve("$out/$BASELINE/build/test-results/test"))
         if (baseline == null) {
             logger.lifecycle("The baseline never ran — generate the modules and run the suite first.")
             return
@@ -56,7 +56,7 @@ abstract class PropertyMatrixTask @Inject constructor(
         val killedBy = linkedMapOf<String, MutableList<String>>()
         val notRun = mutableListOf<String>()
         catalog.filter { it.mustKill }.forEach { mutant ->
-            val f = failing(root.resolve("$out/${mutant.id}/build/test-results/test"))
+            val f = failingTests(root.resolve("$out/${mutant.id}/build/test-results/test"))
             if (f == null) { notRun += mutant.id; return@forEach }
             (f - baseline).forEach { killedBy.getOrPut(it) { mutableListOf() } += mutant.id }
         }
@@ -85,21 +85,5 @@ abstract class PropertyMatrixTask @Inject constructor(
             logger.lifecycle("  ↳ true, perhaps, but constraining no implementation. Not load-bearing.")
         }
         if (notRun.isNotEmpty()) logger.lifecycle("Never ran: ${notRun.joinToString()}")
-    }
-
-    private fun everyTest(dir: File): List<String> =
-        (dir.listFiles { f -> f.name.startsWith("TEST-") && f.extension == "xml" } ?: emptyArray())
-            .flatMap { xml -> Regex("<testcase name=\"([^\"]*)\"").findAll(xml.readText()).map { it.groupValues[1].removeSuffix("()") } }
-
-    private fun failing(dir: File): Set<String>? {
-        val xmls = dir.listFiles { f -> f.name.startsWith("TEST-") && f.extension == "xml" } ?: return null
-        if (xmls.isEmpty()) return null
-        return xmls.flatMap { xml ->
-            xml.readText().split("<testcase ").drop(1).mapNotNull { chunk ->
-                val n = Regex("name=\"([^\"]*)\"").find(chunk)?.groupValues?.get(1) ?: return@mapNotNull null
-                val body = chunk.substringBefore("</testcase>")
-                if (body.contains("<failure") || body.contains("<error")) n.removeSuffix("()") else null
-            }
-        }.toSet()
     }
 }
