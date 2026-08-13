@@ -56,8 +56,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -70,6 +70,7 @@ abstract class RunAgentTask @Inject constructor(
                 "impl" -> "tools/agent-prompt.md"
                 "verify-harden" -> "tools/agent-prompt-verify.md"
                 "attack" -> "tools/agent-prompt-attack.md"
+                "spec" -> "tools/agent-prompt-spec.md"
                 else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
@@ -83,6 +84,7 @@ abstract class RunAgentTask @Inject constructor(
             "impl" -> buildImplPrompt(root, stubs)
             "verify-harden" -> buildVerifyPrompt(root)
             "attack" -> buildAttackPrompt(root, attackSuite)
+            "spec" -> buildSpecPrompt(root)
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -92,6 +94,7 @@ abstract class RunAgentTask @Inject constructor(
                 // re-scored later — e.g. against the mutant set — without re-running the model.
                 "verify-harden" -> "hardened/$agent"
                 "attack" -> "attacks/$agent"
+                "spec" -> "specs/$agent"
                 else -> "solutions/$agent"
             },
         )
@@ -158,9 +161,11 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> writeTestSuite(outDir, content)
             "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
+            "spec" -> writeSpec(outDir, content)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
-        outDir.resolve("build.gradle.kts").writeText(
+        // A spec is a document, so specs/<agent>/ is deliberately not a Gradle module.
+        if (mode != "spec") outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
                 "attack" -> attackBuildScript(
@@ -188,6 +193,7 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
             "attack" -> "./gradlew verifyAttack -Pagent=$agent   (does the suite catch it, and does it " +
                 "really differ from :core?)"
+            "spec" -> "read specs/$agent/SPEC.md — at this stage it is judged by eye, not by machine"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
             else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
@@ -280,6 +286,40 @@ abstract class RunAgentTask @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * The spec prompt (11.4): the informal feature description and the template the learner gets,
+     * and nothing else. No reference implementation exists yet and none is shown — the point is to
+     * see what an agent determines from an under-determined brief.
+     */
+    private fun buildSpecPrompt(root: File): String {
+        val brief = root.resolve("exercises/write-spec/README.md").readText()
+        val template = root.resolve("exercises/write-spec/SPEC-template.md").readText()
+        return buildString {
+            appendLine("The task, exactly as the learner receives it:")
+            appendLine("```markdown")
+            appendLine(brief)
+            appendLine("```")
+            appendLine()
+            appendLine("The template to fill in:")
+            appendLine("```markdown")
+            appendLine(template)
+            appendLine("```")
+            appendLine()
+            append("Write the specification.")
+        }
+    }
+
+    /** Writes the reply as `SPEC.md`, unwrapping one enclosing markdown fence if the model added one. */
+    private fun writeSpec(outDir: File, content: String): List<String> {
+        val whole = Regex("^\\s*```(?:markdown|md)?\\s*\\n(.*)```\\s*$", RegexOption.DOT_MATCHES_ALL)
+            .find(content)?.groupValues?.get(1)
+        val text = (whole ?: content).trim()
+        val target = outDir.resolve("SPEC.md")
+        target.parentFile.mkdirs()
+        target.writeText(text + "\n")
+        return listOf("SPEC.md (${text.lines().size} lines)")
     }
 
     /**
