@@ -56,8 +56,8 @@ abstract class RunAgentTask @Inject constructor(
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
         val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced)"
+            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress")) {
+                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|spec-advanced|spec-compress)"
             }
         }
         val dry = providers.gradleProperty("dry").isPresent
@@ -71,6 +71,7 @@ abstract class RunAgentTask @Inject constructor(
                 "verify-harden" -> "tools/agent-prompt-verify.md"
                 "attack" -> "tools/agent-prompt-attack.md"
                 "spec", "spec-advanced" -> "tools/agent-prompt-spec.md"
+                "spec-compress" -> "tools/agent-prompt-compress.md"
                 else -> "tools/agent-prompt-tests.md" // tests, verify-exercise
             },
         ).readText()
@@ -86,6 +87,7 @@ abstract class RunAgentTask @Inject constructor(
             "attack" -> buildAttackPrompt(root, attackSuite)
             "spec" -> buildSpecPrompt(root, "README.md", "SPEC-template.md")
             "spec-advanced" -> buildSpecPrompt(root, "README-advanced.md", "SPEC-template-advanced.md")
+            "spec-compress" -> buildCompressPrompt(root)
             else -> buildTestsPrompt(root)
         }
         val outDir = root.resolve(
@@ -97,6 +99,7 @@ abstract class RunAgentTask @Inject constructor(
                 "attack" -> "attacks/$agent"
                 "spec" -> "specs/$agent"
                 "spec-advanced" -> "specs-advanced/$agent"
+                "spec-compress" -> "specs-short/$agent"
                 else -> "solutions/$agent"
             },
         )
@@ -163,11 +166,11 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> writeTestSuite(outDir, content)
             "verify-harden" -> writeTestSuite(outDir, content, fileName = "PolicyTests.kt")
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
-            "spec", "spec-advanced" -> writeSpec(outDir, content)
+            "spec", "spec-advanced", "spec-compress" -> writeSpec(outDir, content)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         // A spec is a document, so specs/<agent>/ is deliberately not a Gradle module.
-        if (mode != "spec" && mode != "spec-advanced") outDir.resolve("build.gradle.kts").writeText(
+        if (mode !in setOf("spec", "spec-advanced", "spec-compress")) outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
                 "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
                 "attack" -> attackBuildScript(
@@ -195,7 +198,7 @@ abstract class RunAgentTask @Inject constructor(
             "tests" -> "./gradlew :test-suites:$agent:test   (runs the generated tests against :core)"
             "attack" -> "./gradlew verifyAttack -Pagent=$agent   (does the suite catch it, and does it " +
                 "really differ from :core?)"
-            "spec", "spec-advanced" -> "read ${outDir.relativeTo(root)}/SPEC.md — at this stage it is judged by eye, not by machine"
+            "spec", "spec-advanced", "spec-compress" -> "read ${outDir.relativeTo(root)}/SPEC.md — at this stage it is judged by eye, not by machine"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
             else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
@@ -310,6 +313,29 @@ abstract class RunAgentTask @Inject constructor(
             appendLine("```")
             appendLine()
             append("Write the specification.")
+        }
+    }
+
+    /**
+     * The compression prompt (11.4b): several specs of the same feature, deliberately ANONYMISED as
+     * A/B/C so nothing defers to "the good one", and the task of producing one that keeps everything
+     * that changes an implementation and nothing else. `-PspecsFrom=<dir>` selects the corpus.
+     */
+    private fun buildCompressPrompt(root: File): String {
+        val dir = root.resolve(prop("specsFrom") ?: "specs")
+        val found = dir.listFiles()?.sortedBy { it.name }?.mapNotNull { d ->
+            d.resolve("SPEC.md").takeIf { it.isFile }?.readText()
+        }.orEmpty()
+        require(found.size >= 2) { "Need at least two specs under $dir to compress." }
+        return buildString {
+            appendLine("Several specifications of the same feature, written independently.")
+            appendLine()
+            found.forEachIndexed { i, text ->
+                appendLine("===== SPEC ${'A' + i} =====")
+                appendLine(text)
+                appendLine()
+            }
+            append("Produce the merged specification.")
         }
     }
 
