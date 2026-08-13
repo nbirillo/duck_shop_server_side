@@ -5,11 +5,17 @@
 plugins {
     kotlin("jvm") version "2.2.20" apply false
     id("duck-shop.mutants")
+    id("duck-shop.spec")
 }
 
 // The 11.4 pricing mutants are a second catalog in this build: they mutate :reference, not :core, so
 // they need their own source root, package and output dir. Same task classes, different wiring —
 // the shared convention plugin stays generic.
+tasks.named<duckshop.SpecReportTask>("verifySpec") {
+    // this build sits one level over, so the surface file is across the sibling
+    surfaceFile.convention("../spec-test-driven/exercises/write-spec/README.md")
+}
+
 tasks.register<duckshop.GenerateMutantsTask>("generatePricingMutants") {
     group = "duck-shop"
     description = "Regenerate the 11.4 pricing mutant modules from pricing-mutants/catalog.json."
