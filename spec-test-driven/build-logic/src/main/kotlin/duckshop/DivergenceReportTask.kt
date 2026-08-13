@@ -53,16 +53,20 @@ import javax.inject.Inject
  * reader twice: the gaps close identically because whatever closes them is identical — both sessions
  * reached for `coerceAtLeast(0)` and for `Long` arithmetic although the text mentions neither.
  *
- * ### Determinacy is relative to the reader
+ * ### The second reader has to be strong, and here is what happens when it is not
  *
- * `written/claude-code.md` leaves 0 of 4021 cases open under this pair. Its own compression — same
- * claims, all eight still asserted — leaves **391**, nearly all of them at the top of the `Int`
- * range. The long version spells the requirement out with a worked example and says that multiplying
- * in 32-bit arithmetic is wrong; the compression keeps the requirement in half a clause. That is
- * enough for the stronger reader and not for the weaker one.
+ * `qwen2.5-coder:14b` as the second reader reported **391** open cases on the compression of
+ * `written/claude-code.md`, against 0 on the long version — which looked like a real result about
+ * compression narrowing the set of readers for whom a text is determinate. It was not. Re-measured
+ * with a frontier second reader, the same compression leaves **0 of 4021** open.
  *
- * So compression does not necessarily drop a claim — it can narrow the set of readers for whom the
- * text is determinate, which no single-implementation score can see.
+ * The 391 were the weak reader's incapacity: it overflowed at the top of the `Int` range, and it is
+ * the same model that elsewhere in this corpus imported `DiscountRule` from the wrong package and
+ * failed to compile at all. A reader whose failures are about itself contributes noise that reads
+ * exactly like ambiguity in the text.
+ *
+ * So the rule is not "use two readers" but **use two readers competent at the task**. The number this
+ * task prints is only as trustworthy as the weaker of the pair.
  *
  * So: **agreement between two runs of one agent proves nothing.** Disagreement still proves
  * ambiguity, which makes the same-agent pair a lower bound and never a clean bill of health. This
