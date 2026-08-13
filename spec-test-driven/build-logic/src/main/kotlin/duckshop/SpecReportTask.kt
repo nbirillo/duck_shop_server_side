@@ -70,9 +70,7 @@ abstract class SpecReportTask @Inject constructor(
             val sections = sections(text)
             val missing = REQUIRED.filter { req -> sections.keys.none { it.contains(req, ignoreCase = true) } }
             val empty = sections.filterValues { it.isBlank() }.keys
-            val unmentioned = surface.filterNot { name ->
-                Regex("\\b${Regex.escape(name)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)
-            }
+            val unmentioned = surface.filterNot { mentions(text, it) }
             val collisions = collisions(sections)
 
             logger.lifecycle("")
@@ -102,6 +100,21 @@ abstract class SpecReportTask @Inject constructor(
         logger.lifecycle("")
         logger.lifecycle("Mentioning a name is not describing it, and a filled section is not a true one.")
         logger.lifecycle("What the claims are worth is the property layer's question, not this one.")
+    }
+
+    /**
+     * Does the text refer to [name] at all — **including in prose**.
+     *
+     * `BigSpenderBonus` counts as mentioned by "the Big Spender Bonus rule" and by "big-spender
+     * bonus". Demanding the identifier verbatim was the third false positive of the same family this
+     * checker has produced: a specification is written for people, and naming a rule in words is not
+     * a gap. Every naive text rule here has penalised legitimate style until it was corrected against
+     * the fixtures — which is the argument for keeping the fixture corpus.
+     */
+    private fun mentions(text: String, name: String): Boolean {
+        val humps = Regex("(?<=[a-z0-9])(?=[A-Z])").split(name)
+        val pattern = humps.joinToString("[\\s-]?") { Regex.escape(it) }
+        return Regex("\\b$pattern\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)
     }
 
     /** Declared type names and constructor parameter names — the vocabulary a spec has to cover. */
