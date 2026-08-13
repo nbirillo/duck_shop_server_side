@@ -9,6 +9,7 @@ agent. The student folder therefore holds only the task statement and the comman
 | --- | --- |
 | [`exercise-11.2-answer-key.md`](exercise-11.2-answer-key.md) | 11.2: the planted defect, the gaps, the two under-specifications, how to grade |
 | [`mutation-testing-notes.md`](mutation-testing-notes.md) | How the mutant machinery works, the graded catalog, why some mutants must survive, measured scores |
+| [`exercise-11.4-calibration.md`](exercise-11.4-calibration.md) | 11.4: what the spec brief leaves open, how every agent did, why our consistency check ranks the best spec last, and the laws verified for the advanced tier |
 | [`advanced-tier-notes.md`](advanced-tier-notes.md) | 11.2 advanced: the contract addendum, the conformant variants and what each one frees, the calibrated test budget, the adversary |
 | [`claude-run-checklist.md`](claude-run-checklist.md) | Step-by-step for the by-hand Claude Code measurement of 11.2, incl. what to clear out first |
 | [`claude-attack-checklist.md`](claude-attack-checklist.md) | Step-by-step for the by-hand frontier attack, with prompts E (blind) and F (with feedback) |
