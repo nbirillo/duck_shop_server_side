@@ -17,9 +17,16 @@ includeBuild("../spec-test-driven")
 rootProject.name = "spec-test-driven-grading"
 
 include(":grading")
+include(":reference")
 
 // Auto-discover the generated mutant modules (./gradlew generateMutants), mirroring the student build.
 file("mutants").listFiles()
     ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
     ?.sortedBy { it.name }
     ?.forEach { include(":mutants:${it.name}") }
+
+// The same, for the 11.4 pricing mutants — they mutate :reference rather than :core.
+file("pricing-mutants").listFiles()
+    ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
+    ?.sortedBy { it.name }
+    ?.forEach { include(":pricing-mutants:${it.name}") }

@@ -17,6 +17,9 @@ tasks.register<GenerateMutantsTask>("generateMutants") {
     description = "Regenerate the mutant modules from the mutant catalog (mutation testing)."
     catalogPath.convention(providers.gradleProperty("mutantsCatalog").orElse("mutants/catalog.json"))
     outPath.convention(providers.gradleProperty("mutantsOut").orElse("mutants"))
+    alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
+    packagePath.convention(providers.gradleProperty("mutantsPackage")
+        .orElse("org/jetbrains/kotlin/course/duck/shop/admission"))
 }
 
 tasks.register<MutationReportTask>("verifyMutants") {
@@ -34,6 +37,9 @@ tasks.register<GenerateMutantsTask>("generateVariants") {
     description = "Regenerate the conformant-variant modules from the variant catalog."
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
+    alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
+    packagePath.convention(providers.gradleProperty("mutantsPackage")
+        .orElse("org/jetbrains/kotlin/course/duck/shop/admission"))
 }
 
 tasks.register<MutationReportTask>("verifyVariants") {
