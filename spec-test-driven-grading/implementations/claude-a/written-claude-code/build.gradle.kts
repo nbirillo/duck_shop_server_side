@@ -16,6 +16,7 @@ kotlin {
     }
     sourceSets.named("test") {
         kotlin.srcDir(rootDir.resolve("pricing-properties/kotlin"))
+        kotlin.srcDir(rootDir.resolve("../spec-test-driven/tools/pricing-probe/kotlin"))
     }
 }
 
@@ -30,4 +31,7 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     ignoreFailures = true
+    // Each module records into its own folder, so two implementations of one specification can
+    // be diffed without either overwriting the other.
+    systemProperty("probe.out", layout.buildDirectory.file("probe/recording.txt").get().asFile.absolutePath)
 }

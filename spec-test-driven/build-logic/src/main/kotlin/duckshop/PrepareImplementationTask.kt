@@ -76,6 +76,7 @@ abstract class PrepareImplementationTask @Inject constructor(
             implementationBuildScript(
                 types = providers.gradleProperty("implCoreSrc").getOrElse(IMPL_CORE_SRC),
                 tests = providers.gradleProperty("implTests").getOrElse(IMPL_TESTS),
+                probe = providers.gradleProperty("implProbe").getOrElse(IMPL_PROBE),
             ),
         )
         moduleDir.resolve("agent.json").writeText(
@@ -109,6 +110,7 @@ abstract class PrepareImplementationTask @Inject constructor(
         const val IMPL_PACKAGE = "org/jetbrains/kotlin/course/duck/shop/pricing"
         const val IMPL_CORE_SRC = "../spec-test-driven/core/src/main/kotlin"
         const val IMPL_TESTS = "pricing-properties/kotlin"
+        const val IMPL_PROBE = "../spec-test-driven/tools/pricing-probe/kotlin"
         const val IMPL_SURFACE = "../spec-test-driven/exercises/write-spec/README.md"
     }
 }

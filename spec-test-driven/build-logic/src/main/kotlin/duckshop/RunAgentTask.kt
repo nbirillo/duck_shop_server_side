@@ -474,6 +474,7 @@ abstract class RunAgentTask @Inject constructor(
     private fun implFromSpecBuildScript(): String = implementationBuildScript(
         types = prop("implCoreSrc") ?: DEFAULT_IMPL_CORE_SRC,
         tests = prop("implTests") ?: DEFAULT_IMPL_TESTS,
+        probe = prop("implProbe") ?: DEFAULT_IMPL_PROBE,
     )
 
 
@@ -702,6 +703,9 @@ abstract class RunAgentTask @Inject constructor(
         const val DEFAULT_IMPL_SURFACE = "../spec-test-driven/exercises/write-spec/README.md"
         const val DEFAULT_IMPL_CORE_SRC = "../spec-test-driven/core/src/main/kotlin"
         const val DEFAULT_IMPL_TESTS = "pricing-properties/kotlin"
+
+        /** The differential probe, recorded alongside the properties. */
+        const val DEFAULT_IMPL_PROBE = "../spec-test-driven/tools/pricing-probe/kotlin"
         const val DEFAULT_IMPL_PACKAGE = "org/jetbrains/kotlin/course/duck/shop/pricing"
 
         val CONSUMER_BUILD_SCRIPT = """

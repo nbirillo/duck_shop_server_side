@@ -11,8 +11,9 @@ package duckshop
  * report has to reach the point where it can name the divergence, and a divergence may well be
  * legitimate — the specification decided something differently from our reference, or left it open.
  */
-internal fun implementationBuildScript(types: String, tests: String): String =
-    """
+internal fun implementationBuildScript(types: String, tests: String, probe: String = ""): String {
+    val probeSrc = if (probe.isEmpty()) "" else "kotlin.srcDir(rootDir.resolve(\"$probe\"))"
+    return """
     // GENERATED — do not edit by hand.
     //
     // One agent's implementation of priceFor, written from a specification and nothing else, with
@@ -31,6 +32,7 @@ internal fun implementationBuildScript(types: String, tests: String): String =
         }
         sourceSets.named("test") {
             kotlin.srcDir(rootDir.resolve("$tests"))
+            $probeSrc
         }
     }
 
@@ -45,6 +47,10 @@ internal fun implementationBuildScript(types: String, tests: String): String =
     tasks.test {
         useJUnitPlatform()
         ignoreFailures = true
+        // Each module records into its own folder, so two implementations of one specification can
+        // be diffed without either overwriting the other.
+        systemProperty("probe.out", layout.buildDirectory.file("probe/recording.txt").get().asFile.absolutePath)
     }
 
     """.trimIndent()
+}

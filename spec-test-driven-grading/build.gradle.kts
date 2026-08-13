@@ -87,3 +87,13 @@ tasks.register<duckshop.PrepareImplementationTask>("prepareImplementation") {
     description = "Scaffold a hand-placed implementation so verifyImplementations can score it, or " +
         "print the prompt to hand the agent. Params: -Pagent=<name> -Pspec=<specification>."
 }
+
+// How much did each specification leave to chance? Two independent implementations of the same text,
+// compared with each other and with the reference.
+tasks.register<duckshop.DivergenceReportTask>("verifyDivergence") {
+    group = "verification"
+    description = "Compare two independent implementations of the same specification against each " +
+        "other and the reference. Params: -PagentA=<run> -PagentB=<run> [-Pspec=<one>] [-Pexamples=n]."
+    referenceRecording.convention("reference-probe/recording.txt")
+    dependsOn(":reference-probe:test")
+}

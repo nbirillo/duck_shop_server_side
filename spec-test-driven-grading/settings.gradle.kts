@@ -18,6 +18,7 @@ rootProject.name = "spec-test-driven-grading"
 
 include(":grading")
 include(":reference")
+include(":reference-probe")
 
 // Auto-discover the generated mutant modules (./gradlew generateMutants), mirroring the student build.
 file("mutants").listFiles()
