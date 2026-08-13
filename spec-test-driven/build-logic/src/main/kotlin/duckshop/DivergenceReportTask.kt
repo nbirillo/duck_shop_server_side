@@ -95,7 +95,10 @@ abstract class DivergenceReportTask @Inject constructor(
             .takeIf { it.isFile }
             ?.readLines()
             ?: run {
-                logger.lifecycle("No reference recording — run :reference-probe:test first.")
+                // Normal in the student build: there is no reference there, and comparing two
+                // readers with each other needs none. Only the teacher's side has one.
+                logger.lifecycle("")
+                logger.lifecycle("No reference here — reporting what the two readers agreed and disagreed on.")
                 null
             }
 
@@ -109,13 +112,14 @@ abstract class DivergenceReportTask @Inject constructor(
         logger.lifecycle("How much each specification left to chance — $a vs $b")
         logger.lifecycle("Two independent implementations of the same text. No model is trusted here;")
         logger.lifecycle("the measurement is whether they agree.")
-        if (a.substringBeforeLast('-') == b.substringBeforeLast('-')) {
-            logger.lifecycle("")
-            logger.lifecycle("NOTE — these look like two runs of the SAME agent. Disagreement below still")
-            logger.lifecycle("proves the text is ambiguous, but AGREEMENT PROVES NOTHING: one model twice is")
-            logger.lifecycle("one reader. A thin specification measured this way scored 0 open, and 674 with")
-            logger.lifecycle("a second, different agent. Use two different agents for the real number.")
-        }
+        // Stated every time rather than guessed at. The previous version tried to detect a
+        // same-agent pair from the run names and fired on `reader-a` vs `reader-b` — the naming this
+        // very exercise recommends — so it warned precisely when the learner had done it right.
+        logger.lifecycle("")
+        logger.lifecycle("Only as good as the pair: two runs of ONE agent share one set of habits, so")
+        logger.lifecycle("agreement between them proves nothing (measured: 0 open where two different")
+        logger.lifecycle("agents found 674). Disagreement always proves ambiguity. And a reader too weak")
+        logger.lifecycle("for the task contributes mistakes that read exactly like gaps in your text.")
 
         val ra = recordings(root, a)
         val rb = recordings(root, b)
@@ -163,9 +167,15 @@ abstract class DivergenceReportTask @Inject constructor(
         val settled = total - open - differentlySettled
         logger.lifecycle("── $spec")
         logger.lifecycle("   $total probed inputs")
-        logger.lifecycle("   agreed, same as the reference    $settled")
-        logger.lifecycle("   agreed, differs from reference   $differentlySettled")
-        logger.lifecycle("   LEFT OPEN                        $open")
+        if (ref == null) {
+            // The student build has no reference and must not be told it agrees with one.
+            logger.lifecycle("   the two readers agreed on         $settled")
+            logger.lifecycle("   LEFT OPEN                        $open")
+        } else {
+            logger.lifecycle("   agreed, same as the reference    $settled")
+            logger.lifecycle("   agreed, differs from reference   $differentlySettled")
+            logger.lifecycle("   LEFT OPEN                        $open")
+        }
         settledExamples.forEach { logger.lifecycle("     agreed, not ours: $it") }
         if (settledExamples.isNotEmpty()) {
             logger.lifecycle("       ↳ both readers landed on the same answer and neither matched us. That is")

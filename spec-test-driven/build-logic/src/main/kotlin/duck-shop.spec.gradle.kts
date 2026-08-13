@@ -29,3 +29,23 @@ tasks.register<duckshop.SandboxTask>("sandbox") {
     description = "Lay out a folder with the data types and your SPEC.md and nothing else, to point " +
         "an agent at. Params: -Pspec=<SPEC.md> [-Pname=<folder>]."
 }
+
+// Collect what an agent wrote in a sandbox into a module that can be recorded and compared.
+// Learner-side: the paths come from each build's gradle.properties, and in the student build the
+// property catalog is deliberately absent.
+tasks.register<duckshop.PrepareImplementationTask>("prepareImplementation") {
+    group = "duck-shop"
+    description = "Take the implementation an agent wrote in a sandbox so it can be compared. " +
+        "Params: -Pagent=<name> -Pspec=<the spec> [-Pfrom=sandbox/<name>]."
+}
+
+// How much did your specification leave to chance? Two readers, compared. Needs no reference and no
+// answer key, which is exactly why a learner can run it on their own work.
+tasks.register<duckshop.DivergenceReportTask>("verifyDivergence") {
+    group = "verification"
+    description = "Compare two independent implementations of the same specification. " +
+        "Params: -PagentA=<name> -PagentB=<name> [-Pspec=<one>] [-Pexamples=n]."
+    referenceRecording.convention(
+        providers.gradleProperty("referenceRecording").orElse("reference-probe/recording.txt"),
+    )
+}

@@ -12,7 +12,11 @@ package duckshop
  * legitimate — the specification decided something differently from our reference, or left it open.
  */
 internal fun implementationBuildScript(types: String, tests: String, probe: String = ""): String {
+    // Both optional, and `tests` is empty in the STUDENT build on purpose: the property catalog
+    // states the claims, so handing it to a learner hands over what the reference decided. A learner
+    // records the probe and compares two readers; the properties stay on the teacher's side.
     val probeSrc = if (probe.isEmpty()) "" else "kotlin.srcDir(rootDir.resolve(\"$probe\"))"
+    val testsSrc = if (tests.isEmpty()) "" else "kotlin.srcDir(rootDir.resolve(\"$tests\"))"
     return """
     // GENERATED — do not edit by hand.
     //
@@ -31,7 +35,7 @@ internal fun implementationBuildScript(types: String, tests: String, probe: Stri
             kotlin.srcDir(rootDir.resolve("$types"))
         }
         sourceSets.named("test") {
-            kotlin.srcDir(rootDir.resolve("$tests"))
+            $testsSrc
             $probeSrc
         }
     }

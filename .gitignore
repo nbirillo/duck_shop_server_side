@@ -40,3 +40,6 @@ Thumbs.db
 # ---- Module 11.4 ----
 # Implement-from-spec sandboxes: derived from a SPEC.md by `./gradlew sandbox`, one per attempt.
 spec-test-driven/sandbox/
+
+# Collected sandbox implementations (derived; `prepareImplementation` rebuilds them).
+spec-test-driven/implementations/

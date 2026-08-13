@@ -106,11 +106,14 @@ abstract class PrepareImplementationTask @Inject constructor(
             "print the exact\nuser message the API path would send, and use that verbatim."
     }
 
+    // Defaults for the STUDENT build, which is the one a learner runs. The grading build overrides
+    // every one of them in its gradle.properties — including implTests, which is empty here on
+    // purpose: the property catalog states the claims, and a learner must not have it.
     private companion object {
         const val IMPL_PACKAGE = "org/jetbrains/kotlin/course/duck/shop/pricing"
-        const val IMPL_CORE_SRC = "../spec-test-driven/core/src/main/kotlin"
-        const val IMPL_TESTS = "pricing-properties/kotlin"
-        const val IMPL_PROBE = "../spec-test-driven/tools/pricing-probe/kotlin"
-        const val IMPL_SURFACE = "../spec-test-driven/exercises/write-spec/README.md"
+        const val IMPL_CORE_SRC = "core/src/main/kotlin"
+        const val IMPL_TESTS = ""
+        const val IMPL_PROBE = "tools/pricing-probe/kotlin"
+        const val IMPL_SURFACE = "exercises/write-spec/README.md"
     }
 }
