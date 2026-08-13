@@ -113,10 +113,25 @@ class PricingProperties {
 
     @Test
     fun `a large price does not overflow`() {
+        // TOLERANCE OF 1 ON PURPOSE — do not "tighten" this back to assertEquals.
+        //
+        // It used to demand the exact value, which pins the rounding DIRECTION as a side effect, so
+        // this property also killed round-the-remainder and round-up. Both differ from the ideal by
+        // exactly 1 here, and neither has anything to do with 32-bit arithmetic. The consequence was
+        // a scoring distortion we measured: a specification that says nothing about rounding was
+        // credited with pinning it, and one fixture that mentions only overflow tied a spec four
+        // times its equal. A property should kill what its claim rules out, and nothing else.
+        //
+        // Within 1 the two rounding mutants survive here (claims 4 and 5 own them) while an Int
+        // multiplication still wraps to a result that is out by millions.
         listOf(Int.MAX_VALUE, Int.MAX_VALUE - 1, 2_000_000_000).forEach { price ->
             val duck = Duck("big", price, hasKotlinAttribute = false)
-            val expected = price - (price.toLong() * 10 / 100).toInt()
-            assertEquals(expected, priceFor(duck, listOf(DiscountRule.Percentage(10))), "price $price")
+            val ideal = price - (price.toLong() * 10 / 100).toInt()
+            val actual = priceFor(duck, listOf(DiscountRule.Percentage(10)))
+            assertTrue(
+                actual in (ideal - 1)..(ideal + 1),
+                "price $price: got $actual, and exact arithmetic gives $ideal — that is not a rounding difference",
+            )
         }
     }
 
