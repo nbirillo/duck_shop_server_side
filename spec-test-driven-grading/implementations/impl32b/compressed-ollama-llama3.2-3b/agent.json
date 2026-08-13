@@ -1,1 +1,1 @@
-{"agent":"impl32b","mode":"impl-from-spec","provider":"ollama","model":"qwen2.5-coder:32b","checkedOn":"2026-08-13","temperature":0,"promptSha256":"3c2d4b1e21e1fcca2cfc1f15a6b81e082f3065724f4e55474df92bca1eeabd84"}
+{"agent":"impl32b","mode":"impl-from-spec","provider":"interactive","spec":"fixtures/11.4/compressed/ollama-llama3.2-3b.md","checkedOn":"2026-08-13"}

@@ -22,9 +22,13 @@ import javax.inject.Inject
  * Agreement is the measurement, so no model has to be believed about anything:
  *
  *  - **settled, as we did** — A and B agree, and agree with the reference.
- *  - **settled differently** — A and B agree with each other and not with the reference. This is
- *    *not* a defect. Two readers reached the same answer from the text; ours is one legal answer
- *    among others, and the specification is doing its job.
+ *  - **both read it the same way, and not ours** — A and B agree with each other and differ from the
+ *    reference. Do **not** read this as "the specification decided it differently": it also happens
+ *    when the text says nothing and both readers reach for the same default. Measured: on
+ *    llama3.2-3b's specification both agents returned −50 for `Percentage(150)` on a price of 100
+ *    and both overflowed at `Int.MAX_VALUE` — that text mentions neither clamping nor arithmetic
+ *    width, so the agreement came from a shared habit, not from the page. Only reading the sentence
+ *    separates the two, and this label deliberately no longer pretends otherwise.
  *  - **left open** — A and B differ. The text did not decide, and each agent decided for itself.
  *    This is the number the reference-agreement score cannot see.
  *
@@ -48,6 +52,17 @@ import javax.inject.Inject
  * "Left open" is relative to a **population of readers**, and two sessions of one model are one
  * reader twice: the gaps close identically because whatever closes them is identical — both sessions
  * reached for `coerceAtLeast(0)` and for `Long` arithmetic although the text mentions neither.
+ *
+ * ### Determinacy is relative to the reader
+ *
+ * `written/claude-code.md` leaves 0 of 4021 cases open under this pair. Its own compression — same
+ * claims, all eight still asserted — leaves **391**, nearly all of them at the top of the `Int`
+ * range. The long version spells the requirement out with a worked example and says that multiplying
+ * in 32-bit arithmetic is wrong; the compression keeps the requirement in half a clause. That is
+ * enough for the stronger reader and not for the weaker one.
+ *
+ * So compression does not necessarily drop a claim — it can narrow the set of readers for whom the
+ * text is determinate, which no single-implementation score can see.
  *
  * So: **agreement between two runs of one agent proves nothing.** Disagreement still proves
  * ambiguity, which makes the same-agent pair a lower bound and never a clean bill of health. This
@@ -144,13 +159,14 @@ abstract class DivergenceReportTask @Inject constructor(
         val settled = total - open - differentlySettled
         logger.lifecycle("── $spec")
         logger.lifecycle("   $total probed inputs")
-        logger.lifecycle("   settled, same as the reference   $settled")
-        logger.lifecycle("   settled differently              $differentlySettled")
+        logger.lifecycle("   agreed, same as the reference    $settled")
+        logger.lifecycle("   agreed, differs from reference   $differentlySettled")
         logger.lifecycle("   LEFT OPEN                        $open")
-        settledExamples.forEach { logger.lifecycle("     settled differently: $it") }
+        settledExamples.forEach { logger.lifecycle("     agreed, not ours: $it") }
         if (settledExamples.isNotEmpty()) {
-            logger.lifecycle("       ↳ both readers agreed and neither matched us. The text decided this;")
-            logger.lifecycle("         our reference is one legal answer, not the only one.")
+            logger.lifecycle("       ↳ both readers landed on the same answer and neither matched us. That is")
+            logger.lifecycle("         either the text deciding it differently — fine, ours is one legal answer —")
+            logger.lifecycle("         or the text saying NOTHING and both defaulting the same way. Read it.")
         }
         openExamples.forEach { logger.lifecycle("     open: $it") }
         if (openExamples.isNotEmpty()) {
