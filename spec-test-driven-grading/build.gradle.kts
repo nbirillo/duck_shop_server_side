@@ -80,3 +80,10 @@ tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
             .map { "${it.path}:test" },
     )
 }
+
+// The interactive route into 3e: a frontier agent driven by hand in another window.
+tasks.register<duckshop.PrepareImplementationTask>("prepareImplementation") {
+    group = "duck-shop"
+    description = "Scaffold a hand-placed implementation so verifyImplementations can score it, or " +
+        "print the prompt to hand the agent. Params: -Pagent=<name> -Pspec=<specification>."
+}

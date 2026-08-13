@@ -1,0 +1,103 @@
+package duckshop
+
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
+import java.io.File
+import java.time.LocalDate
+import javax.inject.Inject
+
+/**
+ * Turns a hand-placed `Pricing.kt` into a module `verifyImplementations` can score.
+ *
+ * `runAgent -Pmode=impl-from-spec` does this for an API agent. An interactive one — Claude Code,
+ * Junie — is driven by a person in another window and has no API call to hang the scaffolding off,
+ * so this supplies the same treatment. Same pattern as `prepareAttack`.
+ *
+ * It also **prints the exact prompt to hand that agent**, assembled from the same sources the API
+ * path uses, so the two routes stay comparable. Copying the specification by hand is how a brief or
+ * a reference leaks in, and then the run measures the leak instead of the specification.
+ *
+ * Params: `-Pagent=<name>`, `-Pspec=<the specification>`, `[-PimplSurface=<brief>]`.
+ */
+abstract class PrepareImplementationTask @Inject constructor(
+    private val providers: ProviderFactory,
+    private val layout: ProjectLayout,
+) : DefaultTask() {
+
+    @get:Input
+    @get:Optional
+    abstract val agent: Property<String>
+
+    @TaskAction
+    fun run() {
+        val root = layout.projectDirectory.asFile
+        val name = agent.orNull ?: providers.gradleProperty("agent").orNull
+            ?: error("Missing -Pagent=<name>")
+        val spec = providers.gradleProperty("spec").orNull
+            ?: error("Missing -Pspec=<the specification this implementation was written from>")
+        val key = spec.trimEnd('/').removeSuffix(".md").split('/').filter { it.isNotEmpty() }
+            .takeLast(2).joinToString("-")
+
+        val pkg = providers.gradleProperty("implPackage").getOrElse(IMPL_PACKAGE)
+        val moduleDir = root.resolve("implementations/$name/$key")
+        val source = moduleDir.resolve("src/main/kotlin/$pkg/Pricing.kt")
+        if (!source.isFile) {
+            logger.lifecycle("")
+            logger.lifecycle("Nothing to prepare yet. Put the agent's file here:")
+            logger.lifecycle("   ${source.relativeTo(root)}")
+            logger.lifecycle("")
+            logger.lifecycle("Hand the agent this and nothing else — no brief, no reference, no properties:")
+            logger.lifecycle("")
+            logger.lifecycle("─".repeat(78))
+            logger.lifecycle(promptFor(root, spec))
+            logger.lifecycle("─".repeat(78))
+            return
+        }
+
+        moduleDir.resolve("build.gradle.kts").writeText(
+            implementationBuildScript(
+                types = providers.gradleProperty("implCoreSrc").getOrElse(IMPL_CORE_SRC),
+                tests = providers.gradleProperty("implTests").getOrElse(IMPL_TESTS),
+            ),
+        )
+        moduleDir.resolve("agent.json").writeText(
+            buildJsonObject {
+                put("agent", name)
+                put("mode", "impl-from-spec")
+                put("provider", "interactive")
+                put("spec", spec)
+                put("checkedOn", LocalDate.now().toString())
+            }.toString() + "\n",
+        )
+
+        logger.lifecycle("[prepareImplementation] implementations/$name/$key is ready — reload Gradle, then:")
+        logger.lifecycle("[prepareImplementation]   ./gradlew verifyImplementations -Pagent=$name")
+    }
+
+    /** The API path's prompt, printed so an interactive run gets exactly the same input. */
+    private fun promptFor(root: File, spec: String): String {
+        val system = root.resolve(
+            providers.gradleProperty("promptDir").getOrElse("tools") + "/agent-prompt-impl-spec.md",
+        )
+        require(system.isFile) { "Prompt not found: $system (pass -PpromptDir=<dir>)" }
+        return system.readText().trim() + "\n\n" +
+            "Then paste, below this line, the contents of $spec and of the surface block from " +
+            providers.gradleProperty("implSurface").getOrElse(IMPL_SURFACE) +
+            ".\nRun `./gradlew runAgent -Pmode=impl-from-spec -Pdry ...` with the same -Pspec to " +
+            "print the exact\nuser message the API path would send, and use that verbatim."
+    }
+
+    private companion object {
+        const val IMPL_PACKAGE = "org/jetbrains/kotlin/course/duck/shop/pricing"
+        const val IMPL_CORE_SRC = "../spec-test-driven/core/src/main/kotlin"
+        const val IMPL_TESTS = "pricing-properties/kotlin"
+        const val IMPL_SURFACE = "../spec-test-driven/exercises/write-spec/README.md"
+    }
+}

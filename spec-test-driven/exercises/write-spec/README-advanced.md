@@ -33,6 +33,9 @@ sealed interface DiscountRule {
 
 /** Returns what [duck] actually costs under the promotion [rule]. */
 fun priceFor(duck: Duck, rule: DiscountRule): Int
+
+/** Returns what [duck] actually costs in a shop running all of [rules]. */
+fun priceFor(duck: Duck, rules: List<DiscountRule>): Int
 ```
 
 `AdmissionPolicy` is the one you already know from 11.2 — a yes/no question about a duck.
