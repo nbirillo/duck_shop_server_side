@@ -16,19 +16,14 @@ Write each statement so it is **checkable**: it should be possible to point at a
 whether the statement holds. "Discounts are applied sensibly" is not checkable. "A percentage rule
 reduces the price by `percent` percent of the price it is applied to" is.
 
-Some questions this section has to answer — not because they are the only ones, but because the
-business text does not answer them:
-
-- The percentage of an odd number is not a whole number. What happens to it?
-- More than one rule is active. In what order do they apply, and does the order change the result?
-- Does each rule see the shelf price, or the price left by the rules before it?
-- How low can the answer go?
+Finding what belongs here is most of the work. The business text is short, and a short text leaves
+more undetermined than it looks — go through it and ask, at each sentence, whether two people could
+read it and compute different numbers.
 
 ## 3. Edge cases
 
-Inputs that are legal but unusual, and what the answer is for each. An empty rule list. A duck that
-costs nothing. A percentage of 0, or of 100, or more than 100. A negative amount. Two rules of the
-same kind.
+Inputs that are legal but unusual, and what the answer is for each. Empty things, zero, boundaries,
+values at the far ends of what a type allows, and combinations that would not occur in a demo.
 
 For each one, say the answer — not that it "should be handled".
 
