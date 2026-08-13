@@ -34,3 +34,11 @@ tasks.register<duckshop.MutationReportTask>("verifyPricingMutants") {
     outPath.set("pricing-mutants")
     dependsOn(subprojects.filter { it.path.startsWith(":pricing-mutants:") }.map { "${it.path}:test" })
 }
+
+tasks.register<duckshop.PropertyMatrixTask>("pricingPropertyMatrix") {
+    group = "verification"
+    description = "Which property kills which pricing mutant — the definition of load-bearing."
+    catalogPath.set("pricing-mutants/catalog.json")
+    outPath.set("pricing-mutants")
+    dependsOn("verifyPricingMutants")
+}
