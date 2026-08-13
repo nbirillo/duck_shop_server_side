@@ -32,6 +32,27 @@ import javax.inject.Inject
  * leaving something free is a legitimate choice, and section 4 of the template exists to record it.
  * What this measures is how much is open *at all*; whether that was on purpose is in the text.
  *
+ * ### The two runs have to come from DIFFERENT agents
+ *
+ * Measured, and it went against the intuition: on a specification with no rounding rule, no
+ * compounding rule and a self-contradictory bonus,
+ *
+ * ```
+ * two sessions of the same agent    0 open / 4021
+ * two different agents            674 open / 4021
+ * ```
+ *
+ * The two sessions wrote genuinely different code and produced byte-identical behaviour, so the same
+ * agent twice reported the same clean zero it reports for the best specification in the corpus.
+ *
+ * "Left open" is relative to a **population of readers**, and two sessions of one model are one
+ * reader twice: the gaps close identically because whatever closes them is identical — both sessions
+ * reached for `coerceAtLeast(0)` and for `Long` arithmetic although the text mentions neither.
+ *
+ * So: **agreement between two runs of one agent proves nothing.** Disagreement still proves
+ * ambiguity, which makes the same-agent pair a lower bound and never a clean bill of health. This
+ * task does not know which pair it was given, so it says so in the footer rather than pretending.
+ *
  * Params: `-PagentA=<run>`, `-PagentB=<run>`, `[-Pspec=<one specification>]`, `[-Pexamples=<n>]`.
  */
 abstract class DivergenceReportTask @Inject constructor(
@@ -69,6 +90,13 @@ abstract class DivergenceReportTask @Inject constructor(
         logger.lifecycle("How much each specification left to chance — $a vs $b")
         logger.lifecycle("Two independent implementations of the same text. No model is trusted here;")
         logger.lifecycle("the measurement is whether they agree.")
+        if (a.substringBeforeLast('-') == b.substringBeforeLast('-')) {
+            logger.lifecycle("")
+            logger.lifecycle("NOTE — these look like two runs of the SAME agent. Disagreement below still")
+            logger.lifecycle("proves the text is ambiguous, but AGREEMENT PROVES NOTHING: one model twice is")
+            logger.lifecycle("one reader. A thin specification measured this way scored 0 open, and 674 with")
+            logger.lifecycle("a second, different agent. Use two different agents for the real number.")
+        }
 
         val ra = recordings(root, a)
         val rb = recordings(root, b)
