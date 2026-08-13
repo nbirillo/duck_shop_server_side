@@ -78,3 +78,62 @@ The best of these is that **two of the three broken laws are broken only sometim
 commutativity on 95 and 37 and you will conclude that order does not matter, and be wrong at 100.
 That is the argument for stating a law instead of spot-checking it, and it is what property-based
 testing exists for.
+
+---
+
+# 11.4b — the compression task, calibrated 2026-08-13
+
+Task: given three specs of the same feature (269, 49 and 40 lines — the frontier's, 1.5b's and
+32b's, anonymised as A/B/C), produce one that is **shorter than the longest and no weaker than the
+best**. Run with `runAgent -Pmode=spec-compress -PspecsFrom=…` and, for the frontier, by hand in a
+clean export.
+
+## Results
+
+| Agent | Lines | Load-bearing claims kept (of 5) | How it got there |
+| --- | --- | --- | --- |
+| source A (the frontier's original) | 269 | 5 | — |
+| **Claude Opus 5** | **141** | **4** | the only real synthesis |
+| qwen2.5-coder:32b | 121 | 3 | rewrote (12% verbatim), cut into the content |
+| qwen2.5-coder:14b | 109 | 3 | rewrote (25% verbatim), cut into the content |
+| qwen2.5-coder:7b | 188 | 5 | **93% verbatim from A** |
+| qwen2.5-coder:1.5b | 193 | 5 | **94% verbatim from A**, one original line |
+| llama3.2:3b | 257 | 5 | 67% verbatim, and longer than two of its three sources |
+
+The five load-bearing claims: the two rounding formulations differ (`floor(p × percent / 100)` versus
+`floor(p × (100 − percent) / 100)` — 86 versus 85 at price 95) · a wider intermediate is needed or
+large prices overflow · the bonus tests the running price, not the shelf price · the result is clamped
+at zero · rule order matters.
+
+## What it shows
+
+**Shorter is not better, and the difference is measurable.** The two models that came out shorter than
+the frontier both dropped the two-rounding-formulations point — the single thing only source A had
+found. They compressed by cutting content, not repetition.
+
+**The three that kept everything did so by transcription.** 93–94% of their lines are A verbatim, one
+original line apiece. They did not merge; they retyped the longest source. None of them propagated B's
+two false claims — but only because they never read B.
+
+**The frontier is the only one that actually merged**: 269 → 141, and it found and dropped both of B's
+errors. Verified: "price 50 with `BigSpenderBonus(100, 20)` → 30" is wrong (50 is below the threshold,
+the answer is 50), and "`[AmountOff(5), Percentage(10)]` on 100 → 95" is wrong (the answer is 86). It
+also carried one number out of the worked-example table before deleting the table — `[Percentage(10),
+BigSpenderBonus(100, 20)]` on 100 → **90**, which is the input that distinguishes testing the threshold
+against the running price (90) from testing it against the shelf price (70). Verified.
+
+It lost one thing: the explicit statement that **rule order matters**. Derivable from its own
+definition of composition — but derivable and stated are not the same, which is the distinction the
+laws section of the advanced tier exists to teach.
+
+## The metric this hands us for the checker
+
+Length is trivial to measure. The other half now has a definition that needs no model:
+
+> **A claim is load-bearing if the property derived from it kills at least one mutant.**
+
+That reuses the machinery already standing and matches the decision that properties run against
+`:core` and against the mutants. A compressed spec is then scored on two numbers — **mutants its
+claims still kill**, and **lines** — and "shorter and no weaker" becomes an ordering rather than a
+judgement call. It also gives the exercise the same shape as the test budget in 11.2: derive your own
+target, and defend it against both extremes.
