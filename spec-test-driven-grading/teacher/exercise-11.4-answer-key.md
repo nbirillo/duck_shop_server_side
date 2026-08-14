@@ -69,6 +69,31 @@ On our best fixture, claim 2 is genuinely stated, the extractor genuinely missed
 property kills no mutant, so the claim they were defending constrains nobody. The report says both
 things in the same run.
 
+## Handing out the corpus — rename the files
+
+The repository is public, deliberately. Someone studying alone may read the grading build; the
+exercise then rests on their honesty, which is their business. A teacher running the course downloads
+everything and hands the group only what the step needs.
+
+**When you hand out `fixtures/11.4/`, rename the files.** They are named by the model that wrote them,
+and the slides promise the learner an anonymous set — a name on the file does the reading for them, and
+in the compression step it makes everyone defer to whichever one they believe is best. Use `A.md`,
+`B.md`, `C.md`, in an order you shuffle yourself:
+
+```
+mkdir -p handout
+cp fixtures/11.4/written/claude-code.md                 handout/A.md
+cp fixtures/11.4/written/ollama-qwen2.5-coder-1.5b.md   handout/B.md
+cp fixtures/11.4/written/ollama-qwen2.5-coder-32b.md    handout/C.md
+```
+
+Those three are the set we used for the compression run, so the results in
+`exercise-11.4-corpus-results.md` line up with them. Any three work; keep one long and two short, or
+there is nothing to merge.
+
+Keep your own mapping. You will want it when a learner asks which was which — after they have finished,
+not before.
+
 ## Handing the learner the tool and the list, if you want to
 
 The default is that the claim list and the property run stay on your side: the learner writes the
