@@ -97,7 +97,7 @@ not before.
 ## Handing the learner the tool and the list, if you want to
 
 The default is that the claim list and the property run stay on your side: the learner writes the
-specification, gets the list back with their feedback, and argues with it in writing. Slide 39 has
+specification, gets the list back with their feedback, and argues with it in writing. Slide 41 has
 them grade their own list by hand first, and that step needs nothing from you.
 
 You can go further and give them the catalog and `verifyClaims` outright. It is one copy and one
