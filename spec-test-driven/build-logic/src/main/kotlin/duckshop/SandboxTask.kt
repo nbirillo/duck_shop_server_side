@@ -120,6 +120,19 @@ abstract class SandboxTask @Inject constructor(
         )
         val propertyFiles = ownProperties.takeIf { it.isDirectory }
             ?.walkTopDown()?.filter { it.extension == "kt" }?.toList().orEmpty()
+        // Anything that is not Kotlin is silently unrunnable, and silence here is the worst outcome:
+        // a learner who wrote their properties as prose gets a green build and zero tests, and
+        // concludes the agent satisfied them.
+        val notKotlin = ownProperties.takeIf { it.isDirectory }
+            ?.walkTopDown()?.filter { it.isFile && it.extension != "kt" }?.toList().orEmpty()
+        if (notKotlin.isNotEmpty()) {
+            logger.warn("")
+            logger.warn("[sandbox] Not copied, because only Kotlin can be run:")
+            notKotlin.forEach { logger.warn("[sandbox]   ${it.relativeTo(root)}") }
+            logger.warn("[sandbox] A property written as prose is a claim, not a check. Keep the prose")
+            logger.warn("[sandbox] in your specification; put the runnable version in a .kt file here.")
+        }
+
         propertyFiles.forEach { file ->
             val target = dir.resolve("src/test/kotlin").resolve(file.relativeTo(ownProperties).path)
             target.parentFile.mkdirs()
@@ -201,8 +214,10 @@ abstract class SandboxTask @Inject constructor(
             ./gradlew -p sandbox/$name compileKotlin   # does it build
             ./gradlew -p sandbox/$name test            # if you brought properties of your own
 
-        If `src/test/` has properties in it, they came from `exercises/write-spec/properties/` and they
-        are your contract in executable form. **The agent must make them pass without editing them.**
+        If `src/test/` has properties in it, they came from `exercises/write-spec/properties/`: any
+        number of `.kt` files, named and arranged however you like — only Kotlin is copied, because
+        only Kotlin runs. They are your contract in executable form.
+        **The agent must make them pass without editing them.**
         A property edited to pass is the oldest trick there is — it is what exercise 11.2 was about —
         and this task tells you when the copies stop matching your originals.
 
