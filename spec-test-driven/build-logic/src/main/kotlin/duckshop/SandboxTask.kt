@@ -67,6 +67,24 @@ abstract class SandboxTask @Inject constructor(
         // The copy of the specification is the one an agent reads, and it is the one a learner is
         // looking at while they talk to it — so edits land in the wrong file and vanish on the next
         // run. Say so rather than discovering it later.
+        // An agent that cannot satisfy a property sometimes edits the property. In 11.2 that was the
+        // whole attack surface; here it is silent, because the copy is derived and nobody looks at it.
+        val editedProperties = (dir.resolve("src/test/kotlin").takeIf { it.isDirectory }
+            ?.walkTopDown()?.filter { it.extension == "kt" }?.filter { copy ->
+                val origin = root.resolve(
+                    providers.gradleProperty("properties").getOrElse("exercises/write-spec/properties"),
+                ).resolve(copy.relativeTo(dir.resolve("src/test/kotlin")).path)
+                !origin.isFile || origin.readText() != copy.readText()
+            }?.toList().orEmpty())
+        if (editedProperties.isNotEmpty()) {
+            logger.warn("")
+            logger.warn("[sandbox] The properties in sandbox/$name were CHANGED:")
+            editedProperties.forEach { logger.warn("[sandbox]   ${it.relativeTo(dir)}") }
+            logger.warn("[sandbox] If the agent did that, read it before anything else — a property")
+            logger.warn("[sandbox] edited to pass is the oldest trick there is, and it is exactly what")
+            logger.warn("[sandbox] exercise 11.2 was about. Your originals are untouched.")
+        }
+
         val copied = dir.resolve("SPEC.md")
         if (copied.isFile && copied.readText() != spec.readText()) {
             logger.warn("")
@@ -93,9 +111,24 @@ abstract class SandboxTask @Inject constructor(
             .writeText(withoutExerciseNotes(core.resolve("pricing/DiscountRule.kt").readText()))
         src.resolve("pricing/Pricing.kt").writeText(stub())
 
+        // The learner's OWN properties, if they wrote any. Ours never come here — they state the
+        // claims, so they would hand over what the reference decided — but a learner's own are theirs,
+        // and putting them in front of the agent is the point: the agent now has something to satisfy
+        // rather than only prose to interpret. That is the 11.2 loop, driven by their specification.
+        val ownProperties = root.resolve(
+            providers.gradleProperty("properties").getOrElse("exercises/write-spec/properties"),
+        )
+        val propertyFiles = ownProperties.takeIf { it.isDirectory }
+            ?.walkTopDown()?.filter { it.extension == "kt" }?.toList().orEmpty()
+        propertyFiles.forEach { file ->
+            val target = dir.resolve("src/test/kotlin").resolve(file.relativeTo(ownProperties).path)
+            target.parentFile.mkdirs()
+            file.copyTo(target, overwrite = true)
+        }
+
         dir.resolve("SPEC.md").writeText(spec.readText())
         dir.resolve("README.md").writeText(readme(name))
-        dir.resolve("build.gradle.kts").writeText(BUILD_SCRIPT)
+        dir.resolve("build.gradle.kts").writeText(buildScript(propertyFiles.isNotEmpty()))
         // Its OWN settings file, or Gradle walks up and adopts the student build's — and then the
         // sandbox is a module of the very project it is supposed to be separate from.
         dir.resolve("settings.gradle.kts").writeText("rootProject.name = \"$name\"\n")
@@ -132,6 +165,9 @@ abstract class SandboxTask @Inject constructor(
         //
         // DiscountRule may have cases SPEC.md never describes. Leave the price unchanged for those:
         // your `when` still has to be exhaustive.
+        //
+        // If src/test/ holds properties, they are the contract in executable form: make them pass
+        // WITHOUT editing them. A property you cannot satisfy is a conversation, not an obstacle.
 
         fun priceFor(duck: Duck, rules: List<DiscountRule>): Int = TODO()
 
@@ -160,14 +196,41 @@ abstract class SandboxTask @Inject constructor(
         you send it looking. This is the same deal as the reference implementation: available,
         and it costs you the exercise.
 
-        From the project root, `./gradlew -p sandbox/$name compileKotlin` tells you whether it builds. Whether it is *right* is not
-        something this folder can tell you — that comes from the checks your teacher runs, and from
-        reading the divergences with your specification open beside them.
+        From the project root:
+
+            ./gradlew -p sandbox/$name compileKotlin   # does it build
+            ./gradlew -p sandbox/$name test            # if you brought properties of your own
+
+        If `src/test/` has properties in it, they came from `exercises/write-spec/properties/` and they
+        are your contract in executable form. **The agent must make them pass without editing them.**
+        A property edited to pass is the oldest trick there is — it is what exercise 11.2 was about —
+        and this task tells you when the copies stop matching your originals.
+
+        Whether the implementation is *right* is not something this folder can settle. That comes from
+        the checks your teacher runs, and from reading the divergences with your specification open
+        beside them.
 
         When it compiles, hand it back:
 
             ./gradlew prepareImplementation -Pagent=<you> -Pspec=<the spec> -Pfrom=sandbox/$name
         """.trimIndent() + "\n"
+
+    /**
+     * The sandbox build. It grows a test setup only when the learner brought properties of their own —
+     * with none, there is deliberately nothing to run here, so the step cannot turn into "make these
+     * pass" against a suite somebody else wrote.
+     */
+    private fun buildScript(hasProperties: Boolean): String = BUILD_SCRIPT + if (!hasProperties) "" else
+        """
+
+        dependencies {
+            testImplementation(kotlin("test"))
+        }
+
+        tasks.test {
+            useJUnitPlatform()
+        }
+        """.trimIndent()
 
     private companion object {
         const val PKG = "org/jetbrains/kotlin/course/duck/shop"
