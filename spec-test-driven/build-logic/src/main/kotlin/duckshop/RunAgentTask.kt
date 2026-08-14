@@ -66,20 +66,19 @@ abstract class RunAgentTask @Inject constructor(
         val agent = prop("agent") ?: "$provider-$safeModel"
         val root = layout.projectDirectory.asFile
 
-        // The prompts live in the student build; the grading build reaches them across the sibling.
-        val promptDir = prop("promptDir") ?: "tools"
-        val systemPrompt = root.resolve(
+        val systemPrompt = findPrompt(
+            root,
             when (mode) {
-                "impl" -> "$promptDir/agent-prompt.md"
-                "verify-harden" -> "$promptDir/agent-prompt-verify.md"
-                "attack" -> "$promptDir/agent-prompt-attack.md"
-                "spec", "spec-advanced" -> "$promptDir/agent-prompt-spec.md"
-                "spec-compress" -> "$promptDir/agent-prompt-compress.md"
-                "spec-extract" -> "$promptDir/agent-prompt-extract.md"
-                "impl-from-spec" -> "$promptDir/agent-prompt-impl-spec.md"
-                else -> "$promptDir/agent-prompt-tests.md" // tests, verify-exercise
+                "impl" -> "agent-prompt.md"
+                "verify-harden" -> "agent-prompt-verify.md"
+                "attack" -> "agent-prompt-attack.md"
+                "spec", "spec-advanced" -> "agent-prompt-spec.md"
+                "spec-compress" -> "agent-prompt-compress.md"
+                "spec-extract" -> "agent-prompt-extract.md"
+                "impl-from-spec" -> "agent-prompt-impl-spec.md"
+                else -> "agent-prompt-tests.md" // tests, verify-exercise
             },
-        ).readText()
+        )
         val stubs = if (mode == "impl") stubFiles(root) else emptyList()
         // Which suite the attack has to get past. An attack is always aimed at one specific suite,
         // so the path is baked into the generated module rather than re-read at verification time.
@@ -383,6 +382,38 @@ abstract class RunAgentTask @Inject constructor(
             appendLine()
             append("One line per claim, ${claims.size} lines, nothing else.")
         }
+    }
+
+    /**
+     * Finds a prompt without needing to be told where it is.
+     *
+     * Prompts live in two places on purpose: the ones a learner's own run needs are in the student
+     * build's `tools/`, and the ones only we run — writing a specification, compressing a corpus,
+     * extracting claims — are in the grading build's `prompts/`, because a learner reading
+     * "here is how to write a good specification" has been handed exercise 11.4a.
+     *
+     * Every mode therefore has to work from either build, and the previous version made that the
+     * caller's problem via `-PpromptDir`. Documented commands were wrong as a result: the
+     * implement-from-spec line in the teacher checklist died on
+     * `spec-test-driven-grading/tools/agent-prompt-impl-spec.md (No such file or directory)`.
+     * Searching a short list of candidates is what a reader of those commands already assumes.
+     */
+    private fun findPrompt(root: File, name: String): String {
+        val candidates = listOfNotNull(
+            prop("promptDir")?.let { "$it/$name" },
+            "prompts/$name",                              // this build's own, teacher-only
+            "tools/$name",                                // the student build's
+            "../spec-test-driven-grading/prompts/$name",   // from the student build, reaching over
+            "../spec-test-driven/tools/$name",             // from the grading build, reaching over
+        )
+        candidates.forEach { path ->
+            root.resolve(path).takeIf { it.isFile }?.let { return it.readText() }
+        }
+        error(
+            "Prompt '$name' not found. Looked in:\n" +
+                candidates.joinToString("\n") { "  ${root.resolve(it).path}" } +
+                "\nPass -PpromptDir=<dir> if it lives somewhere else.",
+        )
     }
 
     /** Directory name for one spec's implementation: the fixture's parent dir and file name. */
