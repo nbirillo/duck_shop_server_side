@@ -17,11 +17,16 @@ tasks.register<SpecReportTask>("verifySpec") {
     )
 }
 
+// Teacher-only: it scores the claim extractor against the hand-authored key, and the key lives with
+// the fixtures in the grading build. Registering it where there is no key put a task in a learner's
+// `gradlew tasks` that can only fail — and advertised the key while it is meant to be out of sight.
+if (file("fixtures/11.4/key.json").isFile || providers.gradleProperty("key").isPresent) {
 tasks.register<ExtractionScoreTask>("scoreExtraction") {
     group = "verification"
     description = "Score the claim extractor against the hand-authored key — how often layer 2 is " +
         "right, as opposed to merely repeatable. Params: -Pagent=<name> [-Pkey=<key.json>]."
     keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+}
 }
 
 tasks.register<duckshop.SandboxTask>("sandbox") {

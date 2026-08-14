@@ -48,3 +48,12 @@ spec-test-driven/implementations/
 # The slides tell a learner to drop the folder into the project, so ignore it wherever it lands.
 corpus/
 
+# Generated specifications and extractions (runAgent -Pmode=spec* / spec-extract). These are
+# TEACHER-side work: the brief lives in spec-test-driven-grading/briefs/, so the mode only runs from
+# that build. Ignored in both, so output never turns up as a file waiting to be committed.
+specs/
+specs-advanced/
+specs-short/
+specs-corpus/
+extractions/
+

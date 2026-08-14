@@ -1,4 +1,0 @@
-# Scratch corpus assembled for `runAgent -Pmode=spec-compress -PspecsFrom=specs-corpus`.
-# The canonical, committed corpus is ../spec-test-driven-grading/fixtures/11.4/.
-/*
-!/.gitignore
