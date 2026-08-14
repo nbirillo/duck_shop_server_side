@@ -48,4 +48,12 @@ tasks.register<duckshop.DivergenceReportTask>("verifyDivergence") {
     referenceRecording.convention(
         providers.gradleProperty("referenceRecording").orElse("reference-probe/recording.txt"),
     )
+    // Record before comparing. Without this the documented sequence ends in "No recordings for
+    // reader-a / reader-b. Run their :test tasks first." — a step the learner has no reason to know
+    // about, and one more command on a slide that already has four.
+    listOfNotNull(providers.gradleProperty("agentA").orNull, providers.gradleProperty("agentB").orNull)
+        .flatMap { agent ->
+            subprojects.filter { it.path.startsWith(":implementations:$agent:") && it.buildFile.exists() }
+        }
+        .forEach { dependsOn("${it.path}:test") }
 }
