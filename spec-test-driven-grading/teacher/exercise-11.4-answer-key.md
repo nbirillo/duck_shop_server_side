@@ -69,6 +69,35 @@ On our best fixture, claim 2 is genuinely stated, the extractor genuinely missed
 property kills no mutant, so the claim they were defending constrains nobody. The report says both
 things in the same run.
 
+## Handing the learner the tool and the list, if you want to
+
+The default is that the claim list and the property run stay on your side: the learner writes the
+specification, gets the list back with their feedback, and argues with it in writing. Slide 39 has
+them grade their own list by hand first, and that step needs nothing from you.
+
+You can go further and give them the catalog and `verifyClaims` outright. It is one copy and one
+gradle property — the task is already in the shared plugin, and the student build only lacks
+`implTests`. Before you do, the trade, because it is not small:
+
+**What they gain.** A tight loop. Write a claim, run it, see whether it holds against correct code and
+whether it rules anything out — without waiting for you. For a strong group, or a second pass through
+the exercise, that is worth a lot.
+
+**What it costs.** The list becomes a **visible target**, and a visible target is one people write to
+fit. We have measured that in this very module more than once, on ourselves: the moment a number was
+in view, effort reorganised around it. A learner holding the catalog will produce a specification that
+asserts those ten claims — which is a different and much easier task than deciding what the feature
+should do. It also spoils the two comparisons the exercise ends with, since their text was written
+against the same list it is scored on.
+
+**A middle setting that keeps most of both.** Give them the tool and the list **after** their first
+specification is handed in — as the second attempt. The first pass measures what they decided
+unprompted; the second teaches the loop. The order matters more than the access.
+
+**What must not travel either way.** The reference implementation and the mutant catalog. Those are
+answers, not targets: with the mutants in hand there is nothing left to discover, and with the
+reference the exercise is "guess what we wrote".
+
 ## Making your own property catalog
 
 Supported, and it is the honest way to use this material — our catalog is a default, not a
