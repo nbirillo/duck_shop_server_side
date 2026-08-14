@@ -43,3 +43,8 @@ spec-test-driven/sandbox/
 
 # Collected sandbox implementations (derived; `prepareImplementation` rebuilds them).
 spec-test-driven/implementations/
+
+# The specification corpus the teacher hands out for 11.4b — material, not repository content.
+# The slides tell a learner to drop the folder into the project, so ignore it wherever it lands.
+corpus/
+
