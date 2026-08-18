@@ -10,7 +10,8 @@ import duckshop.SpecReportTask
 tasks.register<SpecReportTask>("verifySpec") {
     group = "verification"
     description = "Check a specification's structure, length and surface coverage. " +
-        "Params: -Pspec=<SPEC.md or a directory of them>."
+        "Params: -Pspec=<SPEC.md or a directory of them> [-Pparts, if that directory is ONE " +
+        "specification split into parts rather than several separate ones]."
     surfaceFile.convention(
         providers.gradleProperty("specSurface")
             .orElse("exercises/write-spec/README.md"),

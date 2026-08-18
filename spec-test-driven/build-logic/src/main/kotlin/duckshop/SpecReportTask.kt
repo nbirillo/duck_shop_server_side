@@ -65,8 +65,31 @@ abstract class SpecReportTask @Inject constructor(
         logger.lifecycle("Specification check — deterministic only, no model involved")
         logger.lifecycle("Surface to describe: ${surface.size} names from ${surfaceFile.get().substringAfterLast('/')}")
 
-        specs.forEach { file ->
-            val text = file.readText()
+        // A specification may be ONE file or SEVERAL, and the requirements are on the specification —
+        // not on each part of it. Judging them per file punished exactly the good move: split a long
+        // contract into parts and every part gets blamed for names described in another, while a part
+        // holding only behaviour gets blamed for having no "open questions" section.
+        // Explicit, because file count cannot tell the two cases apart: `fixtures/11.4/written` holds
+        // SIX independent specifications by different authors, and aggregating those into one 14k-word
+        // blob reported as healthy is exactly the kind of quiet wrong answer this checker exists to
+        // avoid. Without the flag, every .md is its own specification, as before.
+        val split = specs.size > 1 && providers.gradleProperty("parts").isPresent
+        if (split) {
+            logger.lifecycle("")
+            logger.lifecycle("${specs.size} parts, judged together — a specification in parts is still one specification")
+            specs.forEach { f ->
+                val t = f.readText()
+                logger.lifecycle("   ${f.name} · ${t.lines().size} lines · ${t.split(Regex("\\s+")).size} words")
+            }
+        }
+
+        val judged: List<Pair<String, String>> = if (split) {
+            listOf("all ${specs.size} parts" to specs.joinToString("\n\n") { it.readText() })
+        } else {
+            specs.map { "${it.parentFile.name}/${it.name}" to it.readText() }
+        }
+
+        judged.forEach { (label, text) ->
             val sections = sections(text)
             val missing = REQUIRED.filter { req -> sections.keys.none { it.contains(req, ignoreCase = true) } }
             val empty = sections.filterValues { it.isBlank() }.keys
@@ -74,7 +97,7 @@ abstract class SpecReportTask @Inject constructor(
             val collisions = collisions(sections)
 
             logger.lifecycle("")
-            logger.lifecycle("── ${file.parentFile.name}/${file.name}")
+            logger.lifecycle("── $label")
             logger.lifecycle("   ${text.lines().size} lines · ${text.split(Regex("\\s+")).size} words")
             logger.lifecycle(
                 "   sections: " + if (missing.isEmpty() && empty.isEmpty()) "all present and filled" else
