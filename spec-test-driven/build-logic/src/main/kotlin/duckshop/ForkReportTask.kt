@@ -6,6 +6,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -45,6 +46,13 @@ abstract class ForkReportTask @Inject constructor(
             .mapNotNull { it.split('=', limit = 2).takeIf { p -> p.size == 2 } }
             .associate { (k, v) -> k to v }
         val ranSuite = generatedWith["tests"].orEmpty()
+        // A fork check with no suite compiled into the readings measures nothing, and it used to SAY
+        // something instead: with no tests there are no result files, which the branch below reads as
+        // "did not build". Refusing outright is the honest answer.
+        require(ranSuite.isNotBlank()) {
+            "The readings were generated with no test suite, so there is nothing to measure. Re-run " +
+                "./gradlew generateForks -PforkTests=<your test source dir> first."
+        }
         providers.gradleProperty("forkTests").orNull?.let { asked ->
             require(asked.trim('/') == ranSuite.trim('/')) {
                 "-PforkTests=$asked but the modules were generated with '$ranSuite'. Re-run " +
@@ -58,20 +66,30 @@ abstract class ForkReportTask @Inject constructor(
         // mine that were settled by argument and not by measurement.
         val overreaching = sortedMapOf<String, MutableSet<String>>()
 
+        /** Readings with no results whose test sources really did fail to compile. */
+        val notCompiled = sortedSetOf<String>()
+
         val verdicts = readings.groupBy { it.fork }.toSortedMap().map { (fork, group) ->
             val accepted = mutableListOf<Reading>()
             val rejected = mutableListOf<Reading>()
             val unbuilt = mutableListOf<Reading>()
             group.forEach { reading ->
-                val failures = failingTests(root.resolve("$outDir/${reading.id}/build/test-results/test"))
+                val moduleDir = root.resolve("$outDir/${reading.id}")
+                val failures = failingTests(moduleDir.resolve("build/test-results/test"))
                 failures.orEmpty()
                     .filter { it.trimStart().startsWith(SETTLED_PREFIX) }
                     .forEach { overreaching.getOrPut(it) { sortedSetOf() } += reading.id }
                 when {
-                    // No results at all is a DIFFERENT fact from "nothing failed" — usually the
-                    // reading did not compile against this suite. Reported as its own outcome, because
-                    // an earlier report of mine folded it into "rejected" and read as a decision.
-                    failures == null -> unbuilt += reading
+                    // No results at all is a DIFFERENT fact from "nothing failed" — its own outcome,
+                    // because an earlier report of mine folded it into "rejected" and it read as a
+                    // decision. TWO causes reach here and they are not the same problem: compiled test
+                    // classes with no results means the suite ran nothing, while no classes at all means
+                    // it did not compile. Saying "did not build" for the first one is what this branch
+                    // did on its first run against the capstone build, and it was simply wrong.
+                    failures == null -> {
+                        unbuilt += reading
+                        if (!ranNothing(moduleDir)) notCompiled += reading.id
+                    }
                     failures.isEmpty() -> accepted += reading
                     else -> rejected += reading
                 }
@@ -89,19 +107,28 @@ abstract class ForkReportTask @Inject constructor(
 
         verdicts.forEach { v ->
             logger.lifecycle("")
+            val anyFailedToCompile = v.unbuilt.any { it.id in notCompiled }
             val word = when {
-                v.unbuilt.isNotEmpty() -> "DID NOT BUILD"
+                anyFailedToCompile -> "DID NOT COMPILE"
+                v.unbuilt.isNotEmpty() -> "RAN NO TESTS"
                 v.settled -> "SETTLED"
                 v.contradictory -> "CONTRADICTORY"
                 else -> "LEFT OPEN"
             }
             logger.lifecycle("${v.fork}: $word")
-            v.unbuilt.forEach { logger.lifecycle("    did not build   ${it.id} — ${it.label}") }
+            v.unbuilt.forEach {
+                val why = if (it.id in notCompiled) "did not compile" else "ran no tests"
+                logger.lifecycle("    ${why.padEnd(15)} ${it.id} — ${it.label}")
+            }
             v.accepted.forEach { logger.lifecycle("    accepted        ${it.id} — ${it.label}") }
             v.rejected.forEach { logger.lifecycle("    rejected        ${it.id} — ${it.label}") }
             when {
+                anyFailedToCompile ->
+                    logger.lifecycle("  ⇒ your tests do not compile against this reading, so nothing is " +
+                        "measured here.\n     Run with --continue and read the compiler output above.")
                 v.unbuilt.isNotEmpty() ->
-                    logger.lifecycle("  ⇒ nothing is measured here until it compiles. Run with --continue.")
+                    logger.lifecycle("  ⇒ the suite compiled but contains no tests, so nothing is measured " +
+                        "here.")
                 v.settled ->
                     logger.lifecycle("  ⇒ your tests require '${v.accepted.single().label}'. That is a decision, " +
                         "and you own it.")
@@ -149,6 +176,17 @@ abstract class ForkReportTask @Inject constructor(
         if (providers.gradleProperty("forksStrict").isPresent && (open > 0 || broken > 0 || unbuilt > 0)) {
             error("-PforksStrict: $open fork(s) left open, $broken contradictory, $unbuilt did not build")
         }
+    }
+
+    /**
+     * True when this module's test sources compiled but produced no results — i.e. the suite is empty,
+     * as opposed to broken. Compiled classes on disk with no JUnit XML beside them is the only signal
+     * that separates the two, and telling a learner "did not build" when their suite merely has no
+     * tests sends them looking for a compiler error that does not exist.
+     */
+    private fun ranNothing(moduleDir: File): Boolean {
+        val classes = moduleDir.resolve("build/classes/kotlin/test")
+        return classes.isDirectory && classes.walkTopDown().any { f -> f.extension == "class" }
     }
 
     private companion object {
