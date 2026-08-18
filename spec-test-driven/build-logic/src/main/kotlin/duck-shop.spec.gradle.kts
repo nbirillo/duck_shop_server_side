@@ -62,3 +62,19 @@ tasks.register<duckshop.DivergenceReportTask>("verifyDivergence") {
         }
         .forEach { dependsOn("${it.path}:test") }
 }
+
+// 11.5, the last step: you changed the shape — was that a refactor? Crosses "did behaviour change"
+// (from the probe) with "did your suite go red", because neither signal means anything alone.
+tasks.register<duckshop.RefactorReportTask>("verifyRefactor") {
+    group = "verification"
+    description = "Compare an implementation before and after a shape change. " +
+        "Params: -Pbefore=<run> -Pafter=<run> [-Pexamples=n]."
+    val states = listOfNotNull(
+        providers.gradleProperty("before").orNull,
+        providers.gradleProperty("after").orNull,
+    )
+    states.flatMap { agent ->
+        subprojects.filter { it.path.startsWith(":implementations:$agent:") && it.buildFile.exists() }
+    }.forEach { dependsOn("${it.path}:test") }
+}
+
