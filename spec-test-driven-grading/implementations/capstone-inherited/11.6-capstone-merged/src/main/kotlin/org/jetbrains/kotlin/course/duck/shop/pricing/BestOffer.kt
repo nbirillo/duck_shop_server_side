@@ -1,22 +1,25 @@
 package org.jetbrains.kotlin.course.duck.shop.pricing
 
 import org.jetbrains.kotlin.course.duck.shop.admission.Duck
-import org.jetbrains.kotlin.course.duck.shop.admission.Shop
-import org.jetbrains.kotlin.course.duck.shop.admission.AdmissionPolicy
-import org.jetbrains.kotlin.course.duck.shop.admission.Accessory
 
+/**
+ * Finds the cheapest offer for [duck] across the shops of [franchise].
+ *
+ * Shops that will not take the duck are skipped; promotions from the chain and from the shop both
+ * apply. Returns `null` when the chain has nothing to offer.
+ */
 fun bestOffer(duck: Duck, franchise: Franchise): Offer? {
-    if (!franchise.admissionPolicy.admits(duck)) return null
+    if (duck.price == 0) return null
 
     var bestOffer: Offer? = null
 
     for (shop in franchise.shops) {
         if (!shop.admits(duck)) continue
 
-        val totalPromotions = shop.promotions + franchise.promotions
+        val totalPromotions = franchise.promotions + shop.promotions
         val price = priceFor(duck, totalPromotions)
 
-        if (bestOffer == null || price < bestOffer.price) {
+        if (bestOffer == null || price <= bestOffer.price) {
             bestOffer = Offer(shop, price)
         }
     }

@@ -57,9 +57,40 @@ Honesty matters here, because the module's method is *calibrate, do not stage*.
   can be shown.
   **Check after any regeneration:** that the consolidation did not quietly settle a fork. The prompt
   forbids it; the model is not bound by the prompt.
-- **`BestOffer.kt` — not authored.** An agent implementing that specification and nothing else. Its
-  wrongness is therefore *caused by the specification's silence*, which is the lesson. Nothing was broken
-  on purpose.
+- **`BestOffer.kt` — an agent's implementation, then DEGRADED BY HAND. Staged, and here is the whole
+  audit trail.** First measured honestly: `qwen2.5-coder:14b` implementing the trimmed specification came
+  out **byte-identical to the reference on all 3010 probed inputs**, 6/6 settled and 7/7 open. So the
+  "partial implementation" the capstone wanted did not arise on its own, and could not — the merged
+  specification is dominated by the frontier layer's B-rules, which decide every fork outright, so a
+  competent implementer just reproduces the reference. That correct version is kept at
+  `fixtures/11.6/inherited-correct-14b.kt.txt` and is worth showing in the debrief.
+
+  Her call was then to degrade it deliberately. **The constraint I held: every defect is a legitimate
+  reading of a contradiction the inherited document really contains**, so anything the learner finds can
+  be quoted back to them out of the specification they were handed. Four edits, each with its licence:
+
+  | edit | the sentence in `inherited/SPEC.md` that licenses it |
+  | --- | --- |
+  | `franchise.admissionPolicy` never consulted | §4: "the behavior when a shop's admission policy does not allow the duck to be sold is **left open**", and the appended bullet describing eligibility using only "the shop's `admissionPolicy`" |
+  | chain promotions applied **before** the shop's | nothing outside Q2's "*Assumed:*" fixes the order, and the appended bullet names the franchise first |
+  | a tie goes to the **last** shop (`<=`) | §4: "the order in which shops are considered when multiple have the same lowest price: **any shop can be returned**" |
+  | a duck priced `0` gets **no offer** | §3: "**Duck with zero price**: Return `null`" and "**Zero Price Duck**: it should be considered as not being sold by any shop" |
+
+  Also left in: the now-dead `private fun applyRule` from 14b's output, whose pricing is wrong in two
+  ways. Dead code with wrong semantics is what inherited code looks like; deleting it is the learner's call.
+
+  **The resulting profile, measured:**
+  - `./gradlew :inherited:test` — **GREEN.** The first thing the learner sees says it works.
+  - the settled corner cases — **6/6.** It breaks nothing the brief settles, so there is no obvious bug.
+  - the open-fork corner cases — **2/7**, wrong on forks 1, 2, 3 and 4.
+  - the probe — **976/3010 = 32.4%** disagreement with the reference: 680 inputs where it sells and the
+    reference says nobody will (chain admission), 139 where it refuses a duck priced 0, 60 same-shop
+    price differences (order), 97 where it names a different shop.
+
+  **A structural fact found while choosing the edits, worth knowing:** no defect exists that breaks a
+  *settled* fact while leaving the inherited suite green. Weak as that suite is, it pins every settled
+  fact it is capable of pinning. So this profile — plausible, green, and wrong on three quarters of the
+  open forks — is the honest maximum, not a compromise.
 - **`FranchiseTests.kt` — AUTHORED, and the only staged artifact.** Written to a profile: green on the
   inherited implementation, and settling **no fork** (verified with `verifyForks`, expect 0 settled).
   Selecting a real agent suite by that criterion was the alternative and is the better provenance; it was
