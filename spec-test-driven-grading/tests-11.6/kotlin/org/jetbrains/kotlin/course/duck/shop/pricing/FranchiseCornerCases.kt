@@ -38,10 +38,20 @@ import kotlin.test.assertTrue
  * broken outright and ranks nothing. The grade lives in `forks/catalog.json` and `verifyForks`, which
  * ask whether a decision was made rather than whether an answer was right.
  *
- * Two tests moved OUT of the settled group once that was taken seriously: applying only the shop's
- * promotions, and applying only the chain's, are both readings the brief explicitly allows. They had
- * passed everywhere only because nobody happened to read them that way — a measured reminder that
- * "everything passes it" is not evidence that a check is sound.
+ * ### How the settled group was actually settled — by the machinery, not by reading
+ *
+ * Two tests were moved out once the brief's own fork 2 was taken seriously: applying only the shop's
+ * promotions and applying only the chain's are readings it explicitly allows, and each of those tests
+ * failed one of them. They had passed everywhere only because nobody happened to read them that way.
+ *
+ * Then `verifyForks` showed that the *chain-only* reading is the ONLY reading any settled test rejects —
+ * both `cheapest wins` tests do — and the reason is structural: under it every admitted shop prices
+ * identically, so **"cheapest, not first" becomes unobservable**, which the brief settles. That reading
+ * was removed from the catalog as excluded by the brief itself, and `a shop's own promotions reach the
+ * price` came back here with it. Its mirror stays open, because *shop-only* costs the floor nothing.
+ *
+ * So the boundary between "settled" and "a choice" was not decided by argument. **Every test in this
+ * group is green on every reading in `forks/catalog.json`, and that is checked, not asserted.**
  *
  * ### One honest tension, flagged rather than resolved
  *
@@ -79,6 +89,15 @@ class FranchiseCornerCases {
     }
 
     @Test
+    fun `settled — a shop's own promotions reach the price`() {
+        // Settled after the chain-only reading of fork 2 was removed from the catalog, which is the one
+        // reading this failed. It survives every remaining reading: shops keep pricing differently from
+        // each other, so a shop's own promotion is always visible in the answer.
+        val franchise = chain(shop("s0", promos = listOf(DiscountRule.Percentage(50))))
+        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
+    }
+
+    @Test
     fun `settled — a duck no shop admits has no answer`() {
         val franchise = Franchise("f", OPEN, emptyList(), listOf(shop("s0", CLOSED), shop("s1", CLOSED)))
         assertNull(bestOffer(duck(100), franchise), "nobody will sell it, so there is nothing to answer")
@@ -102,16 +121,6 @@ class FranchiseCornerCases {
     }
 
     // ── open: pinned to the reference's reading, which is a choice ────────────────────────────────
-
-    @Test
-    fun `open — fork 2, a shop's own promotions reach the price`() {
-        // This one looked settled and is NOT, which is worth keeping as a worked example. The brief
-        // lists fork 2 as "the chain's, the shop's, both in sequence, or the better of the two", so a
-        // reader who applies only the CHAIN's promotions is inside the brief — and answers 100 here.
-        // It passed on everything we measured only because nobody happened to read it that way.
-        val franchise = chain(shop("s0", promos = listOf(DiscountRule.Percentage(50))))
-        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
-    }
 
     @Test
     fun `open — fork 2, the chain's own promotions reach the price`() {

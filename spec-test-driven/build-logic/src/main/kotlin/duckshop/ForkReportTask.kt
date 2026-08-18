@@ -53,12 +53,20 @@ abstract class ForkReportTask @Inject constructor(
             }
         }
 
+        // A test claiming to hold on EVERY reading, that some reading rejects. See the block that
+        // prints it: this is the invariant keeping a "settled" group honest, and it caught two tests of
+        // mine that were settled by argument and not by measurement.
+        val overreaching = sortedMapOf<String, MutableSet<String>>()
+
         val verdicts = readings.groupBy { it.fork }.toSortedMap().map { (fork, group) ->
             val accepted = mutableListOf<Reading>()
             val rejected = mutableListOf<Reading>()
             val unbuilt = mutableListOf<Reading>()
             group.forEach { reading ->
                 val failures = failingTests(root.resolve("$outDir/${reading.id}/build/test-results/test"))
+                failures.orEmpty()
+                    .filter { it.trimStart().startsWith(SETTLED_PREFIX) }
+                    .forEach { overreaching.getOrPut(it) { sortedSetOf() } += reading.id }
                 when {
                     // No results at all is a DIFFERENT fact from "nothing failed" — usually the
                     // reading did not compile against this suite. Reported as its own outcome, because
@@ -107,6 +115,19 @@ abstract class ForkReportTask @Inject constructor(
             }
         }
 
+        // A test named "settled — …" asserts something the brief decides, so it must hold on EVERY
+        // reading; if a legitimate reading rejects it, either the test over-reaches or the reading is
+        // excluded by something already settled — and both are real findings about the BRIEF. Deciding
+        // that boundary by argument got it wrong twice, so it is checked here instead.
+        if (overreaching.isNotEmpty()) {
+            logger.lifecycle("")
+            logger.warn("⚠ ${overreaching.size} test(s) named '$SETTLED_PREFIX…' are rejected by a reading:")
+            overreaching.forEach { (test, by) -> logger.warn("    $test\n        rejected by ${by.joinToString()}") }
+            logger.warn("  ⇒ a settled fact holds on every reading. Either the test pins a choice and")
+            logger.warn("     belongs with the open group, or that reading contradicts something already")
+            logger.warn("     settled and does not belong in the catalog. Both are findings about the brief.")
+        }
+
         val settled = verdicts.count { it.settled }
         val open = verdicts.count { it.leftOpen }
         val broken = verdicts.count { it.contradictory }
@@ -128,5 +149,14 @@ abstract class ForkReportTask @Inject constructor(
         if (providers.gradleProperty("forksStrict").isPresent && (open > 0 || broken > 0 || unbuilt > 0)) {
             error("-PforksStrict: $open fork(s) left open, $broken contradictory, $unbuilt did not build")
         }
+    }
+
+    private companion object {
+        /**
+         * Test-name prefix marking a claim that must hold on every reading. A naming convention rather
+         * than a catalog field on purpose: the suite under test is not ours to add fields to, and the
+         * same trick already keeps `scoreExtraction` honest about the key's claim list.
+         */
+        const val SETTLED_PREFIX = "settled"
     }
 }

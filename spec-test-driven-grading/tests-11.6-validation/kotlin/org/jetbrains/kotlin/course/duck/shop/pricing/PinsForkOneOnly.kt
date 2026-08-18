@@ -19,13 +19,17 @@ import kotlin.test.assertNull
  * to report fork 1 SETTLED and the other three LEFT OPEN — and if it ever reports all four settled,
  * the check is passing readings it never actually ran.
  *
- * ### It takes TWO tests to settle a fork with three readings, and finding that out is the point
+ * ### Why there are two tests, which is now history rather than necessity
  *
- * The first test alone reported fork 1 as LEFT OPEN, which was right: "the chain refused, so nobody
- * sells" is answered the same way by *both must admit* and by *the chain overrides* — it only rules out
- * *the shop decides alone*. Closing a fork means rejecting **every** reading but one, so a second test
- * has to catch a duck the chain admits and a shop does not. Worth showing a learner verbatim: one
- * counterexample closes one alternative, not a fork.
+ * When fork 1 still held a third reading — *the chain overrides* — the first test alone reported LEFT
+ * OPEN, and rightly: "the chain refused, so nobody sells" is answered identically by *both must admit*
+ * and by *the chain overrides*, so it only ruled out *the shop decides alone*. **One counterexample
+ * closes one alternative, not a fork.** That lesson is worth showing a learner verbatim, and it is the
+ * same shape as hardening against a counterexample closing the instance and not the class.
+ *
+ * That third reading was later removed — `verifyForks` showed it rejecting a *settled* fact, because it
+ * made every shop's own admission rule inert — so either test now settles fork 1 on its own. Both are
+ * kept: the second is still a correct and useful example, and deleting it would delete the story.
  */
 class PinsForkOneOnly {
 

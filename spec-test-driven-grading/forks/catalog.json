@@ -1,5 +1,5 @@
 {
-  "description": "TEACHER-ONLY graded fork set for the 11.6 capstone. Each entry is a READING of something briefs/11.6-franchise.md deliberately leaves open, and every reading holds the other forks at the reference reading so a rejected test is attributable to one decision. ./gradlew generateForks builds a module per reading; ./gradlew verifyForks reports, per fork, whether the suite under test accepts exactly one (SETTLED) or several (LEFT OPEN). No reading is wrong — the report never names a right answer. Why this replaced the planned hidden corner-case set: every artifact we measured passed 7/7 of the settled corner cases, including a specification that disagreed with the reference on 884 of 3010 probed inputs, so a corner-case set graded nothing. Forks 1, 2 and 4 are the three that two independently written weak specifications both missed; fork 6 is here because nothing else asks whether the learner thought about an empty chain. Fork 3 (ties) is the VISIBLE practice tier and lives in the student build instead.",
+  "description": "TEACHER-ONLY graded fork set for the 11.6 capstone. Each entry is a READING of something briefs/11.6-franchise.md deliberately leaves open, and every reading holds the other forks at the reference reading so a rejected test is attributable to one decision. ./gradlew generateForks builds a module per reading; ./gradlew verifyForks reports, per fork, whether the suite under test accepts exactly one (SETTLED) or several (LEFT OPEN). No reading is wrong — the report never names a right answer. Why this replaced the planned hidden corner-case set: every artifact we measured passed 7/7 of the settled corner cases, including a specification that disagreed with the reference on 884 of 3010 probed inputs, so a corner-case set graded nothing. Forks 1, 2 and 4 are the three that two independently written weak specifications both missed; fork 6 is here because nothing else asks whether the learner thought about an empty chain. Fork 3 (ties) is the VISIBLE practice tier and lives in the student build instead. A fifth reading, 'only the chain's promotions apply', was REMOVED after the machinery found it contradicts the brief's own settled line: under it every admitted shop prices identically, so 'cheapest, not first' becomes structurally unobservable. It was the only reading any SETTLED test rejected, which is how it was caught — 'only the shop's promotions apply' is rejected by open tests alone and sits fine with the whole floor. A SECOND reading was removed the same way and by the same guard: 'the chain overrides — joining a chain replaces each shop's own door policy' made every shop's own admission rule inert, so it rejected 'a duck no shop admits has no answer'. It was also never one of the brief's own three options for fork 1, unlike 'the shop decides alone', which is what every weak specification in the corpus actually implies.",
   "readings": [
     {
       "id": "fork1-both-must-admit",
@@ -15,14 +15,6 @@
       "source": "readings/Fork1ShopOnly.kt",
       "note": "What every weak specification we measured actually implies: all three never mentioned Franchise.admissionPolicy at all. This is the single largest source of divergence in the corpus — 798 inputs where it sells and the reference says nobody will."
     },
-    {
-      "id": "fork1-chain-only",
-      "fork": "fork1-whose-door-policy-decides",
-      "label": "the chain overrides — joining a chain replaces each shop's own door policy",
-      "source": "readings/Fork1ChainOnly.kt",
-      "note": "A real franchise model (central membership rules) and a plausible misreading of 'rules of its own on top of that'."
-    },
-
     {
       "id": "fork2-shop-then-chain",
       "fork": "fork2-whose-promotions-and-in-what-order",
@@ -42,16 +34,8 @@
       "fork": "fork2-whose-promotions-and-in-what-order",
       "label": "only the shop's promotions apply",
       "source": "readings/Fork2ShopOnly.kt",
-      "note": "The brief lists 'the chain's, the shop's, both in sequence, or the better of the two' — so a one-sided reading is legitimate, not a defect. This is why two of the corner-case tests had to move out of the settled group: they each failed a reading the brief allows."
+      "note": "The brief lists 'the chain's, the shop's, both in sequence, or the better of the two', so a one-sided reading is legitimate, not a defect. This is the reading that keeps 'the chain's own promotions reach the price' out of the settled group — and unlike its removed mirror it costs the floor nothing else, because shops still price differently from each other under it."
     },
-    {
-      "id": "fork2-chain-only",
-      "fork": "fork2-whose-promotions-and-in-what-order",
-      "label": "only the chain's promotions apply",
-      "source": "readings/Fork2ChainOnly.kt",
-      "note": "The mirror of the above, and the one that makes 'the chain's own promotions reach the price' undecidable from the brief alone."
-    },
-
     {
       "id": "fork4-price-then-choose",
       "fork": "fork4-cheapest-measured-when",
@@ -66,7 +50,6 @@
       "source": "readings/Fork4ChooseThenPrice.kt",
       "note": "The subtlest fork in the brief and the most fragile in practice: a conditional chain promotion makes these name DIFFERENT shops, and qwen2.5-coder:14b missed it even when implementing the frontier's specification. Only 2 of 3010 probed inputs separate them, so a suite that catches this is doing real work."
     },
-
     {
       "id": "fork6-no-answer",
       "fork": "fork6-a-chain-with-no-shops",
