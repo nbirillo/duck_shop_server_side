@@ -1,0 +1,85 @@
+{
+  "description": "TEACHER-ONLY graded fork set for the 11.6 capstone. Each entry is a READING of something briefs/11.6-franchise.md deliberately leaves open, and every reading holds the other forks at the reference reading so a rejected test is attributable to one decision. ./gradlew generateForks builds a module per reading; ./gradlew verifyForks reports, per fork, whether the suite under test accepts exactly one (SETTLED) or several (LEFT OPEN). No reading is wrong — the report never names a right answer. Why this replaced the planned hidden corner-case set: every artifact we measured passed 7/7 of the settled corner cases, including a specification that disagreed with the reference on 884 of 3010 probed inputs, so a corner-case set graded nothing. Forks 1, 2 and 4 are the three that two independently written weak specifications both missed; fork 6 is here because nothing else asks whether the learner thought about an empty chain. Fork 3 (ties) is the VISIBLE practice tier and lives in the student build instead.",
+  "readings": [
+    {
+      "id": "fork1-both-must-admit",
+      "fork": "fork1-whose-door-policy-decides",
+      "label": "both must admit — the chain's rule is a filter on top of each shop's",
+      "source": "readings/Fork1BothMustAdmit.kt",
+      "note": "The reference reading. 'The chain has rules of its own on top of that' reads most naturally as a filter."
+    },
+    {
+      "id": "fork1-shop-only",
+      "fork": "fork1-whose-door-policy-decides",
+      "label": "the shop decides alone — the chain's rule is not a gate on selling",
+      "source": "readings/Fork1ShopOnly.kt",
+      "note": "What every weak specification we measured actually implies: all three never mentioned Franchise.admissionPolicy at all. This is the single largest source of divergence in the corpus — 798 inputs where it sells and the reference says nobody will."
+    },
+    {
+      "id": "fork1-chain-only",
+      "fork": "fork1-whose-door-policy-decides",
+      "label": "the chain overrides — joining a chain replaces each shop's own door policy",
+      "source": "readings/Fork1ChainOnly.kt",
+      "note": "A real franchise model (central membership rules) and a plausible misreading of 'rules of its own on top of that'."
+    },
+
+    {
+      "id": "fork2-shop-then-chain",
+      "fork": "fork2-whose-promotions-and-in-what-order",
+      "label": "both apply — the shop's first, the chain's on top",
+      "source": "readings/Fork2ShopThenChain.kt",
+      "note": "The reference reading. Order is observable, so it is contract."
+    },
+    {
+      "id": "fork2-chain-then-shop",
+      "fork": "fork2-whose-promotions-and-in-what-order",
+      "label": "both apply — the chain's first, the shop's on top",
+      "source": "readings/Fork2ChainThenShop.kt",
+      "note": "Differs from the reference on 92 probed inputs: same shop, different price. Nothing in the brief picks a side."
+    },
+    {
+      "id": "fork2-shop-only",
+      "fork": "fork2-whose-promotions-and-in-what-order",
+      "label": "only the shop's promotions apply",
+      "source": "readings/Fork2ShopOnly.kt",
+      "note": "The brief lists 'the chain's, the shop's, both in sequence, or the better of the two' — so a one-sided reading is legitimate, not a defect. This is why two of the corner-case tests had to move out of the settled group: they each failed a reading the brief allows."
+    },
+    {
+      "id": "fork2-chain-only",
+      "fork": "fork2-whose-promotions-and-in-what-order",
+      "label": "only the chain's promotions apply",
+      "source": "readings/Fork2ChainOnly.kt",
+      "note": "The mirror of the above, and the one that makes 'the chain's own promotions reach the price' undecidable from the brief alone."
+    },
+
+    {
+      "id": "fork4-price-then-choose",
+      "fork": "fork4-cheapest-measured-when",
+      "label": "price every shop fully, then take the cheapest",
+      "source": "readings/Fork4PriceThenChoose.kt",
+      "note": "The reference reading."
+    },
+    {
+      "id": "fork4-choose-then-price",
+      "fork": "fork4-cheapest-measured-when",
+      "label": "choose the cheapest shop on its own promotions, then apply the chain's to the winner",
+      "source": "readings/Fork4ChooseThenPrice.kt",
+      "note": "The subtlest fork in the brief and the most fragile in practice: a conditional chain promotion makes these name DIFFERENT shops, and qwen2.5-coder:14b missed it even when implementing the frontier's specification. Only 2 of 3010 probed inputs separate them, so a suite that catches this is doing real work."
+    },
+
+    {
+      "id": "fork6-no-answer",
+      "fork": "fork6-a-chain-with-no-shops",
+      "label": "no shops means nobody will sell, so there is no answer",
+      "source": "readings/Fork6NoAnswer.kt",
+      "note": "The reference reading, and what every agent we measured converged on without being asked."
+    },
+    {
+      "id": "fork6-rejects",
+      "fork": "fork6-a-chain-with-no-shops",
+      "label": "an empty chain is malformed, so asking it for an offer is an error",
+      "source": "readings/Fork6Rejects.kt",
+      "note": "Weakest pair in the set, kept deliberately: since every agent returns null here anyway, this fork measures whether the LEARNER thought about the empty chain, not whether an agent diverges. A suite that never builds one accepts both."
+    }
+  ]
+}

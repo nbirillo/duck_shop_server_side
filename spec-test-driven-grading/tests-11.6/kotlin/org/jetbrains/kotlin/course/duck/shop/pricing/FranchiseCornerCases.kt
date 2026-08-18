@@ -22,12 +22,26 @@ import kotlin.test.assertTrue
  * and a hidden set that ignores that division punishes a learner for making a legitimate choice. So:
  *
  *  - **`settled — …`** follows from the brief's own settled list and from nothing else. A red one here
- *    is a defect on any reading. **This group, and only this group, is the failure profile.**
+ *    is a defect on any reading.
  *  - **`open — …`** pins a fork to `reference/BestOffer.kt`, which is *a choice, not a truth*. A red
  *    one means "this implementation read the brief differently", which is information, not a fault.
  *    Score it separately and never sum the two.
  *
  * The same distinction the mutant catalog draws between `must-kill` and `spec-dependent`, one level up.
+ *
+ * ### What this file is NOT, measured rather than assumed
+ *
+ * It is **not the capstone's grade**. Every artifact in the 11.6 corpus passes the whole settled group,
+ * including a specification that disagrees with the reference on 884 of 3010 probed inputs — because
+ * every settled fact is satisfied by any implementation shaped "filter the shops, price them, take the
+ * minimum". So this is a **floor**, exactly as layer 1 is in 11.4: it catches an implementation that is
+ * broken outright and ranks nothing. The grade lives in `forks/catalog.json` and `verifyForks`, which
+ * ask whether a decision was made rather than whether an answer was right.
+ *
+ * Two tests moved OUT of the settled group once that was taken seriously: applying only the shop's
+ * promotions, and applying only the chain's, are both readings the brief explicitly allows. They had
+ * passed everywhere only because nobody happened to read them that way — a measured reminder that
+ * "everything passes it" is not evidence that a check is sound.
  *
  * ### One honest tension, flagged rather than resolved
  *
@@ -65,23 +79,6 @@ class FranchiseCornerCases {
     }
 
     @Test
-    fun `settled — a shop's own promotions reach the price`() {
-        // Whatever a reader decides about combining the two sets, a shop's promotions cannot be ignored:
-        // the brief settles that each shop keeps the promotions it already runs.
-        val franchise = chain(shop("s0", promos = listOf(DiscountRule.Percentage(50))))
-        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
-    }
-
-    @Test
-    fun `settled — the chain's own promotions reach the price`() {
-        // Same argument in the other direction: "the chain has rules of its own on top of that".
-        // Every open reading of fork 2 — chain's, both, the better of the two — gives 50 here, because
-        // the one shop runs no promotion of its own. Only ignoring the chain's promotions gives 100.
-        val franchise = Franchise("f", OPEN, listOf(DiscountRule.Percentage(50)), listOf(shop("s0")))
-        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
-    }
-
-    @Test
     fun `settled — a duck no shop admits has no answer`() {
         val franchise = Franchise("f", OPEN, emptyList(), listOf(shop("s0", CLOSED), shop("s1", CLOSED)))
         assertNull(bestOffer(duck(100), franchise), "nobody will sell it, so there is nothing to answer")
@@ -105,6 +102,24 @@ class FranchiseCornerCases {
     }
 
     // ── open: pinned to the reference's reading, which is a choice ────────────────────────────────
+
+    @Test
+    fun `open — fork 2, a shop's own promotions reach the price`() {
+        // This one looked settled and is NOT, which is worth keeping as a worked example. The brief
+        // lists fork 2 as "the chain's, the shop's, both in sequence, or the better of the two", so a
+        // reader who applies only the CHAIN's promotions is inside the brief — and answers 100 here.
+        // It passed on everything we measured only because nobody happened to read it that way.
+        val franchise = chain(shop("s0", promos = listOf(DiscountRule.Percentage(50))))
+        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
+    }
+
+    @Test
+    fun `open — fork 2, the chain's own promotions reach the price`() {
+        // The mirror of the above, and undecidable for the mirror reason: a reader who applies only the
+        // SHOP's promotions answers 100, because this chain's one shop runs no promotion of its own.
+        val franchise = Franchise("f", OPEN, listOf(DiscountRule.Percentage(50)), listOf(shop("s0")))
+        assertEquals(50, assertNotNull(bestOffer(duck(100), franchise)).price)
+    }
 
     @Test
     fun `open — fork 1, the chain's rule vetoes a shop that would sell`() {

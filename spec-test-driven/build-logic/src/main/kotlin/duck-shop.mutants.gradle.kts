@@ -3,11 +3,16 @@
 // come from gradle properties (mutantsCatalog / mutantsCoreSrc / mutantsLearnerTests / mutantsOut),
 // so the task code is shared.
 //
-// Two catalogs, two directions, one engine:
+// Catalogs, directions, one engine:
 //   mutants/  — injected defects, a faithful suite KILLS them (exercise 11.2, both tiers)
 //   variants/ — legal refactorings, a faithful suite stays GREEN on them (11.2 advanced tier only)
+//   forks/    — READINGS of what the brief leaves open; a suite SETTLES a fork by accepting exactly
+//               one of them (the 11.6 capstone). The mirror of variants/: that one says "do not pin
+//               what is free", this one says "do pin what is a decision".
 
 import duckshop.AttackReportTask
+import duckshop.ForkReportTask
+import duckshop.GenerateForksTask
 import duckshop.GenerateMutantsTask
 import duckshop.MutationReportTask
 import duckshop.PrepareAttackTask
@@ -52,6 +57,29 @@ tasks.register<MutationReportTask>("verifyVariants") {
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
     dependsOn(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
+}
+
+tasks.register<GenerateForksTask>("generateForks") {
+    group = "duck-shop"
+    description = "Regenerate one module per READING of a fork the capstone brief leaves open."
+    catalogPath.convention(providers.gradleProperty("forksCatalog").orElse("forks/catalog.json"))
+    outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
+    coreSrc.convention(providers.gradleProperty("forksCoreSrc").orElse("core/src/main/kotlin"))
+    // No default that could be a correct answer: the student build has no priceFor to point at until
+    // the capstone hands one over, and quietly falling back to the reference would leak 11.4.
+    pricingSrc.convention(providers.gradleProperty("forksPricing").orElse(""))
+    testsSrc.convention(providers.gradleProperty("forkTests").orElse(""))
+    packagePath.convention(providers.gradleProperty("forksPackage")
+        .orElse("org/jetbrains/kotlin/course/duck/shop/pricing"))
+}
+
+tasks.register<ForkReportTask>("verifyForks") {
+    group = "verification"
+    description = "Capstone: report which forks the suite SETTLES and which it leaves open. " +
+        "Params: [-PforkTests=<test source dir>] [-PforksStrict]."
+    catalogPath.convention(providers.gradleProperty("forksCatalog").orElse("forks/catalog.json"))
+    outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
+    dependsOn(subprojects.filter { it.path.startsWith(":forks:") }.map { "${it.path}:test" })
 }
 
 // For an interactive agent, which writes the attacking sources itself and has no API call to hang

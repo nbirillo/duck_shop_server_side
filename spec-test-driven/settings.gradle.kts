@@ -25,6 +25,7 @@ autoDiscover("hardened")    // agent-hardened suites (runAgent -Pmode=verify-har
 autoDiscover("mutants")     // mutation testing: :core with one injected defect (11.2, generateMutants)
 autoDiscover("variants")    // conformance check: :core rewritten without changing what it decides (11.2 advanced)
 autoDiscover("attacks")     // adversary: implementations that try to pass the suite and still be wrong (11.2 advanced)
+autoDiscover("forks")      // capstone practice: one READING each of a fork the brief leaves open (11.6, generateForks)
 
 // Implementations an agent wrote in a sandbox and `prepareImplementation` collected, one module per
 // (agent, specification). These exist so two readings of the same spec can be compared; they hold no
