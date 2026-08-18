@@ -36,8 +36,11 @@ fun priceFor(duck: Duck, rules: List<DiscountRule>): Int = TODO()
 Rules for the file:
 
 - Keep the package and the exact signature(s) shown in the surface below.
-- Use the given `Duck` and `DiscountRule` types. **Do not redeclare them** — they already exist and
-  are on the compile path.
+- **Every type shown in the surface already exists and is on your compile path. Do not redeclare any
+  of them** — not `Duck`, not the rule or policy types, not the data classes shown for context. Naming
+  them again in your file is a compile error, not a convenience.
+- Types are shown with their fields so you know their shape. Where the surface lists a type's cases in
+  prose rather than in code, **all of those cases exist** and a `when` over them has to be exhaustive.
 - Add private helpers in the same file if you want them. Do not add new public declarations beyond
   the required function(s).
 - It must compile on its own against the given types.

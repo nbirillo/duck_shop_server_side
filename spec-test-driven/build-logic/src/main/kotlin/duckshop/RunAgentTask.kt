@@ -176,7 +176,7 @@ abstract class RunAgentTask @Inject constructor(
             "attack" -> writeSolutionFiles(outDir, content, emptyList(), nameSuffix = "Attack")
             "spec", "spec-advanced", "spec-compress" -> writeSpec(outDir, content)
             "spec-extract" -> writeExtraction(outDir, content, prop("spec")!!)
-            "impl-from-spec" -> writeImplementation(outDir, content)
+            "impl-from-spec" -> writeImplementation(root, outDir, content)
             else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
         }
         // A spec is a document; an extraction is a list of verdicts. Neither is a Gradle module.
@@ -517,16 +517,37 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     /** Writes the agent's file into the pricing package of a fresh module. */
-    private fun writeImplementation(outDir: File, content: String): List<String> {
+    private fun writeImplementation(root: File, outDir: File, content: String): List<String> {
         val pkg = prop("implPackage") ?: DEFAULT_IMPL_PACKAGE
         // Drop anything from a previous run first, so a shorter answer cannot leave stale
         // declarations behind and quietly keep the module compiling.
         outDir.resolve("src").deleteRecursively()
         val target = outDir.resolve("src/main/kotlin/$pkg/Pricing.kt")
         target.parentFile.mkdirs()
-        val code = normalizeCode(extractCode(content), pkg.replace('/', '.'))
-        target.writeText(code + "\n")
-        return listOf("src/main/kotlin/$pkg/Pricing.kt (${code.lines().size} lines)")
+        val normalised = normalizeCode(extractCode(content), pkg.replace('/', '.'))
+
+        // See [Redeclarations]: reconstructing a type it was shown for reference is a broken output
+        // contract, not a pricing decision, and the `Redeclaration:` it causes hides every real
+        // finding behind a build failure. Asks the types source set what exists instead of describing
+        // it in the prompt, which failed four times on this one surface.
+        val typesDir = root.resolve(prop("implCoreSrc") ?: DEFAULT_IMPL_CORE_SRC)
+        val stripped = Redeclarations.strip(normalised, Redeclarations.existingTypes(typesDir))
+        target.writeText(stripped.code + "\n")
+
+        // A silent rescue would let a broken output contract read as a clean run, so it is always
+        // recorded next to the module as well as printed — the file's absence means nothing was needed.
+        val log = outDir.resolve("normalisation.txt")
+        log.delete()
+        if (!stripped.clean) {
+            stripped.rescues.forEach { logger.warn("[runAgent] RESCUED ${it.what}: ${it.detail}") }
+            log.writeText(
+                "The agent's file needed these removals before it would compile. Neither is a change " +
+                    "to its logic;\nboth are output-contract failures worth reporting per agent.\n\n" +
+                    stripped.rescues.joinToString("\n") { "- ${it.what}: ${it.detail}" } + "\n",
+            )
+        }
+        return listOf("src/main/kotlin/$pkg/Pricing.kt (${stripped.code.lines().size} lines)") +
+            if (stripped.clean) emptyList() else listOf("normalisation.txt (${stripped.rescues.size} rescued)")
     }
 
     /** See [implementationBuildScript] — shared with the interactive path. */

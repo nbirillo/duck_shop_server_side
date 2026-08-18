@@ -1,5 +1,7 @@
 package org.jetbrains.kotlin.course.duck.shop.admission
 
+import org.jetbrains.kotlin.course.duck.shop.pricing.DiscountRule
+
 /**
  * An accessory a duck can wear (e.g. a hat, a scarf).
  *
@@ -31,7 +33,15 @@ data class Duck(
  * @property name the shop's name.
  * @property admissionPolicy the policy this shop applies to candidate ducks.
  */
-data class Shop(val name: String, val admissionPolicy: AdmissionPolicy) {
+data class Shop(
+    val name: String,
+    val admissionPolicy: AdmissionPolicy,
+    /**
+     * The promotions this shop runs. Defaulted, so every existing use of `Shop(name, policy)` — the
+     * whole of exercise 11.2 — is untouched.
+     */
+    val promotions: List<DiscountRule> = emptyList(),
+) {
     /** Returns `true` if [duck] is allowed into this shop by its [admissionPolicy]. */
     fun admits(duck: Duck): Boolean = admissionPolicy.admits(duck)
 }

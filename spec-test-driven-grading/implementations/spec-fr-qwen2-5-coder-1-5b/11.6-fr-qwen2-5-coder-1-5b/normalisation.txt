@@ -1,0 +1,5 @@
+The agent's file needed these removals before it would compile. Neither is a change to its logic;
+both are output-contract failures worth reporting per agent.
+
+- redeclared type: Franchise — it already exists in org.jetbrains.kotlin.course.duck.shop.pricing
+- redeclared type: Offer — it already exists in org.jetbrains.kotlin.course.duck.shop.pricing

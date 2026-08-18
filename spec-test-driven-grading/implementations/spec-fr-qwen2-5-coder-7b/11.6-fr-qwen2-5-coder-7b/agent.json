@@ -1,0 +1,1 @@
+{"agent":"spec-fr-qwen2-5-coder-7b","mode":"impl-from-spec","provider":"ollama","model":"qwen2.5-coder:32b","checkedOn":"2026-08-18","temperature":0,"promptSha256":"49c614e49221a9ce5436ba03a3c5e5a8d4a8005b1874a7b282886e8c0a423756"}
