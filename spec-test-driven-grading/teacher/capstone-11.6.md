@@ -65,6 +65,32 @@ Honesty matters here, because the module's method is *calibrate, do not stage*.
   Selecting a real agent suite by that criterion was the alternative and is the better provenance; it was
   passed over for cost. If it is ever regenerated, prefer the measured route.
 
+## The one edit made to the merged specification, and why
+
+The consolidation is the agent's; **the scoping is mine**, and the boundary matters, so here it is
+exactly. The merge came out **re-specifying pricing** — unsurprising, since all six sources specify a
+feature whose price computation they each restate. An agent implementing that document therefore
+reimplemented `priceFor` instead of calling it, and got it wrong three ways (Int overflow, an exclusive
+big-spender threshold, and a `Then` that rewrote the duck's own price so a nested `OnlyIf` saw a
+different duck) — **154 of 3010 probed inputs, and in 20 of them a different shop wins.** Realistic, but
+it puts 11.4's settled arithmetic back on the table and drags the capstone's scope with it.
+
+So the pricing restatements were removed, and nothing else: **185 → 165 lines, 2988 → 2552 words.**
+
+- B4 no longer fixes the base at `max(0, duck.price)`
+- B6 keeps **which** rules apply and **in what order** — that is fork 2 — but states the price as
+  `priceFor(duck, s.promotions + franchise.promotions)` instead of spelling out the arithmetic
+- B7–B9 (applying one rule, clamping at zero, exact arithmetic) collapse into one **B7** saying pricing
+  was settled earlier, is documented on `priceFor`, and is not restated here
+- three appended bullets restating what Percentage, AmountOff and BigSpenderBonus do
+- §3 edge cases 6, 7, 8, 9, 10, 19, 20 — zero, negative and `Int.MAX_VALUE` bases, clamping, overflow,
+  and the two rounding worked examples. The other 17 stay and are renumbered.
+- §5 **Q4**, the rounding question
+
+**Asserted, not eyeballed:** the trimming script fails unless every fork statement (B1, B5, B6, B11,
+B12, B14) and every retained contradiction ("any one of them may be returned", "left open", "highest
+discount is applied first", "Return the first shop") is still in the file.
+
 ## What the inherited specification actually contains
 
 185 lines, ~3000 words, against 31–35 lines for each of the six sources. It came out better than hoped,

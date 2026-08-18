@@ -23,7 +23,7 @@
 
 ### 2.2 The price at one shop
 
-**B4 (single base).** The computation for every eligible shop starts from the same value, `max(0, duck.price)` (see §3.8 for a negative base). There is no per-shop base price: the surface gives `Shop` no price of its own.
+**B4 (single base).** The computation for every eligible shop starts from the same value, `duck.price`. There is no per-shop base price: the surface gives `Shop` no price of its own.
 
 **B5 (which promotions apply).** For shop `s`, exactly the rules in `s.promotions` and the rules in `franchise.promotions` are applied — each **once per occurrence in those lists**. Consequences:
 
@@ -32,22 +32,15 @@
 * a rule that occurs twice in one list is applied **twice**;
 * nothing is de-duplicated — not by equality, not by object identity.
 
-**B6 (order of application).** The shop's own promotions are applied first, in list order (index `0` first), and then the chain's promotions, in list order. Writing `s.promotions = [s₁ … s_m]` and `franchise.promotions = [f₁ … f_n]`, the price at `s` is
+**B6 (order of application).** The shop's own promotions are applied first, in list order (index `0` first), and then the chain's promotions, in list order. So the price at shop `s` is
 
 ```
-p₀  = max(0, duck.price)
-p_i = max(0, apply(sᵢ, duck, p_{i-1}))          for i = 1 … m
-q_j = max(0, apply(f_j, duck, q_{j-1}))          for j = 1 … n,  with q₀ = p_m
-price(s) = q_n
+price(s) = priceFor(duck, s.promotions + franchise.promotions)
 ```
 
 This order is observable: a 10-off rule and a 10%-off rule give different results depending on which runs first, so the order above is part of the contract, not an implementation detail.
 
-**B7 (applying one rule).** A rule is applied as a pure function of the pair `(duck, incoming price)` returning an outgoing price, with whatever per-rule semantics `:core` already gives that rule kind (see B15). Applying a rule must not modify the duck, the rule, the shop or the franchise.
-
-**B8 (never negative).** Every price is clamped at zero, after **each** individual rule application as written in B6. Therefore every intermediate price and the final price is `>= 0`, and a discount can never turn into money owed to the customer. `0` is a legal price and is reported as `0`.
-
-**B9 (exact arithmetic).** Intermediate arithmetic must not wrap around. A percentage rule applied to a very large price must be computed exactly (e.g. in a wider type) rather than overflowing `Int`. Any exact result above `Int.MAX_VALUE` is reported as `Int.MAX_VALUE` (see §3.10); any exact result below `0` is reported as `0` (B8).
+**B7 (pricing is not restated here).** How an individual rule turns an incoming price into an outgoing one — rounding, clamping, the arithmetic width, the order within a composite rule — was settled earlier and is documented on `priceFor` itself. This specification says only WHICH rules apply to which shop and in what order, and takes the rest from that function.
 
 **B10 (no rule is discarded).** The price at a shop is whatever B6 computes, even if a rule leaves the price unchanged or raises it. A shop is not made ineligible, and a rule is not skipped, because it fails to lower the price.
 
@@ -74,9 +67,6 @@ This order is observable: a 10-off rule and a 10%-off rule give different result
 
 - The function checks each shop in the franchise to determine if it admits the duck using the shop's `admissionPolicy`.
 - For shops that admit the duck, the function calculates the final price by applying all applicable promotions from both the franchise and the individual shop.
-- A percentage rule reduces the price by `percent` percent of the original price, rounding down.
-- An amount off rule directly subtracts the specified `amount` from the original price.
-- A big spender bonus rule applies a fixed `amount` discount if the original price exceeds the specified `threshold`.
 - The function compares the final prices across all admitting shops and returns the offer with the lowest price.
 - If multiple shops have the same lowest price, any one of them may be returned.
 
@@ -87,25 +77,18 @@ This order is observable: a 10-off rule and a 10%-off rule give different result
 3. **The chain does not admit the duck, some shops do** → `null` (B1). The shops are not consulted for the answer.
 4. **The chain admits everything, no shop does** → `null`.
 5. **Both promotion lists empty, several shops eligible** → every eligible shop prices at `max(0, duck.price)`; the first eligible shop in `franchise.shops` is returned (B12).
-6. **`duck.price == 0`** → `0` at every eligible shop, unless a rule raises the price; the cheapest is then still `0` if any eligible shop leaves it at `0`.
-7. **`duck.price == Int.MAX_VALUE`** → computed exactly, no wrap-around (B9). E.g. a 50%-off rule yields `1073741823` under floor rounding, not a negative number.
-8. **`duck.price < 0`** (illegal as a price, but representable) → the base is taken as `0` before any rule is applied (B4), so an eligible shop offers `0`, never a negative price.
-9. **Rules that would drive the price below zero** (a fixed amount larger than the price, or several such rules) → `0`, at that step and in the result (B8).
-10. **Rules that would drive the price above `Int.MAX_VALUE`** → `Int.MAX_VALUE`.
-11. **Two different shops with the same `name`** → they are two shops; the cheaper wins, and on a tie the earlier index wins. Names are never used to merge shops.
-12. **The same `Shop` value listed twice in `franchise.shops`** → the earlier index wins; the returned price is the same either way.
-13. **Two shops equal except for `promotions`** → distinct shops; the one whose promotions produce the lower price wins.
-14. **Exactly one shop, eligible** → that shop, with its computed price, even if that price is higher than `duck.price` because a rule raised it (B10).
-15. **A shop whose `admissionPolicy` is the leaf that admits nothing** → never eligible, no matter what the chain admits or how cheap it would have been.
-16. **A shop that admits the duck but whose promotions raise the price above a plain shop's** → the plain shop wins; being the source of a promotion is not itself an advantage.
-17. **Chain promotions non-empty, shop promotions empty** → the chain's rules alone apply, in list order.
-18. **Shop promotions non-empty, chain promotions empty** → the shop's rules alone apply, in list order.
-19. **The same rule in both lists** → applied twice. Two 10%-off applications on `100` give `81` (under floor rounding), not `80` and not `90`.
-20. **Two percentage rules** → applied one after the other, i.e. multiplicatively: 10% then 20% off `100` gives `72` (under floor rounding), never `70`.
-21. **All eligible shops price at `0`** → the first eligible shop in list order (B12).
-22. **A duck with an empty `accessories` list, a blank `name`, or duplicate accessories** → no special treatment here; those fields matter only inside `admits` and inside rules that look at them.
-23. **Duplicate entries inside one promotions list** → each occurrence is applied (B5).
-24. **Many shops, many of them ineligible** → the ineligible ones are simply absent from the comparison; they can never win and never make the result `null` when an eligible shop exists.
+6. **Two different shops with the same `name`** → they are two shops; the cheaper wins, and on a tie the earlier index wins. Names are never used to merge shops.
+7. **The same `Shop` value listed twice in `franchise.shops`** → the earlier index wins; the returned price is the same either way.
+8. **Two shops equal except for `promotions`** → distinct shops; the one whose promotions produce the lower price wins.
+9. **Exactly one shop, eligible** → that shop, with its computed price, even if that price is higher than `duck.price` because a rule raised it (B10).
+10. **A shop whose `admissionPolicy` is the leaf that admits nothing** → never eligible, no matter what the chain admits or how cheap it would have been.
+11. **A shop that admits the duck but whose promotions raise the price above a plain shop's** → the plain shop wins; being the source of a promotion is not itself an advantage.
+12. **Chain promotions non-empty, shop promotions empty** → the chain's rules alone apply, in list order.
+13. **Shop promotions non-empty, chain promotions empty** → the shop's rules alone apply, in list order.
+14. **All eligible shops price at `0`** → the first eligible shop in list order (B12).
+15. **A duck with an empty `accessories` list, a blank `name`, or duplicate accessories** → no special treatment here; those fields matter only inside `admits` and inside rules that look at them.
+16. **Duplicate entries inside one promotions list** → each occurrence is applied (B5).
+17. **Many shops, many of them ineligible** → the ineligible ones are simply absent from the comparison; they can never win and never make the result `null` when an eligible shop exists.
 
 - An empty chain: `priceFor` returns an offer with no shops and a price of 0.
 - A single shop in the chain: `priceFor` returns an offer for that shop's price.
@@ -149,9 +132,6 @@ This order is observable: a 10-off rule and a 10%-off rule give different result
 
 **Q3. Is the chain's admission policy a filter on top of each shop's, or can the chain force a sale the shop would refuse (or the other way round)?**
 *Assumed:* both must admit — plain conjunction (B1).
-
-**Q4. Rounding for percentage rules: floor, half-up or ceiling — and does rounding happen after each rule or once at the end?** With whole-unit prices this decides many concrete numbers (see §3.19, §3.20, where floor is used only as an illustration).
-*Assumed:* whatever `:core` already does, applied once per rule, since rules are applied one after another to a whole-unit price (B6, B7). I could not read `:core` from this folder to confirm it.
 
 **Q5. The exact inventory and semantics of the four admission leaves, the three combinators and the six discount rule kinds.** The brief names their counts but not their meanings, and nothing in this folder defines them. This is the largest thing I could not verify.
 *Assumed:* only the two contracts in B16. Everything in §2 is written so that it holds whatever those kinds turn out to be.

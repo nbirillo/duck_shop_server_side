@@ -531,7 +531,16 @@ abstract class RunAgentTask @Inject constructor(
         // finding behind a build failure. Asks the types source set what exists instead of describing
         // it in the prompt, which failed four times on this one surface.
         val typesDir = root.resolve(prop("implCoreSrc") ?: DEFAULT_IMPL_CORE_SRC)
-        val stripped = Redeclarations.strip(normalised, Redeclarations.existingTypes(typesDir))
+        // -PimplExisting names a directory of code that is OUT OF SCOPE for this exercise and already on
+        // the compile path. Functions declared there get stripped if the agent writes its own — which
+        // both local models did for `priceFor` despite a surface saying it was settled, each getting it
+        // wrong differently. Unlike the type strip this changes behaviour, so it is opt-in.
+        val outOfScope = prop("implExisting")?.let { root.resolve(it) }
+        val stripped = Redeclarations.strip(
+            normalised,
+            Redeclarations.existingTypes(typesDir),
+            outOfScope?.let { Redeclarations.existingFunctions(it) }.orEmpty(),
+        )
         target.writeText(stripped.code + "\n")
 
         // A silent rescue would let a broken output contract read as a clean run, so it is always
