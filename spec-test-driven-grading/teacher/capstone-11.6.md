@@ -141,19 +141,86 @@ Note also **Q5**: one source recorded that it could not read `:core` from its fo
 the rule semantics at all. That is a specification honestly reporting the limit of its own evidence, and
 it is worth showing next to the sources that simply guessed.
 
+## Giving feedback on a submission
+
+**Why this is here and not on a slide (her call, 2026-08-19).** The capstone is an assignment, not a
+lecture. If the deck explains what a fork is, which forks exist and what we measured, it hands over the
+answer and the learner is walked through instead of working. So the student deck is **five slides — 52–56:
+the situation, the brief, the deliverable, and how to run things** — and everything below stays with you,
+to use when you respond to their work. One consequence, deliberate: **the recurring "how the models did"
+slide is not in this block.** Use the numbers in conversation if they help.
+
+### Reading their submission
+
+```bash
+# in spec-test-driven-grading/, pointing at the learner's own test source
+./gradlew generateForks -PforkTests=<path to their work/src/test/kotlin>
+./gradlew verifyForks --continue
+```
+
+Then, separately, the floor: put their implementation in `implementations/<name>/` and run
+`verifyImplementations`, plus `tests-11.6/FranchiseCornerCases.kt` against it. **Do not rank with the
+corner cases** — see above, everything passes them.
+
+### What to say to each verdict
+
+| verdict | what it means | what to ask them |
+| --- | --- | --- |
+| **SETTLED** | their tests accept exactly one reading | Which one, and *why that one?* The answer is theirs to defend, and "it is what the code already did" is not a defence. |
+| **LEFT OPEN** | their tests accept several readings that answer differently | Not a bug they missed — **a decision nobody made.** Show them the two readings and ask what their specification says about it. Usually: nothing. |
+| **CONTRADICTORY** | their tests reject every reading we hold | **Read their specification before calling this a fault.** It looks identical to a learner who decided the fork a *third* way, which is a good outcome. The report cannot tell the difference; you can. |
+| **DID NOT COMPILE** | their tests do not build against a reading | Often a test reaching into their own implementation's internals rather than the contract. Worth naming as its own lesson. |
+| **NO TESTS YET** | nothing in the suite directory | They have not started, or ran the check in the wrong directory. |
+
+### What a good submission looks like
+
+There is no single shape, and saying so is part of the feedback. Signals worth crediting, in rough order
+of how much they show:
+
+1. **Every fork decided, and each decision stated in the specification** — not just pinned in a test.
+   A test that pins something the text does not say is a decision that will be lost at the next rewrite.
+2. **They noticed the inherited specification contradicts itself** and said which side they took. The
+   table above lists what is there to find.
+3. **They split the specification** rather than editing one long document, or explained why they did not.
+4. **They ran the same agent more than once**, or two different agents, and treated a disagreement as
+   evidence about their text rather than about the model.
+5. **They found something wrong with the inherited implementation** and can say whether the specification
+   licensed it. That is the highest-value observation in the whole exercise.
+
+Signals that need a conversation, not a mark: a suite that pins arithmetic `priceFor` already settled
+(scope) · a specification that grew rather than shrank · tests written against the inherited code's
+behaviour instead of against their own text (this makes every fork SETTLED for the wrong reason — worth
+catching, because the report cannot).
+
+### Discussion points that used to be slides
+
+Use these when they fit what a particular learner did. None of them should be delivered before the attempt.
+
+- **A reading is not a mutant.** A mutant asks *does your suite catch a defect*; a reading asks *does your
+  suite express a decision*. The two checks are mirrors: the conformance check from 11.2 says **do not pin
+  what the contract leaves free**, this one says **do pin what is a decision**. Telling those apart is the
+  whole skill, and no report will do it for them.
+- **One counterexample closes one alternative, not a fork.** Our own self-test pinned "the chain can refuse
+  a duck every shop would sell" and the check still said LEFT OPEN — because two of the three readings we
+  held answer that case identically. Closing a fork means rejecting *every* reading but one. Same shape as
+  the 11.2 lesson that hardening against a counterexample closes the instance and not the class.
+- **The options a brief imagines are not the options readers take.** Our brief offered three answers for
+  the chain-versus-shop question; building the checks showed two of them were the same reading and the
+  third was not expressible against the types — while the reading every weak specification actually took
+  was not listed at all. Good material for anyone who has to write a brief.
+- **A clean report is worth exactly what the check can reach.** They practised on one fork. The others were
+  never in their folder.
+
 ## The reveal, for the debrief
 
-Say all of it, after they have handed in:
+**Moved to `capstone-11.6-debrief.md`** — five beats, the numbers with their provenance, and the one
+decision left to each teacher (how much of the staging to admit out loud). There are no slides for it.
 
-- The specification they inherited was **six independent specifications stacked and smoothed**. Nobody
-  ever wrote it as one document, which is why it reads the way it does. Ask who noticed, and who split it
-  back up.
-- The implementation was **nobody's mistake** — an agent doing exactly what that text says.
-- Everything they inherited **passes the settled facts**, and a specification can disagree with ours on
-  a quarter of all inputs and still pass them. This is the module's thesis arriving: the
-  machine-checkable part was fully satisfied by a bad artifact.
-- Whichever forks they left open: two independent weak specifications missed the same three. Being in
-  good company is not the same as being right.
+One correction worth recording, because the earlier draft of this section had it wrong: it said the
+inherited implementation was "nobody's mistake — an agent doing exactly what that text says". **That was
+true of the version we measured and is NOT true of the one that ships.** The shipped one was degraded by
+hand. The defects are still all licensed by the document, which is what makes the lesson work, but the
+picking was ours.
 
 ## One thing to watch for in the brief
 

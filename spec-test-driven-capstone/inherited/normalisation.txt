@@ -1,6 +1,0 @@
-The agent's file needed these removals before it would compile. Neither is a change to its logic;
-both are output-contract failures worth reporting per agent.
-
-- reimplemented an out-of-scope function: priceFor — it already exists and was settled
-- import from the wrong package: org.jetbrains.kotlin.course.duck.shop.admission.Franchise — Franchise lives in org.jetbrains.kotlin.course.duck.shop.pricing
-- import from the wrong package: org.jetbrains.kotlin.course.duck.shop.admission.Offer — Offer lives in org.jetbrains.kotlin.course.duck.shop.pricing

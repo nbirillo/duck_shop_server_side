@@ -69,6 +69,14 @@ abstract class ForkReportTask @Inject constructor(
         /** Readings with no results whose test sources really did fail to compile. */
         val notCompiled = sortedSetOf<String>()
 
+        // Does the suite contain any test source at all? An EMPTY suite directory produces neither
+        // results nor compiled classes, which the compiled-classes heuristic alone reads as "did not
+        // compile" — and that is the very first thing a learner sees, before they have written a test.
+        // Asking the source directory is the only way to tell the two apart.
+        val suiteHasSources = root.resolve(ranSuite).let { dir ->
+            dir.isDirectory && dir.walkTopDown().any { it.isFile && it.extension == "kt" }
+        }
+
         val verdicts = readings.groupBy { it.fork }.toSortedMap().map { (fork, group) ->
             val accepted = mutableListOf<Reading>()
             val rejected = mutableListOf<Reading>()
@@ -88,7 +96,7 @@ abstract class ForkReportTask @Inject constructor(
                     // did on its first run against the capstone build, and it was simply wrong.
                     failures == null -> {
                         unbuilt += reading
-                        if (!ranNothing(moduleDir)) notCompiled += reading.id
+                        if (suiteHasSources && !ranNothing(moduleDir)) notCompiled += reading.id
                     }
                     failures.isEmpty() -> accepted += reading
                     else -> rejected += reading
@@ -110,6 +118,7 @@ abstract class ForkReportTask @Inject constructor(
             val anyFailedToCompile = v.unbuilt.any { it.id in notCompiled }
             val word = when {
                 anyFailedToCompile -> "DID NOT COMPILE"
+                v.unbuilt.isNotEmpty() && !suiteHasSources -> "NO TESTS YET"
                 v.unbuilt.isNotEmpty() -> "RAN NO TESTS"
                 v.settled -> "SETTLED"
                 v.contradictory -> "CONTRADICTORY"
@@ -117,7 +126,11 @@ abstract class ForkReportTask @Inject constructor(
             }
             logger.lifecycle("${v.fork}: $word")
             v.unbuilt.forEach {
-                val why = if (it.id in notCompiled) "did not compile" else "ran no tests"
+                val why = when {
+                    it.id in notCompiled -> "did not compile"
+                    !suiteHasSources -> "no tests yet"
+                    else -> "ran no tests"
+                }
                 logger.lifecycle("    ${why.padEnd(15)} ${it.id} — ${it.label}")
             }
             v.accepted.forEach { logger.lifecycle("    accepted        ${it.id} — ${it.label}") }
@@ -126,6 +139,10 @@ abstract class ForkReportTask @Inject constructor(
                 anyFailedToCompile ->
                     logger.lifecycle("  ⇒ your tests do not compile against this reading, so nothing is " +
                         "measured here.\n     Run with --continue and read the compiler output above.")
+                v.unbuilt.isNotEmpty() && !suiteHasSources ->
+                    logger.lifecycle("  ⇒ there is nothing in $ranSuite yet, so there is nothing to " +
+                        "measure.\n     Write a test that says which of the readings above you mean, " +
+                        "then run this again.")
                 v.unbuilt.isNotEmpty() ->
                     logger.lifecycle("  ⇒ the suite compiled but contains no tests, so nothing is measured " +
                         "here.")
@@ -161,7 +178,7 @@ abstract class ForkReportTask @Inject constructor(
         val unbuilt = verdicts.count { it.unbuilt.isNotEmpty() }
         logger.lifecycle("")
         logger.lifecycle(
-            "$settled settled · $open left open · $broken contradictory · $unbuilt did not build " +
+            "$settled settled · $open left open · $broken contradictory · $unbuilt not measured " +
                 "(of ${verdicts.size} forks)",
         )
         if (open > 0) {
