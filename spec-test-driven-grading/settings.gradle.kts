@@ -62,3 +62,7 @@ file("implementations").listFiles()
             ?.sortedBy { it.name }
             ?.forEach { include(":implementations:${agent.name}:${it.name}") }
     }
+
+// Schedules the per-module test tasks behind every aggregate report, so a module that does not
+// compile becomes a VERDICT instead of taking the whole report down with it.
+apply(from = "../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts")

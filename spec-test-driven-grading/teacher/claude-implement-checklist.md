@@ -50,8 +50,9 @@ Collect and score:
 ./gradlew verifyDivergence -PagentA=frontier-a -PagentB=impl32b
 ```
 
-`--continue` matters: an implementation that does not compile is a result, and three of `impl14b`'s
-thirteen do not.
+An implementation that does not compile is a **result**: three of `impl14b`'s thirteen do not, and the
+report says DID NOT BUILD OR NEVER RAN for those and scores the other nine. This needed fixing before
+it was true — the report was downstream of the failed compile and printed nothing at all.
 
 ## A local model needs no sandbox
 

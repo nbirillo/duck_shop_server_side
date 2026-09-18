@@ -35,7 +35,10 @@ tasks.register<MutationReportTask>("verifyMutants") {
     catalogPath.convention(providers.gradleProperty("mutantsCatalog").orElse("mutants/catalog.json"))
     outPath.convention(providers.gradleProperty("mutantsOut").orElse("mutants"))
     // Task paths are resolved lazily, so the mutant modules do not need to be evaluated yet.
-    dependsOn(subprojects.filter { it.path.startsWith(":mutants:") }.map { "${it.path}:test" })
+    // ORDER ONLY, not dependsOn: a report that is downstream of a compile failure is skipped, and
+    // then a learner with a type error in their suite sees compiler stack traces instead of a score.
+    // build-logic/reachable-reports.settings.gradle.kts requests these and explains the whole of it.
+    mustRunAfter(subprojects.filter { it.path.startsWith(":mutants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<GenerateMutantsTask>("generateVariants") {
@@ -56,7 +59,8 @@ tasks.register<MutationReportTask>("verifyVariants") {
         "[-PmutantsStrict]."
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
-    dependsOn(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
+    // Order only — see verifyMutants above.
+    mustRunAfter(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<GenerateForksTask>("generateForks") {
@@ -84,7 +88,9 @@ tasks.register<ForkReportTask>("verifyForks") {
     // having run, which the report then read as "did not compile" — the fourth time in this repo that a
     // hard-coded name stood in for a configured one.
     val forksPrefix = ":" + providers.gradleProperty("forksOut").getOrElse("forks") + ":"
-    dependsOn(subprojects.filter { it.path.startsWith(forksPrefix) }.map { "${it.path}:test" })
+    // Order only — see verifyMutants above. This report needs it most: DID NOT COMPILE is one of its
+    // verdicts, and a suite that does not build against a reading is exactly what it has to say.
+    mustRunAfter(subprojects.filter { it.path.startsWith(forksPrefix) }.map { "${it.path}:test" })
 }
 
 // For an interactive agent, which writes the attacking sources itself and has no API call to hang
@@ -97,8 +103,9 @@ tasks.register<PrepareAttackTask>("prepareAttack") {
 }
 
 // The third direction, and the only one without a ceiling: an agent writes an implementation that
-// passes the suite and still contradicts the spec. Run with --continue, so an attack that does not
-// compile still reaches the report.
+// passes the suite and still contradicts the spec. An attack that does not compile still reaches the
+// report — see build-logic/reachable-reports.settings.gradle.kts for how, and for why `--continue`
+// alone was never enough.
 tasks.register<AttackReportTask>("verifyAttack") {
     group = "verification"
     description = "Score one attacking implementation from attacks/<agent>/: does the suite catch it, " +
@@ -107,5 +114,5 @@ tasks.register<AttackReportTask>("verifyAttack") {
     val attacked = providers.gradleProperty("agent").orNull
     listOfNotNull(attacked?.let { ":attacks:$it" }, ":attacks:reference")
         .filter { findProject(it) != null }
-        .forEach { dependsOn("$it:test") }
+        .forEach { mustRunAfter("$it:test") }
 }

@@ -11,7 +11,9 @@ that behaviour is not pinned down by any test. The **mutation score** is the sha
 ./gradlew generateMutants                    # only needed after editing catalog.json
 ```
 
-Use `--continue` so one mutant your suite cannot compile against does not hide the rest.
+`--continue` is there so one red mutant does not hide the rest. You get the report either way —
+including when your suite does not compile at all, which it reports as exactly that rather than
+burying it under compiler output.
 
 ## Reading the report
 

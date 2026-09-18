@@ -44,7 +44,9 @@ tasks.register<duckshop.MutationReportTask>("verifyPricingMutants") {
     catalogPath.set("pricing-mutants/catalog.json")
     defaultTests.set("pricing-properties/kotlin")
     outPath.set("pricing-mutants")
-    dependsOn(subprojects.filter { it.path.startsWith(":pricing-mutants:") }.map { "${it.path}:test" })
+    // Order only — a report downstream of a compile failure is skipped. See
+    // ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts.
+    mustRunAfter(subprojects.filter { it.path.startsWith(":pricing-mutants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<duckshop.PropertyMatrixTask>("pricingPropertyMatrix") {
@@ -73,8 +75,8 @@ tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
 tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     group = "verification"
     description = "Report where implementations written from a specification alone diverge from the " +
-        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]. Add --continue if any " +
-        "implementation does not compile — that is a result, not a build failure."
+        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]. An implementation that " +
+        "does not compile is reported as a verdict, not a build failure."
     keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
     // Scoped to the agent being reported on. Depending on every implementation meant that one
     // agent's non-compiling module broke the report for every other agent — and made the report's
@@ -82,7 +84,12 @@ tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     // A broken implementation inside the requested set is the case that branch exists for: run with
     // --continue and it gets reported instead of aborting.
     val reported = providers.gradleProperty("agent").orNull
-    dependsOn(
+    // Order only, and this is the task that proved the point: scoping alone did NOT make the
+    // "DID NOT BUILD" branch reachable, because the report was still downstream of a failed
+    // compile. -Pagent=impl14b --continue printed nothing at all, three of its runs being
+    // agent output that does not compile — the very result the branch exists to report.
+    // ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts schedules these.
+    mustRunAfter(
         subprojects
             .filter { it.path.startsWith(":implementations:${reported ?: ""}") && it.buildFile.exists() }
             .map { "${it.path}:test" },

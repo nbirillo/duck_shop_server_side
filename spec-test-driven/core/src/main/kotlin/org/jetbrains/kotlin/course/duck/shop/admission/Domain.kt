@@ -38,7 +38,7 @@ data class Shop(
     val admissionPolicy: AdmissionPolicy,
     /**
      * The promotions this shop runs. Defaulted, so every existing use of `Shop(name, policy)` — the
-     * whole of exercise 11.2 — is untouched.
+     * whole of the test-writing exercise — is untouched.
      */
     val promotions: List<DiscountRule> = emptyList(),
 ) {

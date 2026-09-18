@@ -147,5 +147,8 @@ From `spec-test-driven-grading/`:
 ./gradlew verifyDivergence -PagentA=<run> -PagentB=<run>           # what the text left open
 ```
 
-`--continue` matters on the fifth: an implementation that does not compile is a result, and three of
-`impl14b`'s thirteen do not.
+An implementation that does not compile is a **result**, and three of `impl14b`'s thirteen do not —
+they are reported as DID NOT BUILD OR NEVER RAN alongside the nine that scored. That used to require
+`--continue` and did not actually work even with it; the report is reachable now either way (see
+`../../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts`). The flag is still worth
+typing — it keeps the other modules going — but nothing depends on remembering it.

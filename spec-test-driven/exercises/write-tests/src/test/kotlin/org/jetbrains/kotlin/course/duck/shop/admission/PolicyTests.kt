@@ -5,7 +5,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 11.2 — VERIFY AND HARDEN an AI-generated test suite.
+ * VERIFY AND HARDEN an AI-generated test suite.
  *
  * An AI was asked to test the admission-policy algebra (given and correct in `:core`). Below is
  * what it produced. Your job is NOT to implement anything — it is to VERIFY these tests:
@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
  *   3. Two behaviours are left unspecified (see README.md). Decide what they should be and pin
  *      your decision with a test — or flag the ambiguity.
  *
- * Then check your suite actually catches bugs: `./gradlew practiceCatch`.
+ * Then check your suite actually catches bugs: `./gradlew verifyMutants --continue`.
  */
 class PolicyTests {
 

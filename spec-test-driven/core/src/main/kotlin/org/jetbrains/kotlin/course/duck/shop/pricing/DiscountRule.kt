@@ -6,8 +6,8 @@ import org.jetbrains.kotlin.course.duck.shop.admission.AdmissionPolicy
  * A promotion a shop can have active.
  *
  * These are **data only** — deliberately. What a rule *does* to a price is not defined here, because
- * defining it is exercise 11.4: the learner writes that contract from an informal brief, and only then
- * does anyone implement it.
+ * defining it is the spec-writing exercise: the learner writes that contract from an informal brief,
+ * and only then does anyone implement it.
  *
  * The three leaves are the promotions the business described. The three combinators are the advanced
  * tier, where promotions stop being a flat list and start composing — the same skeleton as

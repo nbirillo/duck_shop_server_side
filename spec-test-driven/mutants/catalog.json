@@ -1,5 +1,5 @@
 {
-  "description": "Practice mutants for exercise 11.2. Each entry replaces one snippet in a :core source file; ./gradlew generateMutants turns it into a module that compiles :core with that one file swapped, and ./gradlew verifyMutants runs your tests against each. Entries carry no description on purpose — naming the defect and the test that catches it would do the exercise for you. Patterns match whole `override` lines, since the KDoc above them quotes the same expression.",
+  "description": "Practice mutants for the test-writing exercise. Each entry replaces one snippet in a :core source file; ./gradlew generateMutants turns it into a module that compiles :core with that one file swapped, and ./gradlew verifyMutants runs your tests against each. Entries carry no description on purpose — naming the defect and the test that catches it would do the exercise for you. Patterns match whole `override` lines, since the KDoc above them quotes the same expression.",
   "mutants": [
     {
       "id": "max-budget-strict",
