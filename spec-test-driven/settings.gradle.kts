@@ -8,9 +8,11 @@ rootProject.name = "spec-test-driven"
 
 include(":core")
 
-// The reference implementation and grading suite live in a SEPARATE build OUTSIDE this folder
-// (../spec-test-driven-grading), so a student's project never contains the answers — not even as
-// readable files. This build knows nothing about grading.
+// The reference implementation and the graded catalogs live in a SEPARATE build OUTSIDE this folder
+// (../spec-test-driven-grading). What that buys is precise, and it is worth stating precisely: the
+// learner's PROJECT does not contain the answers, so the agent they point at this folder cannot read
+// them. It is not a lock — a clone of the repository has the sibling directory too, and keeping it
+// unread is on the learner. This build knows nothing about grading either way.
 
 // Auto-discover folders under exercises/ and the generated dirs: every subdir with a build script
 // becomes a module. Adding one is just dropping a folder — no edit here.

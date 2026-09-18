@@ -82,8 +82,8 @@ swapped. `mutants/README.md` explains how to read the report.
 Everything a learner should not read lives in **`../spec-test-driven-grading/`**, outside this folder,
 because anything inside it is readable by the learner's own AI agent:
 
-- `grading/` — the reference implementation, and `tests/kotlin` the acceptance suite for the given
-  policy algebra (its test names spell out the cases exercise 11.2 asks the learner to find).
+- `grading/` — the acceptance suite for the given policy algebra, run against `:core` (its test names
+  spell out the cases exercise 11.2 asks the learner to find). The 11.4 reference lives in `reference/`.
 - `mutants/` — the graded mutant set, larger than the practice one here.
 - `teacher/` — answer keys, grading commands, mutation-testing notes, and the guides for running
   agents against the module (`runAgent`, interactive agents).
