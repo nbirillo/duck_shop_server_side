@@ -1,5 +1,13 @@
 package duckshop
 
+import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.security.MessageDigest
+import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -10,16 +18,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import java.io.File
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.security.MessageDigest
-import java.time.LocalDate
-import javax.inject.Inject
 
 /**
  * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
@@ -46,6 +48,18 @@ abstract class RunAgentTask @Inject constructor(
     private val providers: ProviderFactory,
     private val layout: ProjectLayout,
 ) : DefaultTask() {
+
+    /**
+     * What to print after `-Pmode=impl-from-spec`, with `<agent>` standing for the run's name.
+     *
+     * Supplied by the build, because the build is what knows. The convention below names no task at
+     * all: `duck-shop.spec` overrides it with `verifyDivergence` because that plugin is what registers
+     * `verifyDivergence`, and the capstone — which applies only `duck-shop.run-agent` — overrides it
+     * with its own step. Hard-coding one command here printed `./gradlew verifyDivergence` into a build
+     * that has no such task, which is how `checkPrimary` used to be printed before it.
+     */
+    @get:Input
+    abstract val implNextStep: Property<String>
 
     private val packagePath = "org/jetbrains/kotlin/course/duck/shop/admission"
     private val basePackage = packagePath.replace('/', '.')
@@ -210,8 +224,7 @@ abstract class RunAgentTask @Inject constructor(
             "spec", "spec-advanced", "spec-compress" -> "read ${outDir.relativeTo(root)}/SPEC.md — at this stage it is judged by eye, not by machine"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
-            "impl-from-spec" -> "./gradlew verifyDivergence -PagentA=$agent -PagentB=<a second run of the " +
-                "same specification>   (where two readings disagree is what your text left open)"
+            "impl-from-spec" -> implNextStep.get().replace("<agent>", agent)
             "spec-extract" -> "./gradlew scoreExtraction -Pagent=$agent   (layer 2, against the answer key)"
             else -> "read ${outDir.relativeTo(root)} — this mode produces material, not a result"
         }
@@ -500,11 +513,16 @@ abstract class RunAgentTask @Inject constructor(
         // finding behind a build failure. Asks the types source set what exists instead of describing
         // it in the prompt, which failed four times on this one surface.
         val typesDir = root.resolve(prop("implCoreSrc") ?: DEFAULT_IMPL_CORE_SRC)
-        // -PimplExisting names a directory of code that is OUT OF SCOPE for this exercise and already on
-        // the compile path. Functions declared there get stripped if the agent writes its own — which
-        // both local models did for `priceFor` despite a surface saying it was settled, each getting it
-        // wrong differently. Unlike the type strip this changes behaviour, so it is opt-in.
-        val outOfScope = prop("implExisting")?.let { root.resolve(it) }
+        // -PimplExisting names code that is OUT OF SCOPE for this exercise and already on the compile
+        // path — a file or a directory. Functions declared there get stripped if the agent writes its
+        // own, which both local models did for `priceFor` despite a surface saying it was settled, each
+        // getting it wrong differently. Unlike the type strip this changes behaviour, so it is opt-in.
+        //
+        // Name the FILE, not its directory, unless every function in that directory is really out of
+        // scope: the capstone pointed at inherited/src/main/kotlin and stripped `bestOffer`, the one
+        // function it was asking the agent for. Blank counts as unset — `root.resolve("")` is the build
+        // root, which would put the whole project out of scope.
+        val outOfScope = prop("implExisting")?.takeIf { it.isNotBlank() }?.let { root.resolve(it) }
         val stripped = Redeclarations.strip(
             normalised,
             Redeclarations.existingTypes(typesDir),

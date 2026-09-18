@@ -35,6 +35,17 @@ abstract class PrepareImplementationTask @Inject constructor(
     @get:Optional
     abstract val agent: Property<String>
 
+    /**
+     * The command to print once the module is ready, with `<agent>` standing for the run's name.
+     *
+     * Named by the build that owns the report. The convention is `verifyDivergence`, which is safe
+     * because the plugin registering THIS task registers that one too; the grading build overrides it
+     * with `verifyImplementations`, which exists only there. It used to print `verifyImplementations`
+     * unconditionally, so in the student build it named a task that is not there.
+     */
+    @get:Input
+    abstract val reportCommand: Property<String>
+
     @TaskAction
     fun run() {
         val root = layout.projectDirectory.asFile
@@ -90,7 +101,7 @@ abstract class PrepareImplementationTask @Inject constructor(
         )
 
         logger.lifecycle("[prepareImplementation] implementations/$name/$key is ready — reload Gradle, then:")
-        logger.lifecycle("[prepareImplementation]   ./gradlew verifyImplementations -Pagent=$name")
+        logger.lifecycle("[prepareImplementation]   ${reportCommand.get().replace("<agent>", name)}")
     }
 
     /** The API path's prompt, printed so an interactive run gets exactly the same input. */

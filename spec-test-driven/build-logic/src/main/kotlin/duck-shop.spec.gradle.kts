@@ -43,6 +43,19 @@ tasks.register<duckshop.PrepareImplementationTask>("prepareImplementation") {
     group = "duck-shop"
     description = "Take the implementation an agent wrote in a sandbox so it can be compared. " +
         "Params: -Pagent=<name> -Pspec=<the spec> [-Pfrom=sandbox/<name>]."
+    // verifyDivergence is registered just below, so it is available wherever this task is. The
+    // grading build overrides this with verifyImplementations, which exists only there.
+    reportCommand.convention(
+        "./gradlew verifyDivergence -PagentA=<agent> -PagentB=<a second run of the same specification>",
+    )
+}
+
+// This plugin registers verifyDivergence, so this plugin is what tells runAgent to point at it.
+tasks.withType<duckshop.RunAgentTask>().configureEach {
+    implNextStep.set(
+        "./gradlew verifyDivergence -PagentA=<agent> -PagentB=<a second run of the " +
+            "same specification>   (where two readings disagree is what your text left open)",
+    )
 }
 
 // How much did your specification leave to chance? Two readers, compared. Needs no reference and no

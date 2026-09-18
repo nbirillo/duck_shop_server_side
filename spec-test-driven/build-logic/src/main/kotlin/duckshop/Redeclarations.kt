@@ -63,11 +63,11 @@ internal object Redeclarations {
     }
 
     /**
-     * Names of top-level **functions** declared under [dir].
+     * Names of top-level **functions** declared in [path] — a single `.kt` file, or a directory of them.
      *
      * Separate from [existingTypes] because stripping a redeclared function is a stronger act: the
      * agent's version has a body, and removing it changes which implementation its own calls resolve to.
-     * So this is only ever applied to a directory the caller states is **out of scope** — in the capstone,
+     * So this is only ever applied to code the caller states is **out of scope** — in the capstone,
      * `priceFor`, which was settled two exercises earlier and which the surface tells the agent to use
      * rather than write.
      *
@@ -76,10 +76,27 @@ internal object Redeclarations {
      * pricing", and each got it wrong in its own way (an Int overflow and an exclusive threshold in one,
      * a big-spender bonus that ADDED money and a reversed `Then` in the other). That is the same failure
      * family as reconstructing a type from its field list: shown a declaration, a model writes one.
+     *
+     * ### Why a single file, and why a missing path throws
+     *
+     * A directory was the only accepted form, and in the capstone `implExisting` named the whole of
+     * `inherited/src/main/kotlin` — which holds `Pricing.kt` **and** `BestOffer.kt`. So `bestOffer` was
+     * "already existing" and got stripped: the one function the surface tells the agent to write came
+     * back as a package line and four imports. Naming the file is the fix, and it has to be a form this
+     * function accepts.
+     *
+     * The throw matters as much. Returning an empty set for a path that is neither would have turned
+     * that fix into a silent no-op — the `priceFor` rescue above would simply stop happening, with
+     * nothing in the output to say so. An instrument that quietly measures nothing is the failure mode
+     * this repository keeps paying for.
      */
-    internal fun existingFunctions(dir: File): Set<String> {
-        if (!dir.isDirectory) return emptySet()
-        return dir.walkTopDown().filter { it.isFile && it.extension == "kt" }
+    internal fun existingFunctions(path: File): Set<String> {
+        val sources = when {
+            path.isDirectory -> path.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            path.isFile -> sequenceOf(path)
+            else -> error("implExisting: no such file or directory: $path")
+        }
+        return sources
             .flatMap { file ->
                 topLevelFunctions(strippedOfCommentsAndStrings(file.readText())).map { it.first }
             }

@@ -71,6 +71,12 @@ tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
     dependsOn("verifyPricingMutants")
 }
 
+// verifyImplementations lives in THIS build only, so this build is what may name it. Overriding the
+// convention here is what keeps `prepareImplementation` in the student build from printing it.
+tasks.named<duckshop.PrepareImplementationTask>("prepareImplementation") {
+    reportCommand.set("./gradlew verifyImplementations -Pagent=<agent>")
+}
+
 // 11.4 step 3e: what an agent builds when the specification is all it has.
 tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     group = "verification"
