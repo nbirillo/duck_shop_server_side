@@ -25,10 +25,3 @@ include(":inherited")
 
 // Where your own work goes. Empty until you put something in it.
 include(":work")
-
-// The practice tier of the fork check (./gradlew generateForks). One fork, so you can see what the
-// check does before it is turned on the rest of your work. The graded forks are not in this build.
-file("forks").listFiles()
-    ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
-    ?.sortedBy { it.name }
-    ?.forEach { include(":forks:${it.name}") }

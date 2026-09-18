@@ -79,7 +79,12 @@ tasks.register<ForkReportTask>("verifyForks") {
         "Params: [-PforkTests=<test source dir>] [-PforksStrict]."
     catalogPath.convention(providers.gradleProperty("forksCatalog").orElse("forks/catalog.json"))
     outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
-    dependsOn(subprojects.filter { it.path.startsWith(":forks:") }.map { "${it.path}:test" })
+    // Derived from the SAME property the modules were generated under, not the literal ":forks:". A
+    // second catalog in the same build (forks-practice/) produced a full report with none of its tests
+    // having run, which the report then read as "did not compile" — the fourth time in this repo that a
+    // hard-coded name stood in for a configured one.
+    val forksPrefix = ":" + providers.gradleProperty("forksOut").getOrElse("forks") + ":"
+    dependsOn(subprojects.filter { it.path.startsWith(forksPrefix) }.map { "${it.path}:test" })
 }
 
 // For an interactive agent, which writes the attacking sources itself and has no API call to hang

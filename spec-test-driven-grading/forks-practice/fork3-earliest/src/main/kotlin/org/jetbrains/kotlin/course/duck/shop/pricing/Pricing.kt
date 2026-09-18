@@ -3,11 +3,11 @@ package org.jetbrains.kotlin.course.duck.shop.pricing
 import org.jetbrains.kotlin.course.duck.shop.admission.Duck
 
 /**
- * Pricing, as settled in exercise 11.4. **Not part of the capstone** — treat it as existing code with a
- * contract, and use it rather than reimplementing it.
+ * TEACHER-ONLY reference implementation of the 11.4 feature. It lives in the grading build, outside
+ * the student folder, because a learner who can read this does not have to specify anything.
  *
- * Each decision below was open in the original brief and is now written down, which is the only reason
- * it can be relied on:
+ * Every decision below is one the business brief leaves open. They are ours, not the only defensible
+ * ones, and each is written down in `teacher/exercise-11.4-answer-key.md` with the reasoning:
  *
  *  1. Rules **compound** — each sees the price left by the ones before it, not the shelf price.
  *  2. A percentage takes a **rounded-down discount**, which is not the same function as keeping a

@@ -141,6 +141,31 @@ Note also **Q5**: one source recorded that it could not read `:core` from its fo
 the rule semantics at all. That is a specification honestly reporting the limit of its own evidence, and
 it is worth showing next to the sources that simply guessed.
 
+## The practice fork is YOURS to demonstrate, not theirs to run (changed 2026-09-18)
+
+It used to ship in the capstone build so a learner could run it themselves. **Her question found the
+problem: a reading is a complete implementation of the feature.** `forks/readings/Fork3Earliest.kt` answers
+*all four graded forks* — chain admission as a conjunction, the shop's promotions first, price-then-choose,
+`null` for an empty chain — so shipping its source put our answer to the whole graded set in the learner's
+folder, and any agent pointed at that folder would read it. Exactly what moved the briefs out.
+
+So the practice tier now lives here, as `forks-practice/`, and you demonstrate it in class:
+
+```bash
+./gradlew generateForks -PforksCatalog=forks-practice/catalog.json -PforksOut=forks-practice \
+    -PforkTests=../spec-test-driven-capstone/inherited/src/test/kotlin
+./gradlew verifyForks   -PforksCatalog=forks-practice/catalog.json -PforksOut=forks-practice --continue
+```
+
+Pointed at the suite the learner *inherited*, that reports **LEFT OPEN** — which is the demonstration:
+eight green tests that decide nothing about ties. Swap `-PforkTests` for a learner's own directory to show
+the same thing on their work. (Regenerate when the *path* changes; test contents are read at build time,
+so editing tests needs only the second command.)
+
+The learner-facing consequence is in `README.md` and on slide 57: the check exists, it will be run on their
+work, and **there is no command for them** — stated outright, because a practice band with no command has to
+say so.
+
 ## Giving feedback on a submission
 
 **Why this is here and not on a slide (her call, 2026-08-19).** The capstone is an assignment, not a

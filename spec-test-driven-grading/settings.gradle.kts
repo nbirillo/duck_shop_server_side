@@ -35,11 +35,21 @@ file("pricing-mutants").listFiles()
 
 // The graded fork readings for the 11.6 capstone (./gradlew generateForks). One module per READING of
 // something the brief leaves open — see forks/catalog.json for why this replaced a hidden corner-case
-// set. The practice tier for fork 3 lives in the student build; these four forks must not.
+// set. The practice tier is the sibling block below; both are teacher-only.
 file("forks").listFiles()
     ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
     ?.sortedBy { it.name }
     ?.forEach { include(":forks:${it.name}") }
+
+// The PRACTICE fork tier — one fork (ties), two readings. It used to live in the handed-out capstone
+// build so a learner could run it themselves; it was moved here 2026-09-18 because a reading is a
+// COMPLETE implementation of the feature, so shipping its source put our answer to all four graded forks
+// in the learner's folder — and any agent pointed at that folder would read it. Same failure that moved
+// the briefs out. The teacher demonstrates it in class instead.
+file("forks-practice").listFiles()
+    ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
+    ?.sortedBy { it.name }
+    ?.forEach { include(":forks-practice:${it.name}") }
 
 // Implementations written by an agent from a specification alone (11.4, exercise step 3e), one
 // module per (agent, specification) pair: implementations/<agent>/<written-claude-code>/.

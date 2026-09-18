@@ -1,0 +1,3 @@
+tests=../spec-test-driven-capstone/inherited/src/test/kotlin
+pricing=reference/src/main/kotlin/org/jetbrains/kotlin/course/duck/shop/pricing/Pricing.kt
+core=../spec-test-driven/core/src/main/kotlin

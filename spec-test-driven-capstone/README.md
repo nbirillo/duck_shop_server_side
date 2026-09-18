@@ -33,40 +33,58 @@ you meant?** If it does not, decide whether the agent was wrong or your specific
 
 ## Running it
 
+**1 — see where you are starting from.**
+
 ```bash
-./gradlew :inherited:test        # the tests you inherited, against the implementation you inherited
-./gradlew :work:test            # your own tests
+./gradlew :inherited:test    # the tests you inherited, against the code you inherited
+```
 
-# an agent implements from your specification and nothing else
-./gradlew runAgent -Pmode=impl-from-spec -Pagent=<name> -Pspec=<your-spec.md> \
-    -Pprovider=ollama -Pmodel=<model>
+**2 — write your specification.** A file in this folder; `my-spec.md` below, name it what you like.
 
-# record what two implementations answer on a fixed corpus, and diff them
-./gradlew :implementations:<name>:test
+**3 — have an agent implement it, from that text and nothing else.**
+
+```bash
+./gradlew runAgent -Pmode=impl-from-spec -Pagent=my-run -Pspec=my-spec.md \
+    -Pprovider=ollama -Pmodel=qwen2.5-coder:14b
+```
+
+`-Pagent` names the run, so a second run does not overwrite the first. `-Pspec` is your text — the agent
+receives it and `surface.md`, nothing else. `-Pprovider`/`-Pmodel` choose the agent.
+
+It writes one file: `implementations/my-run/my-spec/src/main/kotlin/…/pricing/Pricing.kt`.
+
+**4 — put it in place of what you inherited**, overwriting
+`inherited/src/main/kotlin/…/pricing/BestOffer.kt`. That is the deliverable: you are replacing that file,
+not adding next to it. Keep the earlier one somewhere if you want to compare.
+
+**5 — run your own tests against it.**
+
+```bash
+./gradlew :work:test         # your tests, against whatever is in inherited/ right now
 ```
 
 Run the same agent more than once before you conclude anything about it. Two different agents on the
 same specification is more interesting still — where they disagree, your specification did not say.
 
-## The one check that is new
+## The check your tests will face
 
-```bash
-./gradlew generateForks -PforkTests=work/src/test/kotlin
-./gradlew verifyForks
-```
+There is one more instrument, and **you do not run it** — it is run on your work, and you will see it
+demonstrated in class rather than in this folder.
 
-`forks/` holds two **readings** of one thing the feature leaves open: they are both complete, both
-sensible, and they answer that one question differently. The check runs your tests against each and tells
-you whether your tests **accept only one of them**.
+It takes **two complete implementations** of the feature. Both are sensible, both pass the tests that came
+with this project, and they answer one question the business text never settled **differently**. Then it
+runs *your* tests against each of them and asks a single thing: **do your tests tell them apart?**
 
-Neither reading is wrong, and the report will never tell you which to pick. What it can tell you is
-whether you picked at all — because a suite that passes on both has not said anything about that
-question, and neither has your specification. That is a different failure from a bug, and no mutant will
-ever find it for you.
+- **SETTLED** — your tests accept only one of the two. You decided, and the decision is visible in code.
+- **LEFT OPEN** — your tests accept both. That is not a bug you missed; it is a decision nobody made,
+  not by whoever wrote what you inherited, and so far not by you.
 
-There is one fork in this folder so that you can see how the check behaves. **There are others, and they
-are not in this folder.** A clean report here means "the fork you practised on is decided" — never "my
-specification is complete". You have met that distinction before.
+Neither of the two is wrong, so nothing here tells you which to pick — only whether you picked. That is a
+different kind of failure from a bug, and no mutant will ever find it for you.
+
+**Why it is not in this folder:** each of those implementations is a complete, working answer to the
+feature. Handing you the source would hand you our answer — and would hand it to any agent you point at
+this directory, which is the one thing this exercise cannot survive.
 
 ## How this is judged
 
