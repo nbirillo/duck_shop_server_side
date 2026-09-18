@@ -42,4 +42,7 @@ hard to think past it — so steps 1 and 2 have to happen first, without it.
 
 ---
 
-Done, and it barely put up a fight? Your agent may simply be stronger than this task. [`README-advanced.md`](README-advanced.md) asks three harder questions — whether your suite forbids changes that were allowed, whether it could have been shorter, and whether another agent can get past it on purpose.
+Done, and it barely put up a fight? Your agent may simply be stronger than this task.
+[`README-advanced.md`](README-advanced.md) asks three harder questions — whether your suite forbids
+changes that were **allowed**, whether it could have said the same in **fewer** tests, and whether
+another agent can get past it **on purpose**.

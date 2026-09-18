@@ -62,6 +62,49 @@ to be able to say why** — and to be honest in the last two sections about what
 - And an agent implements the feature **from your text alone**. What it gets wrong is the most direct
   answer you will get to "was that enough?"
 
+## Running the checks
+
+Same order as above. Everything runs from `spec-test-driven/`, and the whole sequence uses **one**
+specification path — if the two readers get different text, you are measuring the text, not the readers.
+
+```bash
+SPEC=exercises/write-spec/SPEC.md
+
+# structure and coverage — is every name in the surface mentioned, is every section filled
+./gradlew verifySpec -Pspec=$SPEC
+```
+
+Then your claims as code. Put any number of `.kt` files in `properties/`, named however you like, and
+build a sandbox: your specification and the types, and nothing else.
+
+```bash
+./gradlew sandbox -Pname=a -Pspec=$SPEC
+./gradlew -p sandbox/a test
+```
+
+A sandbox is a **separate Gradle build**. It has no `gradlew` of its own and this project's tasks do not
+exist inside it, so every command stays here at the project root and reaches in with `-p`.
+
+Finally, two readers of the same text. One interactive agent working in the sandbox, one over an API —
+they have to be **two different agents**, and both competent, or what you measure is the weaker one's
+incapacity rather than a gap in your text.
+
+```bash
+./gradlew sandbox -Pname=a -Pspec=$SPEC
+#   ▸ open sandbox/a in your agent and let it implement. this step is yours, not a command
+./gradlew prepareImplementation -Pagent=reader-a -Pspec=$SPEC -Pfrom=sandbox/a
+
+./gradlew runAgent -Pmode=impl-from-spec -Pagent=reader-b \
+    -Pprovider=ollama -Pmodel=qwen2.5-coder:32b -Pspec=$SPEC
+
+./gradlew verifyDivergence -PagentA=reader-a -PagentB=reader-b
+```
+
+The last command records what each reader answers on a fixed corpus and reports how many inputs they
+answer **differently**. It needs no reference and no answer key: every open input is a decision your text
+did not make, so somebody else made it. Read the open lines, not the number — leaving something free on
+purpose is a legitimate choice, and section 4 of the template is where you say so.
+
 ## The checker can be wrong, and you are allowed to say so
 
 Checking a specification is hard — harder than checking code, and our tooling does not manage it

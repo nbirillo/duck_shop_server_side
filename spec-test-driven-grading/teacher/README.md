@@ -14,28 +14,37 @@ agent. The student folder therefore holds only the task statement and the comman
 | [`advanced-tier-notes.md`](advanced-tier-notes.md) | 11.2 advanced: the contract addendum, the conformant variants and what each one frees, the calibrated test budget, the adversary |
 | [`claude-run-checklist.md`](claude-run-checklist.md) | Step-by-step for the by-hand Claude Code measurement of 11.2, incl. what to clear out first |
 | [`claude-attack-checklist.md`](claude-attack-checklist.md) | Step-by-step for the by-hand frontier attack, with prompts E (blind) and F (with feedback) |
-| [`running-api-agents.md`](running-api-agents.md) | `runAgent` (all five modes), `solutions/`, `compareAgents`, difficulty calibration |
+| [`exercise-11.4-answer-key.md`](exercise-11.4-answer-key.md) | 11.4: the property catalog and the hand-written key — and the appeal (`verifyClaims`) a learner can raise against them |
+| [`exercise-11.4-corpus-results.md`](exercise-11.4-corpus-results.md) | 11.4 measured four ways over thirteen specifications — the evidence behind the slides, including two retractions |
+| [`capstone-11.6.md`](capstone-11.6.md) | 11.6: why it is a separate build, what is graded, how to answer each verdict, and the provenance of every inherited artifact |
+| [`capstone-11.6-debrief.md`](capstone-11.6-debrief.md) | The capstone debrief — five beats, every number with its provenance. No slides for it on purpose |
+| [`claude-implement-checklist.md`](claude-implement-checklist.md) | Driving a frontier agent as the *implementer*: code from a specification alone (11.4, step 3e) |
+| [`running-api-agents.md`](running-api-agents.md) | `runAgent` — every mode, the flags each one needs, and difficulty calibration |
 | [`running-advanced-agents.md`](running-advanced-agents.md) | Driving a strong interactive agent (Claude Code, Junie) without an API key, and the prompts |
 
-When the slides exist, the narrative parts of these notes become slide content; the commands and the
-answer keys stay here, next to the code they refer to.
+The narrative parts of these notes are what became slide content; the commands and the answer keys stay
+here, next to the code they refer to. **The slides are the ground truth for what a learner is told** —
+if a command here disagrees with a slide, the slide is right and this file is stale.
 
 ## Reference implementation and grading
 
 ```bash
 # in spec-test-driven-grading/
-./gradlew :grading:test        # the reference implementation against both acceptance suites
+./gradlew :grading:test        # the given-algebra acceptance suite against :core
 ./gradlew verifyMutants --continue                      # graded mutants vs the learner's 11.2 suite
 ./gradlew verifyMutants -PmutantTests=tests/kotlin      # graded mutants vs the authored policy suite
 ```
 
 This build lives outside `spec-test-driven/` on purpose: a learner opens that folder, so an agent
-working from it cannot reach the reference implementation, the graded mutants or these notes — not
-even as readable files. It links back to `:core` and the shared test suite through a composite build
-(`includeBuild("../spec-test-driven")`); the link only points from here INTO the student project,
-never the other way, so the student build knows nothing about grading.
+working from it cannot reach the reference implementation, the graded catalogs or these notes. It
+borrows `:core` through a composite build (`includeBuild("../spec-test-driven")`); the link points only
+from here INTO the student project, never the other way, so the student build knows nothing about
+grading.
 
-To hand out the module, export the `spec-test-driven/` folder only.
+To hand out the module, export the `spec-test-driven/` folder only — and, when the capstone starts,
+`spec-test-driven-capstone/`. A clone of the whole repository has this build beside them, so the
+separation is a matter of not looking rather than of a lock; the build-root [`../README.md`](../README.md)
+says the same thing to whoever opens it.
 
 ## What stays in the student folder, and why
 

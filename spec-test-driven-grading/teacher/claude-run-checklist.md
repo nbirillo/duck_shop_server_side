@@ -10,7 +10,7 @@ Do **not** measure in `<repo>/spec-test-driven`. Our working copy accumulates gi
 our own harness runs that a learner never receives — and one of them is fatal:
 `test-suites/claude-code/` is an 86-test suite that already scores 11/11 on the graded mutants, sitting
 right there for an agent to read. `test-suites/ollama-*` and `hardened/ollama-*` are other models'
-suites for the same algebra, and `solutions/ollama-*` are generated schedule implementations.
+suites for the same algebra, and `attacks/*` and `implementations/*` hold what past runs produced.
 
 Export exactly the tracked content instead — that *is* the learner's environment, and it also removes
 any risk of the run mutating our copy:

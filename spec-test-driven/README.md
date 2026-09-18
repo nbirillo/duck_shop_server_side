@@ -1,4 +1,4 @@
-#  Spec/Test-Driven Development with AI in Kotlin
+# Spec/Test-Driven Development with AI in Kotlin
 
 An AI-native module on **spec- and test-driven development in Kotlin**, built on top of the
 [Duck Shop server-side course](https://github.com/nbirillo/duck_shop_server_side).
@@ -6,88 +6,75 @@ An AI-native module on **spec- and test-driven development in Kotlin**, built on
 > **Want to build the project from scratch first?** Start with the server-side course above.
 > This module is self-contained and can also be taken as the next step after it.
 
-## Idea
+**You write the specification and the tests. An AI agent writes the code. The tests decide whether to
+accept it.** The skill the module teaches is the one that does not transfer to the agent:
+**verification** — saying precisely what correct means, and checking that what came back satisfies it.
 
-The learner writes the **specification and the tests**; an AI agent implements the Kotlin code
-against them; the tests are the acceptance criterion. The skill the module teaches is
-**verification** — writing good specs/tests and checking that generated code satisfies them. 
+You can use any agent you like, local or hosted. Everything here was measured on real runs across five
+local models and one frontier model, and the module is deliberately agent-agnostic: nothing in it
+depends on which one you open.
 
-
-TODO: describe about agent-agnostic and how to work with this later
-
-## Feature
-
-Duck shops with an **admission policy** — `AdmissionPolicy.admits(duck): Boolean`, modelled with
-the **Specification pattern** (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`
-+ combinators `AllOf`, `AnyOf`, `Not`). This algebra is **given** in `:core`.
-
-Everything a learner does is built on that one algebra: verify and harden a suite for it (11.2),
-specify a pricing function over it (11.4), then do the whole cycle alone on a franchise (11.6).
-
-## Run the app
-
-The module builds on the Duck Shop server-side app (REST API + UI). From the repository root:
-
-```bash
-cd server
-./gradlew bootRun
-```
-
-Then open <http://localhost:8080> for the UI, or `GET /api/ducks` for the API.
-Dev credentials (HTTP Basic): `admin/admin` (ADMIN), `user/user` (USER).
-
-A lightweight Ktor variant of the API lives in `ktor-server/` (`./gradlew run`, port 8081).
-
-## Modules
-
-`:core` is the one module you never edit; every exercise module supplies only its own sources and
-compiles against it.
-
-- `:core` — contract + domain + the **given** algebra (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DiscountRule`, `Franchise`/`Offer`).
-- `exercises/write-tests/` — exercise 11.2: verify and harden an AI-written test suite. Its
-  `README-advanced.md` is the harder tier, for when your agent found the basic one easy.
-- `mutants/` — the practice mutants that exercise 11.2 scores against: `:core` with one defect injected, and a good suite notices.
-- `variants/` — the same idea inverted, for the advanced tier: `:core` rewritten **without** changing what it decides, and a good suite stays green. See `variants/README.md`.
-- `attacks/` — also advanced: implementations written to pass your suite while still contradicting the specification. `reference/` is the unmodified algebra the differential probe compares against, and `demo-prefix/` is a worked example.
-
-## Run the tests
-
-Check the setup before anything else — this must be green:
+## Before anything else
 
 ```bash
 cd spec-test-driven
 ./gradlew :core:test
 ```
 
-## Exercise 11.2 and mutation testing
+This must be green before you start. If it is not, fix the setup first — every exercise compiles
+against `:core`.
 
-`exercises/write-tests/` is the first learner-facing exercise: an "AI-written" test suite for the
-given `:core` algebra that the learner has to **verify and harden**. See its README.
+## The one rule
 
-Feedback comes from **mutation testing** — the suite is run against copies of the algebra with one
-injected defect each, and every defect it fails to notice is reported:
+**You never edit `core/`.** It is given, it is correct, and it is the thing your tests and your
+specifications are *about*. Your work lives in `exercises/`, and that is the only thing here you are
+expected to change.
 
-```bash
-./gradlew verifyMutants --continue           # mutation score
-./gradlew verifyMutants -PmutantsStrict      # fail until every must-kill mutant is dead
-./gradlew generateMutants                    # only after editing mutants/catalog.json
-```
+## Where to go
 
-`mutants/catalog.json` is the source of truth: each entry replaces one snippet of a `:core` file, and
-`generateMutants` turns it into a module that compiles the real `:core` sources with that one file
-swapped. `mutants/README.md` explains how to read the report.
+Each exercise has its own README with the task, the commands and what to hand in. This file is only the
+map.
 
-## Author-side material
+| Start here | What it is |
+| --- | --- |
+| [`exercises/write-tests/README.md`](exercises/write-tests/README.md) | **Exercise 11.2** — an AI wrote a test suite for the given algebra. Decide whether it can be trusted, then make it complete. |
+| [`exercises/write-tests/README-advanced.md`](exercises/write-tests/README-advanced.md) | The harder tier of the same exercise, for when your agent found the basic one easy: did you forbid something legal · could you have said it in fewer tests · can another agent get past you on purpose |
+| [`exercises/write-spec/README.md`](exercises/write-spec/README.md) | **Exercise 11.4** — write the specification of a pricing function precise enough that two correct implementations cannot disagree |
+| [`exercises/write-spec/README-advanced.md`](exercises/write-spec/README-advanced.md) | The harder tier: specify a thing that *composes*, and state the laws it obeys |
+| the capstone | Handed out separately when you get there — the whole cycle alone, on inherited artifacts |
 
-Everything a learner should not read lives in **`../spec-test-driven-grading/`**, outside this folder,
-because anything inside it is readable by the learner's own AI agent:
+| Reference, when a report confuses you | What it explains |
+| --- | --- |
+| [`mutants/README.md`](mutants/README.md) | Mutation testing: where the mutants come from, and how to read the report |
+| [`variants/README.md`](variants/README.md) | The conformance check — the same engine with the opposite expectation: your suite must stay **green** |
+| [`exercises/write-tests/contract-addendum.md`](exercises/write-tests/contract-addendum.md) | The two questions the basic task left open, now written down as contract (advanced tier only) |
 
-- `grading/` — the acceptance suite for the given policy algebra, run against `:core` (its test names
-  spell out the cases exercise 11.2 asks the learner to find). The 11.4 reference lives in `reference/`.
-- `mutants/` — the graded mutant set, larger than the practice one here.
-- `teacher/` — answer keys, grading commands, mutation-testing notes, and the guides for running
-  agents against the module (`runAgent`, interactive agents).
+## What is in here
 
-That build links back to `:core` and the shared test suite via a composite build
-(`includeBuild("../spec-test-driven")`); the link only points from grading INTO this project, never
-the other way, so this folder knows nothing about it.
+`:core` is the only Gradle module you compile against; everything else is either an exercise you edit
+or a generated feedback loop you run.
+
+| Directory | Role |
+| --- | --- |
+| `core/` | The **given** algebra — read-only. `AdmissionPolicy` with its four leaves and three combinators, `Duck`/`Accessory`/`Shop`, plus `DiscountRule` and `Franchise`/`Offer` for the later exercises |
+| `exercises/` | Your work. `write-tests/` (11.2) and `write-spec/` (11.4) |
+| `mutants/` | `:core` with one defect injected per copy. Feedback for 11.2: a good suite notices every one |
+| `variants/` | `:core` rewritten **without** changing what it decides. A good suite stays green on all of them |
+| `attacks/` | Advanced tier: implementations written to pass your suite and still contradict the specification. `demo-prefix/` is a worked example; `reference/` is the unmodified algebra the differential probe compares against |
+| `tools/` | The prompts handed to agents, and the differential probes the checks record with |
+| `sandbox/<name>/` | Appears when you run `sandbox`: your specification and the types, and nothing else — where an agent works. Derived, git-ignored |
+| `build-logic/` | The Gradle tasks behind every check. Nothing to edit |
+
+## Author-side material — not here on purpose
+
+Everything that explains, hints at or answers an exercise lives in **`../spec-test-driven-grading/`**,
+outside this folder: the reference implementation, the graded catalogs, the answer keys and the spec
+corpus. The reason is mechanical rather than ceremonial — you open *this* folder in an IDE with an AI
+agent, and anything inside it is readable by that agent.
+
+That build reaches into this one through a composite build (`includeBuild("../spec-test-driven")`), and
+the link points only **into** this project, never back out. So this folder knows nothing about grading,
+and nothing here depends on it.
+
+It is in the same public repository, which means the separation is a matter of not looking rather than
+of a lock. Keeping it unread is on you, and it is the only way the checks tell you anything true.

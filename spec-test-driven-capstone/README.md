@@ -19,6 +19,20 @@ None of it is yours to defend. It is a starting position, and the only thing you
 that it was produced the way things usually are: under time pressure, by more than one person, with an
 agent doing the typing.
 
+### Everything in this folder
+
+| Path | What it is |
+| --- | --- |
+| `inherited/SPEC.md` | The specification you inherited. Read it before you change anything |
+| `inherited/src/main/kotlin/…/BestOffer.kt` | The implementation written from it — **replace this file** when your agent produces a better one |
+| `inherited/src/main/kotlin/…/Pricing.kt` | `priceFor`, settled in 11.4. Use it; do not reopen it |
+| `inherited/src/test/kotlin/…/FranchiseTests.kt` | The tests that came with the implementation |
+| [`surface.md`](surface.md) | What you hand the agent together with **your** specification, and nothing else |
+| `work/src/test/kotlin/` | **Your** tests. Empty until you put something in it |
+
+`:core` comes from the `spec-test-driven/` folder next door, which you already have. There is nothing
+else here — no reference, no answer key, no graded checks.
+
 ## What you deliver
 
 1. **A specification you would be willing to hand to a stranger.** It may be a rewrite of the one you
