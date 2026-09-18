@@ -75,6 +75,30 @@ Two conclusions worth carrying into the materials:
 That eight independent suites stay green on all ten is also the evidence the rewrites really are
 behaviour-preserving.
 
+### Which suite to point the check at — the one thing the slide leaves out
+
+The slide for this exercise prints one command with a placeholder (`-PmutantTests=<your suite>`) and
+asks the learner to run it for both arms. Deliberately short — but it hides two things a learner asks
+within a minute, so answer them at the board:
+
+- **Run B — the suite they were given and edited in place.** The value is the literal **`learner`**, not
+  a path: the task expands it to `exercises/write-tests/src/test/kotlin` itself and prints
+  `suite: learner (exercises/write-tests/src/test/kotlin)`. Nothing to look up.
+- **Run A — the suite an agent wrote from nothing.** The slide says to have one written but never says
+  where to put it. Any source root works; the house location is **`test-suites/<name>/src/test/kotlin`**
+  — the same place `runAgent -Pmode=tests` writes to, and git-ignored, so their runs never end up in a
+  commit.
+
+```bash
+./gradlew verifyVariants --continue -PmutantTests=test-suites/run-a/src/test/kotlin   # run A
+./gradlew verifyVariants --continue -PmutantTests=learner                             # run B
+```
+
+Both verified in a clean export (2026-09-18): each prints the suite it really used and reports 10/10.
+Worth saying out loud that the **path is the second thing that differs between the arms** — the slide's
+own line is "the only thing that changes is where the agent starts", and the suite moving with it is the
+same fact seen from the filesystem.
+
 ## 2. The test budget
 
 `-PtestBudget=<n>` on `verifyMutants` or `verifyVariants`. The suite size is read off the baseline run

@@ -1,8 +1,8 @@
 package org.jetbrains.kotlin.course.duck.shop.admission
 
-// The leaf policies — given, correct, and shared from :core. They are the building blocks the
-// harder tasks (e.g. the DSL parser or the opening-schedule engine) build on, so they are no
-// longer part of what an agent implements.
+// The leaf policies — given, correct, and shared from :core. Every exercise in the module is about
+// specifying or checking this algebra, never about implementing it, so these are not what an agent
+// writes.
 
 /**
  * Admits only ducks that carry the Kotlin attribute.

@@ -1,6 +1,0 @@
-{
-  "agent": "demo-buggy",
-  "model": "hand-seeded",
-  "checkedOn": "2026-07-30",
-  "notes": "Not a real agent. Reference opening-schedule engine with one deliberately seeded bug: DailyWindow.covers ignores the wrap-around-past-midnight case, so late-night windows (e.g. 22:00-02:00) fail. Demonstrates that the shared acceptance suite catches a broken implementation."
-}

@@ -22,7 +22,6 @@ kotlin {
             ),
         )
         kotlin.srcDir(rootDir.resolve("tools/probe/kotlin"))
-        kotlin.exclude("**/schedule/**")
     }
 }
 

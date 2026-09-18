@@ -23,8 +23,7 @@ import javax.inject.Inject
 
 /**
  * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
- * Anthropic). Five modes:
- *  - `impl`  (default)  — implement the :starter stubs; writes to `solutions/<agent>/`.
+ * Anthropic). The modes:
  *  - `tests`            — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
  *  - `verify-exercise`  — author-side: regenerate the flawed starter suite of exercise 11.2 from a
  *    model's real output, with one invalid test planted; overwrites the exercise file.
@@ -35,12 +34,12 @@ import javax.inject.Inject
  *    PASSES it and still contradicts the specification. Writes to `attacks/<agent>/`, scored by
  *    `verifyAttack -Pagent=<agent>`. Unlike a mutant catalog, an adversary cannot be saturated.
  *
- * The prompt is assembled here from :core (and, for impl, the :starter stubs) — never :grading —
+ * The prompt is assembled here from :core — never :grading —
  * so an API agent cannot copy a reference. In tests mode the prompt is deliberately generic
  * ("cover every edge case you can think of"): it does NOT enumerate the corner cases, so it
  * measures whether the agent finds them.
  *
- * Params: -Pprovider=ollama|mistral|anthropic, -Pmodel=<m>, [-Pmode=impl|tests], [-Pagent=<name>], [-Pdry].
+ * Params: -Pprovider=ollama|mistral|anthropic, -Pmodel=<m>, -Pmode=<mode>, [-Pagent=<name>], [-Pdry].
  * Mistral/Anthropic read their key from MISTRAL_API_KEY / ANTHROPIC_API_KEY.
  */
 abstract class RunAgentTask @Inject constructor(
@@ -55,9 +54,9 @@ abstract class RunAgentTask @Inject constructor(
     fun run() {
         val provider = prop("provider") ?: error("Missing -Pprovider=ollama|mistral|anthropic")
         val model = prop("model") ?: error("Missing -Pmodel=<model>")
-        val mode = (prop("mode") ?: "impl").also {
-            require(it in setOf("impl", "tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress", "spec-extract", "impl-from-spec")) {
-                "Unknown -Pmode='$it' (use impl|tests|verify-exercise|verify-harden|attack|spec|" +
+        val mode = (prop("mode") ?: error("Missing -Pmode=<mode>")).also {
+            require(it in setOf("tests", "verify-exercise", "verify-harden", "attack", "spec", "spec-advanced", "spec-compress", "spec-extract", "impl-from-spec")) {
+                "Unknown -Pmode='$it' (use tests|verify-exercise|verify-harden|attack|spec|" +
                     "spec-advanced|spec-compress|spec-extract|impl-from-spec)"
             }
         }
@@ -69,7 +68,6 @@ abstract class RunAgentTask @Inject constructor(
         val systemPrompt = findPrompt(
             root,
             when (mode) {
-                "impl" -> "agent-prompt.md"
                 "verify-harden" -> "agent-prompt-verify.md"
                 "attack" -> "agent-prompt-attack.md"
                 "spec", "spec-advanced" -> "agent-prompt-spec.md"
@@ -79,14 +77,12 @@ abstract class RunAgentTask @Inject constructor(
                 else -> "agent-prompt-tests.md" // tests, verify-exercise
             },
         )
-        val stubs = if (mode == "impl") stubFiles(root) else emptyList()
         // Which suite the attack has to get past. An attack is always aimed at one specific suite,
         // so the path is baked into the generated module rather than re-read at verification time.
         val attackSuite = prop("mutantTests")
             ?.takeIf { it != "learner" }
             ?: "exercises/write-tests/src/test/kotlin"
         val userPrompt = when (mode) {
-            "impl" -> buildImplPrompt(root, stubs)
             "verify-harden" -> buildVerifyPrompt(root)
             "attack" -> buildAttackPrompt(root, attackSuite)
             "spec" -> buildSpecPrompt(root, "briefs/11.4-basic.md", "SPEC-template.md")
@@ -108,7 +104,9 @@ abstract class RunAgentTask @Inject constructor(
                 "spec-compress" -> "specs-short/$agent"
                 "spec-extract" -> "extractions/$agent"
                 "impl-from-spec" -> "implementations/$agent/${specKey(prop("spec"))}"
-                else -> "solutions/$agent"
+                // verify-exercise never uses this: it overwrites the exercise file directly.
+                "verify-exercise" -> "exercises/write-tests"
+                else -> error("No output dir for -Pmode=$mode")
             },
         )
         val exerciseFile = root.resolve("exercises/write-tests/src/test/kotlin/$packagePath/PolicyTests.kt")
@@ -177,13 +175,12 @@ abstract class RunAgentTask @Inject constructor(
             "spec", "spec-advanced", "spec-compress" -> writeSpec(outDir, content)
             "spec-extract" -> writeExtraction(outDir, content, prop("spec")!!)
             "impl-from-spec" -> writeImplementation(root, outDir, content)
-            else -> writeSolutionFiles(outDir, content, stubs.map { it.first })
+            else -> error("No writer for -Pmode=$mode")
         }
         // A spec is a document; an extraction is a list of verdicts. Neither is a Gradle module.
         // An implementation IS one — it has to compile and be tested.
         if (mode !in setOf("spec", "spec-advanced", "spec-compress", "spec-extract")) outDir.resolve("build.gradle.kts").writeText(
             when (mode) {
-                "impl" -> "plugins {\n    id(\"duck-shop.solution\")\n}\n"
                 "impl-from-spec" -> implFromSpecBuildScript()
                 "attack" -> attackBuildScript(
                     coreBase = root.resolve("core/src/main/kotlin/$packagePath"),
@@ -223,37 +220,6 @@ abstract class RunAgentTask @Inject constructor(
 
     private fun envKey(name: String): String =
         providers.environmentVariable(name).orNull ?: error("$name environment variable is not set")
-
-    /** The stub files under :starter as (relativePath, contents), relative to the base package dir. */
-    private fun stubFiles(root: File): List<Pair<String, String>> {
-        val starterBase = root.resolve("starter/src/main/kotlin/$packagePath")
-        return starterBase.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
-            .sortedBy { it.path }
-            .map { it.relativeTo(starterBase).path to it.readText() }
-            .toList()
-    }
-
-    private fun buildImplPrompt(root: File, stubs: List<Pair<String, String>>): String {
-        val coreBase = root.resolve("core/src/main/kotlin/$packagePath")
-        val given = listOf("Domain.kt", "schedule/TimeTypes.kt")
-            .map { coreBase.resolve(it) }
-            .filter { it.exists() }
-            .joinToString("\n\n") { it.readText() }
-        val stubText = stubs.joinToString("\n\n") { (rel, body) -> "// FILE: $rel\n$body" }
-
-        return buildString {
-            appendLine("Given types (already on the classpath — do not redeclare):")
-            appendLine("```kotlin")
-            appendLine(given)
-            appendLine("```")
-            appendLine()
-            appendLine("Implement these stub files. Keep the exact paths, packages and signatures,")
-            appendLine("and return each as its own `// FILE:` block per the output contract.")
-            appendLine()
-            append(stubText)
-        }
-    }
 
     private fun buildTestsPrompt(root: File): String {
         val coreBase = root.resolve("core/src/main/kotlin/$packagePath")

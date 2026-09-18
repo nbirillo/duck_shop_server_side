@@ -21,11 +21,8 @@ Duck shops with an **admission policy** — `AdmissionPolicy.admits(duck): Boole
 the **Specification pattern** (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`
 + combinators `AllOf`, `AnyOf`, `Not`). This algebra is **given** in `:core`.
 
-The implementation **task** is the **opening-schedule** engine: a shop admits ducks only while open,
-per a weekly schedule.
-
-- `DailyWindow.covers(at)` — open inclusive, close exclusive, wrap past midnight.
-- `OpeningSchedule.isOpenAt(at)` — union of windows, `SpecialClosure` overrides, empty = closed.
+Everything a learner does is built on that one algebra: verify and harden a suite for it (11.2),
+specify a pricing function over it (11.4), then do the whole cycle alone on a franchise (11.6).
 
 ## Run the app
 
@@ -43,13 +40,10 @@ A lightweight Ktor variant of the API lives in `ktor-server/` (`./gradlew run`, 
 
 ## Modules
 
-One shared acceptance suite (`tests/kotlin`, the opening-schedule task) is compiled and run against
-every implementation module (Design B): a module supplies only its implementation under `src/main`,
-and the `duck-shop.solution` convention plugin (in `build-logic/`) wires in `:core` and the shared
-tests.
+`:core` is the one module you never edit; every exercise module supplies only its own sources and
+compiles against it.
 
-- `:core` — contract + domain + **given** algebra & time types (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DailyWindow`/`SpecialClosure`).
-- `:starter` — the stubs to implement (`schedule/WindowMatching.kt`, `schedule/OpeningSchedule.kt`), `TODO()`. Red until implemented.
+- `:core` — contract + domain + the **given** algebra (`AdmissionPolicy`, `Duck`/`Accessory`/`Shop`, the policy leaves/combinators, `DiscountRule`, `Franchise`/`Offer`).
 - `exercises/write-tests/` — exercise 11.2: verify and harden an AI-written test suite. Its
   `README-advanced.md` is the harder tier, for when your agent found the basic one easy.
 - `mutants/` — the practice mutants that exercise 11.2 scores against: `:core` with one defect injected, and a good suite notices.
@@ -58,11 +52,11 @@ tests.
 
 ## Run the tests
 
-Check the primary implementation (`primaryAgent` in `gradle.properties`, default `starter`):
+Check the setup before anything else — this must be green:
 
 ```bash
 cd spec-test-driven
-./gradlew checkPrimary                 # or override: -PprimaryAgent=<name>
+./gradlew :core:test
 ```
 
 ## Exercise 11.2 and mutation testing
@@ -92,7 +86,7 @@ because anything inside it is readable by the learner's own AI agent:
   policy algebra (its test names spell out the cases exercise 11.2 asks the learner to find).
 - `mutants/` — the graded mutant set, larger than the practice one here.
 - `teacher/` — answer keys, grading commands, mutation-testing notes, and the guides for running
-  agents against the module (`runAgent`, `solutions/<agent>/`, interactive agents).
+  agents against the module (`runAgent`, interactive agents).
 
 That build links back to `:core` and the shared test suite via a composite build
 (`includeBuild("../spec-test-driven")`); the link only points from grading INTO this project, never

@@ -216,9 +216,6 @@ abstract class GenerateMutantsTask @Inject constructor(
             }
             sourceSets.named("test") {
                 kotlin.srcDir(rootDir.resolve(suite))
-                // The mutants target the admission-policy algebra; schedule tests need the
-                // implementation modules, which are deliberately not on this classpath.
-                kotlin.exclude("**/schedule/**")
             }
         }
 

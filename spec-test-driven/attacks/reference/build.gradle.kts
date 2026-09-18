@@ -25,8 +25,6 @@ kotlin {
             ),
         )
         kotlin.srcDir(rootDir.resolve("tools/probe/kotlin"))
-        // The probe covers the admission-policy algebra; the schedule task lives elsewhere.
-        kotlin.exclude("**/schedule/**")
     }
 }
 

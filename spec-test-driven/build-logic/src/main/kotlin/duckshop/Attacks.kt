@@ -105,7 +105,6 @@ internal fun attackBuildScript(
                     ),
                 )
                 kotlin.srcDir(rootDir.resolve("tools/probe/kotlin"))
-                kotlin.exclude("**/schedule/**")
             }
         }
 
