@@ -1,4 +1,4 @@
-# Exercise 11.2, advanced — three harder questions
+# Verify and harden, advanced — three harder questions
 
 Take this tier if the basic exercise felt **too easy for the agent you were working with**: it fixed the
 wrong test, filled the gaps, and the mutation report came back clean without much of a fight.

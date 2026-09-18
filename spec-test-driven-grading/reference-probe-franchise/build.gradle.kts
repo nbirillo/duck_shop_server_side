@@ -12,7 +12,7 @@ kotlin {
         kotlin.srcDir(rootDir.resolve("../spec-test-driven/core/src/main/kotlin"))
     }
     sourceSets.named("test") {
-        kotlin.srcDir(rootDir.resolve("../spec-test-driven/tools/franchise-probe/kotlin"))
+        kotlin.srcDir(rootDir.resolve("tools/franchise-probe/kotlin"))
     }
 }
 

@@ -1,4 +1,4 @@
-# Exercise 11.2 — Verify & harden an AI's tests
+# Verify and harden an AI's tests
 
 The admission-policy algebra (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`,
 `AllOf`, `AnyOf`, `Not`) is **given and correct** in `:core`. You are NOT implementing it.

@@ -1,4 +1,4 @@
-# Exercise 11.4, advanced — specify a thing that composes
+# Write the specification, advanced — specify a thing that composes
 
 Take this tier when the first brief did not fight back: you wrote the contract, the agent implemented
 it, and there was nothing much to argue about.
@@ -34,7 +34,8 @@ fun priceFor(duck: Duck, rule: DiscountRule): Int
 fun priceFor(duck: Duck, rules: List<DiscountRule>): Int
 ```
 
-`AdmissionPolicy` is the one you already know from 11.2 — a yes/no question about a duck.
+`AdmissionPolicy` is the one you already know from the test-writing exercise — a yes/no question
+about a duck.
 
 Note the shape: three leaves and three combinators, the same skeleton as the admission algebra. What
 is new is that these combine *values* rather than yes/no answers, and values are where arithmetic can

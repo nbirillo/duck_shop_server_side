@@ -210,7 +210,10 @@ abstract class RunAgentTask @Inject constructor(
             "spec", "spec-advanced", "spec-compress" -> "read ${outDir.relativeTo(root)}/SPEC.md — at this stage it is judged by eye, not by machine"
             "verify-harden" -> "./gradlew :hardened:$agent:test   (validity on :core), then " +
                 "./gradlew verifyMutants -PmutantTests=hardened/$agent/src/test/kotlin --continue   (mutation score)"
-            else -> "./gradlew checkPrimary -PprimaryAgent=$agent"
+            "impl-from-spec" -> "./gradlew verifyDivergence -PagentA=$agent -PagentB=<a second run of the " +
+                "same specification>   (where two readings disagree is what your text left open)"
+            "spec-extract" -> "./gradlew scoreExtraction -Pagent=$agent   (layer 2, against the answer key)"
+            else -> "read ${outDir.relativeTo(root)} — this mode produces material, not a result"
         }
         logger.lifecycle("[runAgent] wrote ${outDir.relativeTo(root)}: $written")
         logger.lifecycle("[runAgent] now run: $next")

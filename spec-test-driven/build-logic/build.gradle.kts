@@ -1,5 +1,7 @@
-// Holds the convention plugin(s) shared by every implementation module. Kept as an included
-// build so the plugins are precompiled Kotlin scripts with full type-safe accessors.
+// Holds the three convention plugins (mutants, run-agent, spec) and the task classes behind every
+// check in the module — the generators, the reports and the agent runner. The grading and capstone
+// builds borrow the same classes. Kept as an included build so the plugins are precompiled Kotlin
+// scripts with full type-safe accessors.
 
 plugins {
     `kotlin-dsl`

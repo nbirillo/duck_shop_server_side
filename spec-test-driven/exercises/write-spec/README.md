@@ -1,4 +1,4 @@
-# Exercise 11.4 — write the specification
+# Write the specification
 
 Until now the contract was handed to you. This time you write it.
 
@@ -35,7 +35,8 @@ Copy [`SPEC-template.md`](SPEC-template.md) to `SPEC.md` and fill it in. The sec
 decoration — each one is a different kind of statement, and a specification that skips one is missing
 something a reader needs.
 
-The section that will feel strangest is **"deliberately not specified"**. You met the idea in 11.2:
+The section that will feel strangest is **"deliberately not specified"**. You met the idea while
+hardening the test suite:
 some behaviour is contract and some is an accident of how the code happens to be written, and pinning
 an accident costs a future refactor its freedom. Now you are on the other side of it — you decide,
 and you write the decision down.

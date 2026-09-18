@@ -24,6 +24,20 @@ cd spec-test-driven
 This must be green before you start. If it is not, fix the setup first — every exercise compiles
 against `:core`.
 
+## Running the app
+
+Nothing here needs a running server — every exercise is decided by tests. The app is there if you want
+to look at what the algebra is *for*: the IDE run configuration **Duck Shop server (bootRun)** in
+`.run/` starts it, and by hand it is
+
+```bash
+cd ../server
+./gradlew bootRun
+```
+
+Both reach into the `server/` folder beside this one, so they need the whole course repository rather
+than this folder alone.
+
 ## The one rule
 
 **You never edit `core/`.** It is given, it is correct, and it is the thing your tests and your
@@ -37,9 +51,9 @@ map.
 
 | Start here | What it is |
 | --- | --- |
-| [`exercises/write-tests/README.md`](exercises/write-tests/README.md) | **Exercise 11.2** — an AI wrote a test suite for the given algebra. Decide whether it can be trusted, then make it complete. |
+| [`exercises/write-tests/README.md`](exercises/write-tests/README.md) | **A suite to verify** — an AI wrote a test suite for the given algebra. Decide whether it can be trusted, then make it complete. |
 | [`exercises/write-tests/README-advanced.md`](exercises/write-tests/README-advanced.md) | The harder tier of the same exercise, for when your agent found the basic one easy: did you forbid something legal · could you have said it in fewer tests · can another agent get past you on purpose |
-| [`exercises/write-spec/README.md`](exercises/write-spec/README.md) | **Exercise 11.4** — write the specification of a pricing function precise enough that two correct implementations cannot disagree |
+| [`exercises/write-spec/README.md`](exercises/write-spec/README.md) | **A contract to write** — the specification of a pricing function, precise enough that two correct implementations cannot disagree |
 | [`exercises/write-spec/README-advanced.md`](exercises/write-spec/README-advanced.md) | The harder tier: specify a thing that *composes*, and state the laws it obeys |
 | the capstone | Handed out separately when you get there — the whole cycle alone, on inherited artifacts |
 
@@ -57,8 +71,8 @@ or a generated feedback loop you run.
 | Directory | Role |
 | --- | --- |
 | `core/` | The **given** algebra — read-only. `AdmissionPolicy` with its four leaves and three combinators, `Duck`/`Accessory`/`Shop`, plus `DiscountRule` and `Franchise`/`Offer` for the later exercises |
-| `exercises/` | Your work. `write-tests/` (11.2) and `write-spec/` (11.4) |
-| `mutants/` | `:core` with one defect injected per copy. Feedback for 11.2: a good suite notices every one |
+| `exercises/` | Your work — `write-tests/` (a suite to verify) and `write-spec/` (a contract to write) |
+| `mutants/` | `:core` with one defect injected per copy. Feedback while you harden the suite: a good one notices every mutant |
 | `variants/` | `:core` rewritten **without** changing what it decides. A good suite stays green on all of them |
 | `attacks/` | Advanced tier: implementations written to pass your suite and still contradict the specification. `demo-prefix/` is a worked example; `reference/` is the unmodified algebra the differential probe compares against |
 | `tools/` | The prompts handed to agents, and the differential probes the checks record with |

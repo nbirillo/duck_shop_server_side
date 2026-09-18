@@ -37,6 +37,7 @@ Both are separate directories precisely so that handing one over hands over noth
 | `tests-11.6-validation/` | A harness self-test: a suite that decides exactly one fork, so `verifyForks` can be checked against a known answer |
 | `briefs/` | The business texts handed out in class. Not in the student folder, or the agent answers the brief instead of the specification |
 | `prompts/`, `prompts-capstone/` | Author-side agent prompts: claim extraction, spec writing, compression, and the capstone's consolidation prompt |
+| `tools/franchise-probe/` | The capstone's differential corpus, 3010 cases. Here rather than in the handout because its own comments name the open questions the capstone is about |
 | `fixtures/` | Measured corpora — 11.4 specifications, the hand-written answer key, 11.6 franchise specs |
 | `implementations/`, `extractions/` | What agents produced in our measured runs, kept so a number can be traced back to the artifact it came from |
 

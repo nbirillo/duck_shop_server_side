@@ -12,7 +12,8 @@ Somebody has already started. In `inherited/` you will find:
 
 - **`SPEC.md`** — the specification of the feature as it currently stands.
 - **`src/main/kotlin/.../BestOffer.kt`** — an implementation an agent wrote from that specification.
-- **`src/main/kotlin/.../Pricing.kt`** — `priceFor`, settled back in exercise 11.4. Not your problem.
+- **`src/main/kotlin/.../Pricing.kt`** — `priceFor`, settled back when you wrote its specification.
+  Not your problem here.
 - **`src/test/kotlin/.../FranchiseTests.kt`** — the tests that came with the implementation.
 
 None of it is yours to defend. It is a starting position, and the only thing you are told about it is
@@ -25,7 +26,7 @@ agent doing the typing.
 | --- | --- |
 | `inherited/SPEC.md` | The specification you inherited. Read it before you change anything |
 | `inherited/src/main/kotlin/…/BestOffer.kt` | The implementation written from it — **replace this file** when your agent produces a better one |
-| `inherited/src/main/kotlin/…/Pricing.kt` | `priceFor`, settled in 11.4. Use it; do not reopen it |
+| `inherited/src/main/kotlin/…/Pricing.kt` | `priceFor`, settled when you specified it earlier. Use it; do not reopen it |
 | `inherited/src/test/kotlin/…/FranchiseTests.kt` | The tests that came with the implementation |
 | [`surface.md`](surface.md) | What you hand the agent together with **your** specification, and nothing else |
 | `work/src/test/kotlin/` | **Your** tests. Empty until you put something in it |
