@@ -1,10 +1,10 @@
-# Exercise 11.6 — Capstone Debrief
+# The capstone — Capstone Debrief
 
 These notes are for teachers only.
 **Use them after students have submitted their work, not before.**
 The whole module follows one important principle: **first try, then compare**.
 Students should have a chance to make their own decisions before seeing what other agents did, what we measured, or how we prepared the exercise.
-There are deliberately **no slides for this debrief**. See [`capstone-11.6.md`](capstone-11.6.md) for the reasoning.
+There are deliberately **no slides for this debrief**. See [`capstone.md`](capstone.md) for the reasoning.
 Instead, use these notes to guide a conversation. Spend more time on the things your students actually noticed, struggled with, or found surprising.
 
 ## First, one decision for you
@@ -19,7 +19,7 @@ Two of the four inherited artifacts were prepared by us:
 - **The implementation** started as a correct agent-generated implementation, which we then deliberately changed by hand.
 
 The specification was different. It came from **six real AI-generated specifications combined by another agent**.
-The full history, including which sentences in the specification support each deliberate defect, is documented in [`capstone-11.6.md`](capstone-11.6.md).
+The full history, including which sentences in the specification support each deliberate defect, is documented in [`capstone.md`](capstone.md).
 There are two reasonable ways to handle this.
 
 **Option A: Explain how we prepared everything.**
@@ -63,14 +63,14 @@ It's that **the structure of a specification affects how easy it is to understan
 ### 2. The specification contradicts itself
 
 Now show students some of the contradictions.
-The full table is in [`capstone-11.6.md`](capstone-11.6.md), but here are the main examples:
+The full table is in [`capstone.md`](capstone.md), but here are the main examples:
 
 | One part says…                                        | Another part says…                                                                                           |
 |-------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
 | When prices tie, choose a particular shop.            | The choice is deliberately unspecified.                                                                      |
 | The franchise's own admission policy must be checked. | The effect of that policy is left open.                                                                      |
 | Promotions follow a particular order.                 | Section 4 gives a different ordering rule that isn't supported by the business description.                  |
-| Promotions use the price left by previous promotions. | Appended notes describe calculations using the original price, contradicting what exercise 11.4 established. |
+| Promotions use the price left by previous promotions. | Appended notes describe calculations using the original price, contradicting what the spec-writing exercise established. |
 
 Ask students which contradictions they found.
 More importantly, ask **what they did about them**.
@@ -162,7 +162,7 @@ But that doesn't mean leaving the decisions open is correct. It means these are 
 
 If you want to compare just one additional file, use:
 
-`fixtures/11.6/inherited-correct-14b.kt.txt`
+`fixtures/capstone/inherited-correct-14b.kt.txt`
 
 This is the original implementation produced by `qwen2.5-coder:14b` from the same specification.
 It matched the reference implementation on **all 3,010 probed inputs**.
@@ -179,7 +179,7 @@ Remember that the version students received was deliberately modified by us, not
 
 Please keep the evidence together with the results when discussing them.
 The detailed run history and measurements are recorded in `[[module-11-agent-run-findings]]`.
-The design decisions and full audit trail are documented in [`capstone-11.6.md`](capstone-11.6.md).
+The design decisions and full audit trail are documented in [`capstone.md`](capstone.md).
 In particular, keep these distinctions clear:
 
 | Result                                | How it was measured                                                                                                  |

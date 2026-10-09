@@ -27,13 +27,13 @@ file("mutants").listFiles()
     ?.sortedBy { it.name }
     ?.forEach { include(":mutants:${it.name}") }
 
-// The same, for the 11.4 pricing mutants — they mutate :reference rather than :core.
+// The same, for the pricing mutants — they mutate :reference rather than :core.
 file("pricing-mutants").listFiles()
     ?.filter { it.isDirectory && it.resolve("build.gradle.kts").exists() }
     ?.sortedBy { it.name }
     ?.forEach { include(":pricing-mutants:${it.name}") }
 
-// The graded fork readings for the 11.6 capstone (./gradlew generateForks). One module per READING of
+// The graded fork readings for the capstone (./gradlew generateForks). One module per READING of
 // something the brief leaves open — see forks/catalog.json for why this replaced a hidden corner-case
 // set. The practice tier is the sibling block below; both are teacher-only.
 file("forks").listFiles()
@@ -51,7 +51,7 @@ file("forks-practice").listFiles()
     ?.sortedBy { it.name }
     ?.forEach { include(":forks-practice:${it.name}") }
 
-// Implementations written by an agent from a specification alone (11.4, exercise step 3e), one
+// Implementations written by an agent from a specification alone (spec-writing exercise, step 3e), one
 // module per (agent, specification) pair: implementations/<agent>/<written-claude-code>/.
 file("implementations").listFiles()
     ?.filter { it.isDirectory }

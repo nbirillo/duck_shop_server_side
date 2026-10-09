@@ -27,12 +27,12 @@ import org.gradle.api.tasks.TaskAction
  * Generates an agent artifact by calling an OpenAI-compatible chat API (Ollama / Mistral /
  * Anthropic). The modes:
  *  - `tests`            — write a test suite for the given :core algebra; writes to `test-suites/<agent>/`.
- *  - `verify-exercise`  — author-side: regenerate the flawed starter suite of exercise 11.2 from a
+ *  - `verify-exercise`  — author-side: regenerate the flawed starter suite of the test-writing exercise from a
  *    model's real output, with one invalid test planted; overwrites the exercise file.
- *  - `verify-harden`    — the 11.2 task itself: verify and harden that flawed suite. Archived to
+ *  - `verify-harden`    — the test-writing task itself: verify and harden that flawed suite. Archived to
  *    `hardened/<agent>/`, which is then scored for validity (`:hardened:<agent>:test`) and for
  *    coverage (`verifyMutants -PmutantTests=hardened/<agent>/src/test/kotlin`).
- *  - `attack`           — the advanced tier of 11.2: given a suite, write an implementation that
+ *  - `attack`           — the advanced tier of the test-writing exercise: given a suite, write an implementation that
  *    PASSES it and still contradicts the specification. Writes to `attacks/<agent>/`, scored by
  *    `verifyAttack -Pagent=<agent>`. Unlike a mutant catalog, an adversary cannot be saturated.
  *
@@ -99,8 +99,8 @@ abstract class RunAgentTask @Inject constructor(
         val userPrompt = when (mode) {
             "verify-harden" -> buildVerifyPrompt(root)
             "attack" -> buildAttackPrompt(root, attackSuite)
-            "spec" -> buildSpecPrompt(root, "briefs/11.4-basic.md", "SPEC-template.md")
-            "spec-advanced" -> buildSpecPrompt(root, "briefs/11.4-advanced.md", "SPEC-template-advanced.md")
+            "spec" -> buildSpecPrompt(root, "briefs/write-spec-basic.md", "SPEC-template.md")
+            "spec-advanced" -> buildSpecPrompt(root, "briefs/write-spec-advanced.md", "SPEC-template-advanced.md")
             "spec-compress" -> buildCompressPrompt(root)
             "spec-extract" -> buildExtractPrompt(root)
             "impl-from-spec" -> buildImplFromSpecPrompt(root)
@@ -288,7 +288,7 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     /**
-     * The spec prompt (11.4): the informal feature description and the template the learner gets,
+     * The spec prompt (spec-writing exercise): the informal feature description and the template the learner gets,
      * and nothing else. No reference implementation exists yet and none is shown — the point is to
      * see what an agent determines from an under-determined brief.
      */
@@ -339,7 +339,7 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     /**
-     * The extraction prompt (11.4 layer 2). Claim ids come from the property catalog's test names, so
+     * The extraction prompt (spec-writing exercise, layer 2). Claim ids come from the property catalog's test names, so
      * the two can never drift: renaming a property renames the claim. This is **matching against the
      * author's rubric**, not understanding a specification, and the prompt says so — a learner cannot
      * be credited for a claim outside the list, which is the price of a check that is comparable
@@ -372,7 +372,7 @@ abstract class RunAgentTask @Inject constructor(
      * Prompts live in two places on purpose: the ones a learner's own run needs are in the student
      * build's `tools/`, and the ones only we run — writing a specification, compressing a corpus,
      * extracting claims — are in the grading build's `prompts/`, because a learner reading
-     * "here is how to write a good specification" has been handed exercise 11.4a.
+     * "here is how to write a good specification" has been handed the basic spec-writing exercise.
      *
      * Every mode therefore has to work from either build, and the previous version made that the
      * caller's problem via `-PpromptDir`. Documented commands were wrong as a result: the
@@ -406,7 +406,7 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     /**
-     * The 11.4 implement-from-spec prompt: the learner's specification, the shape of the data, and
+     * The spec-writing exercise implement-from-spec prompt: the learner's specification, the shape of the data, and
      * **nothing else**.
      *
      * Three things are deliberately withheld, and each was a real leak before it was closed.
@@ -416,7 +416,7 @@ abstract class RunAgentTask @Inject constructor(
      *    the brief. What is being measured is what the specification alone conveys.
      *  - **The reference and the property catalog**, for the obvious reason.
      *  - **`:core`'s `DiscountRule.kt` itself.** Its KDoc says in as many words that defining this
-     *    behaviour *is* exercise 11.4, and it declares all six rule kinds — so an author working from
+     *    behaviour *is* the spec-writing exercise, and it declares all six rule kinds — so an author working from
      *    the basic brief, which shows three, would be implemented against a surface they never saw.
      *    The declaration comes from **the brief the specification was written against**, exactly as
      *    the surface check does, and for the same reason.
@@ -573,7 +573,7 @@ abstract class RunAgentTask @Inject constructor(
     }
 
     /**
-     * The compression prompt (11.4b): several specs of the same feature, deliberately ANONYMISED as
+     * The compression prompt (the compression exercise): several specs of the same feature, deliberately ANONYMISED as
      * A/B/C so nothing defers to "the good one", and the task of producing one that keeps everything
      * that changes an implementation and nothing else. `-PspecsFrom=<dir>` selects the corpus.
      */

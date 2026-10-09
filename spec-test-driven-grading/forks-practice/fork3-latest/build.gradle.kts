@@ -14,7 +14,7 @@ kotlin {
         kotlin.srcDir(rootDir.resolve("../spec-test-driven/core/src/main/kotlin"))
     }
     sourceSets.named("test") {
-        kotlin.srcDir(rootDir.resolve("tests-11.6/kotlin"))
+        kotlin.srcDir(rootDir.resolve("tests-capstone/kotlin"))
     }
 }
 

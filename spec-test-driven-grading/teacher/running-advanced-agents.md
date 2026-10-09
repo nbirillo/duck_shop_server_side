@@ -45,7 +45,7 @@ For a controlled experiment, use a clean student export and keep the teacher gra
 
 ---
 
-## 2. Exercise 11.2 — Verify and harden an AI-written test suite
+## 2. The test-writing exercise — Verify and harden an AI-written test suite
 
 The exercise lives in:
 `exercises/write-tests/`
@@ -189,9 +189,9 @@ The rest of the module has its own teacher notes.
 
 | Exercise                                                                      | Guide                                                                                                             |
 |-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| **11.2 advanced tier** — conformant variants, test budgets, and the adversary | [`advanced-tier-notes.md`](advanced-tier-notes.md) and [`claude-attack-checklist.md`](claude-attack-checklist.md) |
-| **11.4** — using a frontier agent as the implementer                          | [`claude-implement-checklist.md`](claude-implement-checklist.md)                                                  |
-| **11.6** — the capstone, feedback, and debrief                                | [`capstone-11.6.md`](capstone-11.6.md)                                                                            |
+| **Test-writing, advanced tier** — conformant variants, test budgets, and the adversary | [`advanced-tier-notes.md`](advanced-tier-notes.md) and [`claude-attack-checklist.md`](claude-attack-checklist.md) |
+| **Spec-writing** — using a frontier agent as the implementer                          | [`claude-implement-checklist.md`](claude-implement-checklist.md)                                                  |
+| **The capstone**, feedback, and debrief                                | [`capstone.md`](capstone.md)                                                                            |
 
 ---
 

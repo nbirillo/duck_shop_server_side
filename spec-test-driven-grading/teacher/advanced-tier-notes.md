@@ -1,6 +1,6 @@
-# Exercise 11.2 — Advanced Tier: Teacher Notes
+# The test-writing exercise — Advanced Tier: Teacher Notes
 
-These notes explain the advanced version of exercise 11.2, including the additional checks, 
+These notes explain the advanced version of the test-writing exercise, including the additional checks, 
 how they work, and what we learned from running them with different AI agents.
 
 ## Why do we need an advanced version?

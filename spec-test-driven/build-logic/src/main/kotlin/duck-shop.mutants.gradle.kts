@@ -3,9 +3,9 @@
 // own paths through Gradle properties, so they can share the same task definitions.
 //
 // Three catalogs, three kinds of checks, one shared setup:
-//   mutants/  — broken implementations. Good tests should catch them (11.2, both tiers).
-//   variants/ — valid refactorings. Good tests should still pass (11.2, advanced tier).
-//   forks/    — different valid ways to fill gaps in the brief. In the 11.6 capstone, tests
+//   mutants/  — broken implementations. Good tests should catch them (test-writing exercise, both tiers).
+//   variants/ — valid refactorings. Good tests should still pass (test-writing exercise, advanced tier).
+//   forks/    — different valid ways to fill gaps in the brief. In the capstone, tests
 //               settle a fork when they accept exactly one reading. Variants check that tests
 //               leave flexible behavior flexible; forks check that tests make choices explicit.
 
@@ -68,7 +68,7 @@ tasks.register<GenerateForksTask>("generateForks") {
     outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
     coreSrc.convention(providers.gradleProperty("forksCoreSrc").orElse("core/src/main/kotlin"))
     // Do not provide a default pricing implementation. Students do not have priceFor until
-    // the capstone gives them one, and falling back to the reference would reveal the 11.4 answer.
+    // the capstone gives them one, and falling back to the reference would reveal the spec-writing exercise answer.
     pricingSrc.convention(providers.gradleProperty("forksPricing").orElse(""))
     testsSrc.convention(providers.gradleProperty("forkTests").orElse(""))
     packagePath.convention(providers.gradleProperty("forksPackage")

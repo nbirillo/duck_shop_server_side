@@ -17,7 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Records what one implementation of `bestOffer` answers on a fixed corpus — the 11.6 capstone.
+ * Records what one implementation of `bestOffer` answers on a fixed corpus — the capstone.
  *
  * ### Why the shop's name is in the output
  *
@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
  *  - a chain with **no shops**
  *  - shops whose promotions differ, so "cheapest" is not the same shop before and after they apply
  *
- * The guard below asserts each of those really occurs. The 11.2 probe twice reported a real divergence
+ * The guard below asserts each of those really occurs. The test-writing exercise probe twice reported a real divergence
  * as "identical" because its generator never built the input that would have shown it.
  */
 class FranchiseProbe {

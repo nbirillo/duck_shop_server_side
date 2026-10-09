@@ -5,7 +5,7 @@ It's a teacher-only procedure.
 
 ## What are we trying to find out?
 
-In exercise 11.2, students improve a test suite until it catches bugs in the admission-policy implementation.
+In the test-writing exercise, students improve a test suite until it catches bugs in the admission-policy implementation.
 Our strongest archived suite was written by Claude. It contains **47 tests and catches all 11 graded mutants**.
 By the mutation-testing score, that's a perfect result.
 But here's the question:
@@ -369,7 +369,7 @@ For each run, record:
 - **The counterexample:** An input that demonstrates the incorrect behavior.
 - **How many attempts it took:** Especially important for the feedback experiments.
 
-If an attack succeeds, also add the newly discovered gap to the exercise 11.2 answer key.
+If an attack succeeds, also add the newly discovered gap to the test-writing exercise answer key.
 A successful attack means we found a problem in a suite we previously considered complete.
 That's exactly the kind of result this module is designed to uncover.
 

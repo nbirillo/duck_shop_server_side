@@ -12,7 +12,7 @@ import javax.inject.Inject
 
 /**
  * Checks the parts of a specification that we can measure without an AI model.
- * This is the first layer of exercise 11.4.
+ * This is the first layer of the spec-writing exercise.
  *
  * It checks whether the expected sections are present and filled in, counts the text,
  * and looks for names from the API surface. It cannot tell whether a claim is true,
@@ -65,7 +65,7 @@ abstract class SpecReportTask @Inject constructor(
         // A spec can span several files. With -Pparts, check them together rather than
         // expecting every file to contain every section and API name.
         // Keep this opt-in: a directory can also hold several independent specs.
-        // For example, fixtures/11.4/written contains six different authors' work.
+        // For example, fixtures/write-spec/written contains six different authors' work.
         // Without -Pparts, each Markdown file is checked on its own.
         val split = specs.size > 1 && providers.gradleProperty("parts").isPresent
         if (split) {

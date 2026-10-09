@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The authored property catalog for 11.4 — the base set, and the load-bearing layer of the check.
+ * The authored property catalog for the spec-writing exercise — the base set, and the load-bearing layer of the check.
  * **No model is involved here.** One test per claim a specification might make, each stated over
  * generated inputs rather than examples, because the point of a property is that it holds for
  * *every* input and examples cannot say that.
@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
  *    reports those, because a specification full of them reads as rigour and constrains nobody.
  *
  * The teacher can regenerate this set with a model of their choosing, and the student build has an
- * opt-in mode for adding to it; see `teacher/exercise-11.4-answer-key.md`. This is the default.
+ * opt-in mode for adding to it; see `teacher/write-spec-answer-key.md`. This is the default.
  *
  * Test names are the property ids: layer 2 maps a learner's claims onto these names, so renaming one
  * renames it everywhere.

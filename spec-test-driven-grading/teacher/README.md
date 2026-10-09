@@ -17,18 +17,18 @@ Here's a guide to the files in this folder.
 
 | File                                                                 | What you'll find                                                                                                                                                                     |
 |----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`exercise-11.2-answer-key.md`](exercise-11.2-answer-key.md)         | **Exercise 11.2:** The intentionally incorrect test, missing cases, two unclear parts of the specification, and grading instructions.                                                |
+| [`write-tests-answer-key.md`](write-tests-answer-key.md)         | **The test-writing exercise:** The intentionally incorrect test, missing cases, two unclear parts of the specification, and grading instructions.                                                |
 | [`mutation-testing-notes.md`](mutation-testing-notes.md)             | How mutation testing works in this course, the grading mutant catalog, why some mutants are allowed to survive, and measured results.                                                |
-| [`../fixtures/11.4/`](../fixtures/11.4/)                             | Specifications written by different AI agents for exercise 11.4. Used as the 11.4b handout, checker benchmarks, and regression tests.                                                |
-| [`exercise-11.4-calibration.md`](exercise-11.4-calibration.md)       | **Exercise 11.4:** Ambiguities in the business description, results from different agents, problems with our first consistency checker, and verified laws for the advanced exercise. |
-| [`advanced-tier-notes.md`](advanced-tier-notes.md)                   | **Exercise 11.2 advanced:** The additional contract rules, valid implementation variants, test budget, and adversarial testing.                                                      |
-| [`claude-run-checklist.md`](claude-run-checklist.md)                 | Step-by-step instructions for manually running the Claude Code experiment for exercise 11.2, including what to clean up before starting.                                             |
+| [`../fixtures/write-spec/`](../fixtures/write-spec/)                             | Specifications written by different AI agents for the spec-writing exercise. Used as the compression exercise handout, checker benchmarks, and regression tests.                                                |
+| [`write-spec-calibration.md`](write-spec-calibration.md)       | **The spec-writing exercise:** Ambiguities in the business description, results from different agents, problems with our first consistency checker, and verified laws for the advanced exercise. |
+| [`advanced-tier-notes.md`](advanced-tier-notes.md)                   | **The test-writing exercise advanced:** The additional contract rules, valid implementation variants, test budget, and adversarial testing.                                                      |
+| [`claude-run-checklist.md`](claude-run-checklist.md)                 | Step-by-step instructions for manually running the Claude Code experiment for the test-writing exercise, including what to clean up before starting.                                             |
 | [`claude-attack-checklist.md`](claude-attack-checklist.md)           | Step-by-step instructions for testing a frontier agent's ability to find weaknesses in a test suite, including prompts E and F.                                                      |
-| [`exercise-11.4-answer-key.md`](exercise-11.4-answer-key.md)         | **Exercise 11.4:** The property catalog, the manually written answer key, and how students can challenge a grading result using `verifyClaims`.                                      |
-| [`exercise-11.4-corpus-results.md`](exercise-11.4-corpus-results.md) | Results from evaluating 13 specifications in four different ways, including the evidence used in the slides and two corrections to earlier conclusions.                              |
-| [`capstone-11.6.md`](capstone-11.6.md)                               | **Exercise 11.6:** Why the capstone uses a separate project, what gets graded, how to explain each result, and where the provided materials came from.                               |
-| [`capstone-11.6-debrief.md`](capstone-11.6-debrief.md)               | A five-part capstone debrief, with evidence behind every number. We intentionally don't use slides for this part.                                                                    |
-| [`claude-implement-checklist.md`](claude-implement-checklist.md)     | Instructions for using a frontier agent to implement code from a specification alone (exercise 11.4, step 3e).                                                                       |
+| [`write-spec-answer-key.md`](write-spec-answer-key.md)         | **The spec-writing exercise:** The property catalog, the manually written answer key, and how students can challenge a grading result using `verifyClaims`.                                      |
+| [`write-spec-corpus-results.md`](write-spec-corpus-results.md) | Results from evaluating 13 specifications in four different ways, including the evidence used in the slides and two corrections to earlier conclusions.                              |
+| [`capstone.md`](capstone.md)                               | **The capstone:** Why the capstone uses a separate project, what gets graded, how to explain each result, and where the provided materials came from.                               |
+| [`capstone-debrief.md`](capstone-debrief.md)               | A five-part capstone debrief, with evidence behind every number. We intentionally don't use slides for this part.                                                                    |
+| [`claude-implement-checklist.md`](claude-implement-checklist.md)     | Instructions for using a frontier agent to implement code from a specification alone (the spec-writing exercise, step 3e).                                                                       |
 | [`running-api-agents.md`](running-api-agents.md)                     | How to use `runAgent`, including its different modes, command options, and difficulty calibration.                                                                                   |
 | [`running-advanced-agents.md`](running-advanced-agents.md)           | How to work with strong interactive agents such as Claude Code or Junie without using an API key, including example prompts.                                                         |
 
@@ -46,7 +46,7 @@ Run them from `spec-test-driven-grading/`:
 # Run the acceptance tests for the given admission-policy implementation
 ./gradlew :grading:test
 
-# Run the grading mutants against a student's test suite (exercise 11.2)
+# Run the grading mutants against a student's test suite (the test-writing exercise)
 ./gradlew verifyMutants --continue
 
 # Run the grading mutants against the teacher's test suite

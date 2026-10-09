@@ -57,7 +57,7 @@ abstract class GenerateMutantsTask @Inject constructor(
      *
      * `mutantTests` is a gradle property and therefore global to the build, so a build holding two
      * catalogs cannot express "this one runs the property suite" through it. It has to be baked in
-     * per catalog at generation time. The 11.4 pricing mutants defaulted to the 11.2 admission suite
+     * per catalog at generation time. The pricing mutants defaulted to the admission suite
      * and ran it — ten tests about policies, against mutated pricing code, one of them failing in
      * the baseline too. Nothing about that reads as a misconfiguration in the output.
      */
@@ -67,7 +67,7 @@ abstract class GenerateMutantsTask @Inject constructor(
     /**
      * Source root the mutated file is read from, relative to this build's root. Same reasoning as
      * [defaultTests]: `mutantsCoreSrc` is global to the build, and this build mutates `:core` for
-     * 11.2 and the pricing reference for 11.4. Falls back to the gradle property when unset.
+     * the test-writing exercise and the pricing reference for the spec-writing exercise. Falls back to the gradle property when unset.
      */
     @get:Input
     @get:Optional

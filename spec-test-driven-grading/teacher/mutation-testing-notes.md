@@ -1,7 +1,7 @@
 # Mutation Testing — Teacher Notes
 
 These notes are for teachers only.
-This guide explains how the mutation-testing infrastructure works, what we've learned from running real AI agents against it, and how to use those findings in exercise 11.2.
+This guide explains how the mutation-testing infrastructure works, what we've learned from running real AI agents against it, and how to use those findings in the test-writing exercise.
 The most important lesson is that **a perfect mutation score doesn't necessarily mean a complete test suite**. Our experiments show why.
 
 ## 1. How the mutation-testing infrastructure works
@@ -59,7 +59,7 @@ The generator therefore matches complete `override` lines instead of loose fragm
 The generator also creates a **baseline module**.
 It runs the same test suite against the original, unmutated `:core`.
 Tests that already fail against correct code don't count toward killing mutants.
-Without this check, the flawed starter suite in exercise 11.2 appeared to kill **4/4 mutants**.
+Without this check, the flawed starter suite in the test-writing exercise appeared to kill **4/4 mutants**.
 
 Its deliberately incorrect test failed everywhere, so it looked as if every mutant had been caught.
 With baseline validation, the honest starting score is **1/4**.
@@ -114,7 +114,7 @@ If the caller later changes a mutable list, the policy's behavior can change too
 With a defensive copy, those later changes no longer affect the policy.
 
 Only a test that modifies the list **after constructing `AllOf`** can distinguish the two implementations.
-This is the second intentional ambiguity in exercise 11.2.
+This is the second intentional ambiguity in the test-writing exercise.
 
 Again, there are two defensible choices:
 

@@ -1,7 +1,7 @@
-# Exercise 11.2 — Answer Key and Grading Guide
+# The test-writing exercise — Answer Key and Grading Guide
 
 These notes are for teachers only.
-This guide explains what we've deliberately put into exercise 11.2, what students should discover, and how to grade their work.
+This guide explains what we've deliberately put into the test-writing exercise, what students should discover, and how to grade their work.
 
 ## What students receive
 
@@ -247,7 +247,7 @@ The goal is to give students a realistic, imperfect AI-generated suite with a kn
 
 ## The main takeaway
 
-Exercise 11.2 is about more than increasing a mutation score.
+The test-writing exercise is about more than increasing a mutation score.
 
 Students should learn to distinguish three different situations:
 

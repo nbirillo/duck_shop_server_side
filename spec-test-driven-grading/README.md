@@ -37,9 +37,9 @@ Here are a few other useful places:
 | Start here                                                             | What you'll find                                                                                                                                              |
 |------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`teacher/README.md`](teacher/README.md)                               | **The teacher guide.** Answer keys, grading instructions, exercise notes, and checklists for working with AI agents. Start here!                              |
-| [`fixtures/11.4/README.md`](fixtures/11.4/README.md)                   | The specifications written by different AI agents for exercise 11.4. Also used as the 11.4b handout and to check that our grading tools still work correctly. |
-| [`teacher/capstone-11.6.md`](teacher/capstone-11.6.md)                 | How to grade the capstone, give feedback on individual results, and trace where the provided materials came from.                                             |
-| [`teacher/capstone-11.6-debrief.md`](teacher/capstone-11.6-debrief.md) | A five-part capstone debrief, with evidence behind each result. We intentionally don't use slides for this one.                                               |
+| [`fixtures/write-spec/README.md`](fixtures/write-spec/README.md)                   | The specifications written by different AI agents for the spec-writing exercise. Also used as the compression exercise handout and to check that our grading tools still work correctly. |
+| [`teacher/capstone.md`](teacher/capstone.md)                 | How to grade the capstone, give feedback on individual results, and trace where the provided materials came from.                                             |
+| [`teacher/capstone-debrief.md`](teacher/capstone-debrief.md) | A five-part capstone debrief, with evidence behind each result. We intentionally don't use slides for this one.                                               |
 
 ## What's inside this project?
 
@@ -49,20 +49,20 @@ Here's what each one is for:
 | Directory                          | What it contains                                                                                                                                                                                  |
 |------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `teacher/`                         | All the written teaching materials: answer keys, instructions, notes, and checklists. See its README for the full index.                                                                          |
-| `grading/`                         | The acceptance tests for the admission-policy implementation in `:core`. The test names reveal cases students are supposed to discover in exercise 11.2, so we keep them here.                    |
+| `grading/`                         | The acceptance tests for the admission-policy implementation in `:core`. The test names reveal cases students are supposed to discover in the test-writing exercise, so we keep them here.                    |
 | `tests/kotlin/`                    | The source code for that test suite.                                                                                                                                                              |
-| `reference/`                       | Reference implementations of `priceFor` for exercise 11.4 and `bestOffer` for the capstone. These are possible interpretations of the business descriptions, not necessarily the only valid ones. |
-| `mutants/`                         | The grading mutant catalog for exercise 11.2. It includes more mutants than the student practice version, along with explanations and hints that students shouldn't see in advance.               |
-| `pricing-mutants/`                 | Mutation testing for exercise 11.4. It checks the reference implementation against the property catalog.                                                                                          |
-| `pricing-properties/`              | A collection of possible properties for exercise 11.4 specifications, written as executable checks.                                                                                               |
+| `reference/`                       | Reference implementations of `priceFor` for the spec-writing exercise and `bestOffer` for the capstone. These are possible interpretations of the business descriptions, not necessarily the only valid ones. |
+| `mutants/`                         | The grading mutant catalog for the test-writing exercise. It includes more mutants than the student practice version, along with explanations and hints that students shouldn't see in advance.               |
+| `pricing-mutants/`                 | Mutation testing for the spec-writing exercise. It checks the reference implementation against the property catalog.                                                                                          |
+| `pricing-properties/`              | A collection of possible properties for the spec-writing exercise specifications, written as executable checks.                                                                                               |
 | `forks/`                           | Nine valid interpretations of four open questions in the capstone, used for grading.                                                                                                              |
 | `forks-practice/`                  | The example about ties that you can demonstrate in class. It stays here because it contains a complete implementation of one interpretation.                                                      |
-| `tests-11.6/`                      | Tests for important capstone edge cases. They provide a starting point, not a complete grade.                                                                                                     |
-| `tests-11.6-validation/`           | A test suite used to check the grading tool itself. It resolves exactly one open question, so we can verify that `verifyForks` reports the expected result.                                       |
+| `tests-capstone/`                      | Tests for important capstone edge cases. They provide a starting point, not a complete grade.                                                                                                     |
+| `tests-capstone-validation/`           | A test suite used to check the grading tool itself. It resolves exactly one open question, so we can verify that `verifyForks` reports the expected result.                                       |
 | `briefs/`                          | The business descriptions given to students in class. We keep them outside the student project so the AI agent can't simply read them instead of working from the student's specification.        |
 | `prompts/`, `prompts-capstone/`    | Prompts used by the course authors for extracting claims, writing and shortening specifications, and combining capstone materials.                                                                |
 | `tools/franchise-probe/`           | A collection of 3,010 test cases used to compare capstone implementations. It stays here because its comments reveal the open questions students should discover themselves.                      |
-| `fixtures/`                        | Saved materials from our experiments: exercise 11.4 specifications, a hand-written answer key, and capstone franchise specifications.                                                             |
+| `fixtures/`                        | Saved materials from our experiments: the spec-writing exercise specifications, a hand-written answer key, and capstone franchise specifications.                                                             |
 | `implementations/`, `extractions/` | Results produced by AI agents during our experiments. We keep them so we can trace reported results back to the actual files.                                                                     |
 
 ## How to run the teacher checks
@@ -75,13 +75,13 @@ Run the following commands from `spec-test-driven-grading/`:
 # Check the given admission-policy implementation
 ./gradlew :grading:test
 
-# Run the grading mutants against a student's tests (exercise 11.2)
+# Run the grading mutants against a student's tests (the test-writing exercise)
 ./gradlew verifyMutants --continue
 
 # Run the grading mutants against the teacher's test suite
 ./gradlew verifyMutants -PmutantTests=tests/kotlin
 
-# Check the pricing mutants against the property catalog (exercise 11.4)
+# Check the pricing mutants against the property catalog (the spec-writing exercise)
 ./gradlew verifyPricingMutants --continue
 
 # Check which capstone interpretations a test suite rules out

@@ -1,7 +1,7 @@
-# Exercise 11.4 — Calibration Notes
+# The spec-writing exercise — Calibration Notes
 
 These notes are for teachers only.
-This document records what happened when we tested exercise 11.4 with different AI models, what we learned about the difficulty of the task, and how those results shaped the advanced tier.
+This document records what happened when we tested the spec-writing exercise with different AI models, what we learned about the difficulty of the task, and how those results shaped the advanced tier.
 The main calibration run took place on **August 13, 2026**.
 
 We used `runAgent -Pmode=spec` with the updated business brief, after removing hints from the template that made the answers too easy to guess.
@@ -187,7 +187,7 @@ But for Claude Opus 5, the task was relatively easy.
 That gives us a straightforward design decision.
 
 **When strong agents can handle the task, make the task more challenging rather than weakening the evaluation tool.**
-So the composable version of the pricing rules becomes the real advanced tier of exercise 11.4.
+So the composable version of the pricing rules becomes the real advanced tier of the spec-writing exercise.
 It introduces algebraic laws that require more careful reasoning than a list of individual examples.
 
 ---
@@ -233,7 +233,7 @@ It's also one of the main motivations for property-based testing.
 
 ---
 
-# Exercise 11.4b — Calibrating the Compression Task
+# The compression exercise — Calibrating the Compression Task
 
 <text color="secondary">Calibration date: August 13, 2026</text>
 
@@ -393,7 +393,7 @@ We can then evaluate a compressed specification using two measurements:
 
 Now “shorter and no weaker” becomes something we can compare directly rather than relying only on subjective judgment.
 A good compressed specification should preserve the ability to rule out incorrect implementations while reducing unnecessary text.
-This also connects exercise 11.4b to the test-budget challenge in exercise 11.2.
+This also connects the compression exercise to the test-budget challenge in the test-writing exercise.
 
 In both exercises, students have to find a useful balance.
 Too little content leaves important behavior unconstrained.

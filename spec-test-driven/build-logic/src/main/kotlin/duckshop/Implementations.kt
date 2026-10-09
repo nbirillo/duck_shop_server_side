@@ -1,7 +1,7 @@
 package duckshop
 
 /**
- * The build script of one implement-from-spec module (11.4, step 3e), shared by the API path
+ * The build script of one implement-from-spec module (spec-writing exercise, step 3e), shared by the API path
  * (`runAgent -Pmode=impl-from-spec`) and the interactive path (`prepareImplementation`).
  *
  * The module compiles ONE agent's implementation, written from a specification alone, against the

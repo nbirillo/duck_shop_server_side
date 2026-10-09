@@ -33,7 +33,7 @@ abstract class GenerateForksTask @Inject constructor(
      * A property rather than a fixed path, and it matters which one each build points at: the teacher
      * build uses the reference, while **the student build must use the learner's own inherited
      * implementation.** Putting a correct pricing file anywhere inside the student folder would hand
-     * over the answer to exercise 11.4, which is the leak [module-11 reference-impl leakage] exists to
+     * over the answer to the spec-writing exercise, which is the leak [module-11 reference-impl leakage] exists to
      * prevent.
      */
     @get:Input

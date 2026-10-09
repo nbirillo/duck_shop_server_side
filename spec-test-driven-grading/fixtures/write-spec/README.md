@@ -41,7 +41,7 @@ We originally planned to write examples manually for this purpose, but our exper
 ### 3. Checking for regressions
 
 Once our specification checker is ready, we can run it on all these files.
-Then we can compare its results with our manual evaluation in [`../../teacher/exercise-11.4-calibration.md`](../../teacher/exercise-11.4-calibration.md).
+Then we can compare its results with our manual evaluation in [`../../teacher/write-spec-calibration.md`](../../teacher/write-spec-calibration.md).
 The checker should rank the specifications in the same order as our manual evaluation.
 If it doesn't, we need to investigate why.
 We've already seen how this can go wrong: our first checker simply looked for certain keywords, and it ranked the **best specification last**!

@@ -14,7 +14,7 @@ import java.io.File
  *
  * ### Why it is structural instead of another sentence in the prompt
  *
- * The 11.6 implementation surface was reworded **four times** against this exact symptom — declarations
+ * The capstone implementation surface was reworded **four times** against this exact symptom — declarations
  * shown in full got copied; then case names needed qualifying; then field types; then packages — and it
  * still fired on 4 of 6 specs while the same model, same surface, stayed clean on the other 2. It is
  * stochastic, so no wording closes it. What does close it: the file is compiled against a known set of

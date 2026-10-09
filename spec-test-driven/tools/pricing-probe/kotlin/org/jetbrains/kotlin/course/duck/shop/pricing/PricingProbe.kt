@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
  *
  * Cases are pseudo-random but fully determined by [SEED], so two runs generate identical inputs and
  * any difference in the recording is a difference in behaviour. `the corpus reaches the values it
- * claims to` is not decoration: the 11.2 probe twice reported a real divergence as "identical"
+ * claims to` is not decoration: the test-writing exercise probe twice reported a real divergence as "identical"
  * because the generator never produced the inputs that would have shown it — once from too small a
  * combinator arity, once from too narrow an argument range. A blind corpus fails silently and looks
  * like good news.

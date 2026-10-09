@@ -21,7 +21,7 @@ import javax.inject.Inject
  *   if they survive. We show them separately.
  * - `conformant` variants are valid refactorings. They should still pass the tests.
  *   If a test fails, that's a FALSE ALARM: the test depends on an implementation detail
- *   rather than required behavior. Exercise 11.2's advanced tier checks for this too.
+ *   rather than required behavior. The test-writing exercise's advanced tier checks for this too.
  *
  * The `duck-shop.mutants` plugin connects the test tasks automatically.
  * Use `--continue` so one compilation failure doesn't hide the other results.
@@ -172,7 +172,7 @@ abstract class MutationReportTask @Inject constructor(
                         if (falseAlarms == 0) "." else ", $falseAlarms false alarm(s).",
             )
         }
-        // The advanced tier of 11.2 limits the number of tests. Without a limit, it's
+        // The advanced tier of the test-writing exercise limits the number of tests. Without a limit, it's
         // easy to add a test for every case. A budget makes you choose the most useful ones.
         val tests = countTests(baselineResults)
         val budget = providers.gradleProperty("testBudget").orNull?.toIntOrNull()

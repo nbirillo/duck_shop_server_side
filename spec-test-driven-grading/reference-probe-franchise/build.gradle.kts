@@ -1,4 +1,4 @@
-// Records what the REFERENCE `bestOffer` answers on the 11.6 probe corpus. Teacher-only.
+// Records what the REFERENCE `bestOffer` answers on the capstone probe corpus. Teacher-only.
 
 plugins {
     kotlin("jvm")

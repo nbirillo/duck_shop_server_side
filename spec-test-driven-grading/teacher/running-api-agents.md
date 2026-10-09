@@ -19,7 +19,7 @@ We use it to test the course itself:
 There is one important exception.
 **`impl-from-spec` is a student-facing step.**
 
-In exercise 11.4 and the capstone, students give an agent their own specification and examine the implementation it produces.
+In the spec-writing exercise and the capstone, students give an agent their own specification and examine the implementation it produces.
 That is part of the learning process, not just our course calibration.
 
 ### Before you run anything
@@ -39,12 +39,12 @@ Some modes need teacher-only briefs or prompts and must be run from the grading 
 | `-Pmode=`         | What the agent does                                                                                 | Output directory                         | Run from                                           |
 |-------------------|-----------------------------------------------------------------------------------------------------|------------------------------------------|----------------------------------------------------|
 | `tests`           | Writes a test suite for the `:core` algebra from a generic prompt                                   | `test-suites/<agent>/`                   | Student project                                    |
-| `verify-exercise` | Generates the flawed starter suite for 11.2; the incorrect `Not` test is injected afterward         | `exercises/write-tests/…/PolicyTests.kt` | Student project                                    |
-| `verify-harden`   | Verifies and improves the flawed suite from 11.2                                                    | `hardened/<agent>/`                      | Student project                                    |
-| `attack`          | Advanced 11.2: writes an implementation that passes a given suite but contradicts the specification | `attacks/<agent>/`                       | Student project                                    |
-| `spec`            | Writes a basic-tier 11.4 specification from the business brief                                      | `specs/<agent>/`                         | **Teacher build**, using `briefs/11.4-basic.md`    |
-| `spec-advanced`   | Writes a specification for the composable advanced tier                                             | `specs-advanced/<agent>/`                | **Teacher build**, using `briefs/11.4-advanced.md` |
-| `spec-compress`   | Exercise 11.4b: combines several specifications into one that should be shorter and no weaker       | `specs-short/<agent>/`                   | **Teacher build**, with `-PspecsFrom=<dir>`        |
+| `verify-exercise` | Generates the flawed starter suite for the test-writing exercise; the incorrect `Not` test is injected afterward         | `exercises/write-tests/…/PolicyTests.kt` | Student project                                    |
+| `verify-harden`   | Verifies and improves the flawed suite from the test-writing exercise                                                    | `hardened/<agent>/`                      | Student project                                    |
+| `attack`          | Advanced test-writing: writes an implementation that passes a given suite but contradicts the specification | `attacks/<agent>/`                       | Student project                                    |
+| `spec`            | Writes a basic-tier spec-writing specification from the business brief                                      | `specs/<agent>/`                         | **Teacher build**, using `briefs/write-spec-basic.md`    |
+| `spec-advanced`   | Writes a specification for the composable advanced tier                                             | `specs-advanced/<agent>/`                | **Teacher build**, using `briefs/write-spec-advanced.md` |
+| `spec-compress`   | The compression exercise: combines several specifications into one that should be shorter and no weaker       | `specs-short/<agent>/`                   | **Teacher build**, with `-PspecsFrom=<dir>`        |
 | `spec-extract`    | Layer 2: identifies which claims from the property catalog appear in a specification                | `extractions/<agent>/`                   | **Teacher build**                                  |
 | `impl-from-spec`  | Implements a feature using only its specification and the available API surface                     | `implementations/<agent>/<spec>/`        | Either project                                     |
 
@@ -208,7 +208,7 @@ This checks whether the target test suite catches the agent's adversarial implem
 ### Where are the other scoring instructions?
 
 For mutation scoring of a hardened suite, see [`mutation-testing-notes.md`](mutation-testing-notes.md).
-For specification evaluation, see [`exercise-11.4-answer-key.md`](exercise-11.4-answer-key.md).
+For specification evaluation, see [`write-spec-answer-key.md`](write-spec-answer-key.md).
 
 ---
 
@@ -245,8 +245,8 @@ These live in the grading build:
 - `prompts/agent-prompt-compress.md`
 - `prompts-capstone/agent-prompt-compress.md`
 
-The capstone compression prompt has a different goal from the 11.4b compression prompt.
-In exercise 11.4b, the agent tries to make a specification **shorter without making it weaker**.
+The capstone compression prompt has a different goal from the compression exercise compression prompt.
+In the compression exercise, the agent tries to make a specification **shorter without making it weaker**.
 In the capstone, the instruction is effectively the opposite:
 
 **Keep everything. Decide nothing.**
@@ -280,9 +280,9 @@ That told us something important:
 **Implementing well-specified logic wasn't a useful challenge for these agents.**
 We needed to test a different skill.
 
-### Exercise 11.2 focuses on verification
+### The test-writing exercise focuses on verification
 
-Instead of asking students to implement the algebra, exercise 11.2 asks them to **verify and harden an existing AI-written test suite**.
+Instead of asking students to implement the algebra, the test-writing exercise asks them to **verify and harden an existing AI-written test suite**.
 This separates model capabilities much more clearly.
 Every tested model could fix the deliberately incorrect test.
 
@@ -292,7 +292,7 @@ The second is much harder.
 
 ### The advanced tier challenges frontier agents
 
-A frontier agent can still solve the basic 11.2 task very well.
+A frontier agent can still solve the basic test-writing task very well.
 So the advanced tier adds different challenges:
 
 - **Conformant variants.**
@@ -302,9 +302,9 @@ So the advanced tier adds different challenges:
 All three were measured as challenges appropriate for frontier-level agents.
 See [`advanced-tier-notes.md`](advanced-tier-notes.md) for the experiments and what each task measures.
 
-### Exercise 11.4 moves from code to specifications
+### The spec-writing exercise moves from code to specifications
 
-Exercise 11.4 shifts the focus.
+The spec-writing exercise shifts the focus.
 Instead of asking whether the implementation is correct, it asks whether the **specification text communicates enough to produce the intended behavior**.
 The capstone then brings the entire process together.
 Students have to work with specifications, tests, implementations, and feedback — including artifacts left behind by someone else.

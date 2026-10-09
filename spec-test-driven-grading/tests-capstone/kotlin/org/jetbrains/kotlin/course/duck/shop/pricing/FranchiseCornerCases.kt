@@ -13,12 +13,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * TEACHER-ONLY. The key corner cases of the 11.6 capstone, run against one implementation of
- * `bestOffer` at a time (`-PimplTests=tests-11.6/kotlin`).
+ * TEACHER-ONLY. The key corner cases of the capstone, run against one implementation of
+ * `bestOffer` at a time (`-PimplTests=tests-capstone/kotlin`).
  *
  * ### The split is the whole design of this file
  *
- * `briefs/11.6-franchise.md` divides the feature into what it **settles** and what it **leaves open**,
+ * `briefs/capstone-franchise.md` divides the feature into what it **settles** and what it **leaves open**,
  * and a hidden set that ignores that division punishes a learner for making a legitimate choice. So:
  *
  *  - **`settled — …`** follows from the brief's own settled list and from nothing else. A red one here
@@ -31,10 +31,10 @@ import kotlin.test.assertTrue
  *
  * ### What this file is NOT, measured rather than assumed
  *
- * It is **not the capstone's grade**. Every artifact in the 11.6 corpus passes the whole settled group,
+ * It is **not the capstone's grade**. Every artifact in the capstone corpus passes the whole settled group,
  * including a specification that disagrees with the reference on 884 of 3010 probed inputs — because
  * every settled fact is satisfied by any implementation shaped "filter the shops, price them, take the
- * minimum". So this is a **floor**, exactly as layer 1 is in 11.4: it catches an implementation that is
+ * minimum". So this is a **floor**, exactly as layer 1 is in the spec-writing exercise: it catches an implementation that is
  * broken outright and ranks nothing. The grade lives in `forks/catalog.json` and `verifyForks`, which
  * ask whether a decision was made rather than whether an answer was right.
  *
@@ -105,7 +105,7 @@ class FranchiseCornerCases {
 
     @Test
     fun `settled — an offer never costs more than the duck does on the shelf`() {
-        // Inherited from 11.4: a promotion is a discount. Checked here because a franchise makes it
+        // Inherited from the spec-writing exercise: a promotion is a discount. Checked here because a franchise makes it
         // newly easy to break — adding two discounts the wrong way round can raise a price.
         val franchise = Franchise(
             "f",

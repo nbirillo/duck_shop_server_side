@@ -1,4 +1,4 @@
-# Exercise 11.6 — Capstone: Teacher Notes
+# The capstone — Capstone: Teacher Notes
 
 These notes are for teachers only.
 Students should receive `spec-test-driven-capstone/`, not this grading project.
@@ -8,8 +8,8 @@ This guide explains how the capstone was prepared, what we check, how to interpr
 
 There's a practical reason for this.
 The capstone includes a **working implementation of `priceFor`**.
-Students already worked on pricing in exercise 11.4, and in a real software project, that feature would probably be finished by the time the next task begins.
-But if we put the working implementation inside `spec-test-driven/`, students who haven't finished exercise 11.4 could find the answer.
+Students already worked on pricing in the spec-writing exercise, and in a real software project, that feature would probably be finished by the time the next task begins.
+But if we put the working implementation inside `spec-test-driven/`, students who haven't finished the spec-writing exercise could find the answer.
 And so could their AI agents.
 That's why we keep the capstone separate, just like the teacher grading tools and business descriptions.
 **Share `spec-test-driven-capstone/` only when students reach the capstone.**
@@ -56,7 +56,7 @@ We're asking them to make clear decisions about ambiguous behavior, document tho
 
 We also have:
 
-`tests-11.6/FranchiseCornerCases.kt`
+`tests-capstone/FranchiseCornerCases.kt`
 
 These tests cover six behaviors that the business description clearly specifies.
 They are a **minimum correctness check, not a grading system**.
@@ -117,14 +117,14 @@ Here's the full story.
 
 We started with six real franchise specifications saved in:
 
-`fixtures/11.6/`
+`fixtures/capstone/`
 
 They came from a frontier model and the local models.
-We collected them in `fixtures/11.6-parts/` and asked an agent to combine them using:
+We collected them in `fixtures/capstone-parts/` and asked an agent to combine them using:
 
 `prompts-capstone/agent-prompt-compress.md`
 
-The instruction was deliberately different from the compression exercise in 11.4b.
+The instruction was deliberately different from the compression exercise in the compression exercise.
 Instead of making the document short, the agent was told to:
 
 **Keep everything. Keep disagreements. Don't decide anything.**
@@ -147,7 +147,7 @@ So the partially correct implementation we wanted for the capstone didn't appear
 The combined specification already contained enough precise rules from the frontier model for a capable agent to reproduce the reference behavior.
 We saved that original correct implementation here:
 
-`fixtures/11.6/inherited-correct-14b.kt.txt`
+`fixtures/capstone/inherited-correct-14b.kt.txt`
 
 It's worth showing during the debrief.
 We then **deliberately changed the implementation by hand**.
@@ -211,7 +211,7 @@ If this artifact is regenerated later, prefer the measured approach.
 ## Why did we edit the combined specification?
 
 The AI-generated combined specification was originally **185 lines and 2,988 words**.
-It included detailed pricing rules from exercise 11.4.
+It included detailed pricing rules from the spec-writing exercise.
 That created a problem.
 When we asked an agent to implement the capstone from that document, it reimplemented `priceFor` instead of calling the existing function.
 And it introduced three pricing bugs:
@@ -221,7 +221,7 @@ And it introduced three pricing bugs:
 - A `Then` implementation that changed the duck's own price, so a nested `OnlyIf` evaluated a different duck.
 
 These bugs caused differences on **154 of 3,010 inputs**, including 20 cases where a different shop won.
-Those are realistic mistakes, but they belong to exercise 11.4.
+Those are realistic mistakes, but they belong to the spec-writing exercise.
 We didn't want the capstone to turn into another pricing exercise.
 So we removed only the sections that repeated the already-settled pricing rules.
 The document became **165 lines and 2,552 words**.
@@ -333,7 +333,7 @@ Put the student's implementation in:
 
 Then run `verifyImplementations` and the corner-case tests in:
 
-`tests-11.6/FranchiseCornerCases.kt`
+`tests-capstone/FranchiseCornerCases.kt`
 
 Remember: the corner cases are a minimum check, **not a grade**.
 
@@ -394,7 +394,7 @@ That distinction is at the heart of the capstone.
 
 Some results aren't necessarily bad, but are worth discussing:
 
-- The tests spend a lot of effort checking pricing arithmetic that was already settled in exercise 11.4.
+- The tests spend a lot of effort checking pricing arithmetic that was already settled in the spec-writing exercise.
 - The student's specification becomes longer instead of clearer.
 - The tests copy the inherited implementation's behavior rather than enforcing the student's own decisions.
 
@@ -421,7 +421,7 @@ A fork reading asks:
 **Have your tests made a decision about this ambiguous behavior?**
 
 These are different questions.
-In exercise 11.2, conformance testing teaches students **not to require behavior the contract leaves open**.
+In the test-writing exercise, conformance testing teaches students **not to require behavior the contract leaves open**.
 In the capstone, fork checking teaches students to **make and test the decisions that the specification needs**.
 Knowing when to leave behavior flexible and when to make it precise is the real skill.
 
@@ -432,7 +432,7 @@ But the fork checker still reported LEFT OPEN.
 Why?
 Because two of the three interpretations in our catalog behaved the same way on that example.
 To settle a fork, tests must reject every alternative except one.
-This connects directly to the advanced exercise 11.2 lesson:
+This connects directly to the advanced test-writing exercise lesson:
 **Fixing one counterexample doesn't necessarily cover the whole category of behavior.**
 
 ### The options in a business description may not match what readers actually understand
@@ -460,7 +460,7 @@ As in mutation and adversarial testing, **a checker can only report on the cases
 
 The full capstone debrief is in:
 
-[`capstone-11.6-debrief.md`](capstone-11.6-debrief.md)
+[`capstone-debrief.md`](capstone-debrief.md)
 
 It contains five parts, with the evidence behind each number.
 We intentionally don't use slides for this debrief.
@@ -479,7 +479,7 @@ How much of that preparation to explain during the debrief is a teaching decisio
 
 The original brief is in:
 
-`briefs/11.6-franchise.md`
+`briefs/capstone-franchise.md`
 
 Its first open question wasn't written as well as we initially thought.
 Two of the three options described the same behavior. The third wasn't expressible using `Shop`. And the interpretation readers actually chose wasn't included.

@@ -1,4 +1,4 @@
-// Adds the specification checks for exercise 11.4. Both builds use these tasks because they
+// Adds the specification checks for the spec-writing exercise. Both builds use these tasks because they
 // work with specifications and claim lists, not hidden reference implementations.
 //
 // scoreExtraction is mainly for teachers: it needs the manually checked answer key
@@ -20,12 +20,12 @@ tasks.register<SpecReportTask>("verifySpec") {
 
 // Only add this task when an answer key is available. Otherwise students would see
 // a task they cannot run, and the hidden key would be unnecessarily exposed.
-if (file("fixtures/11.4/key.json").isFile || providers.gradleProperty("key").isPresent) {
+if (file("fixtures/write-spec/key.json").isFile || providers.gradleProperty("key").isPresent) {
     tasks.register<ExtractionScoreTask>("scoreExtraction") {
         group = "verification"
         description = "Compare the AI claim extractor with the manually checked answer key. " +
                 "This measures accuracy, not just consistency. Params: -Pagent=<name> [-Pkey=<key.json>]."
-        keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+        keyPath.convention(providers.gradleProperty("key").orElse("fixtures/write-spec/key.json"))
     }
 }
 

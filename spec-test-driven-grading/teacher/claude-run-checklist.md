@@ -1,7 +1,7 @@
-# Checklist — Measuring Claude Code on Exercise 11.2
+# Checklist — Measuring Claude Code on The test-writing exercise
 
 These notes are for teachers only.
-This checklist walks you through measuring Claude Code on exercise 11.2.
+This checklist walks you through measuring Claude Code on the test-writing exercise.
 The actual prompts are in [`running-advanced-agents.md`](running-advanced-agents.md). This document explains **when to use each prompt, how to prepare the project, and how to collect trustworthy results**.
 
 Two things can quietly invalidate the experiment:

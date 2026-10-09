@@ -3,7 +3,7 @@ package org.jetbrains.kotlin.course.duck.shop.pricing
 import org.jetbrains.kotlin.course.duck.shop.admission.Duck
 
 /**
- * TEACHER-ONLY reference for the 11.6 capstone, and it takes **the frontier's reading** of the brief,
+ * TEACHER-ONLY reference for the capstone, and it takes **the frontier's reading** of the brief,
  * recorded here so the hidden set has a definite answer to score against. Each decision is one the
  * brief deliberately leaves open, so this file is a *choice*, not a truth:
  *

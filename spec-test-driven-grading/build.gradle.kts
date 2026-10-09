@@ -9,7 +9,7 @@ plugins {
     id("duck-shop.spec")
 }
 
-// Exercise 11.4 has a separate set of pricing mutants. They change :reference rather than
+// The spec-writing exercise has a separate set of pricing mutants. They change :reference rather than
 // :core, so they need different source, package, and output paths. The task code stays shared.
 tasks.named<duckshop.SpecReportTask>("verifySpec") {
     // The exercise files are in a sibling directory. Keep -PspecSurface as the first choice:
@@ -23,7 +23,7 @@ tasks.named<duckshop.SpecReportTask>("verifySpec") {
 
 tasks.register<duckshop.GenerateMutantsTask>("generatePricingMutants") {
     group = "duck-shop"
-    description = "Recreate the pricing mutant modules for exercise 11.4 from pricing-mutants/catalog.json."
+    description = "Recreate the pricing mutant modules for the spec-writing exercise from pricing-mutants/catalog.json."
     catalogPath.set("pricing-mutants/catalog.json")
     outPath.set("pricing-mutants")
     packagePath.set("org/jetbrains/kotlin/course/duck/shop/pricing")
@@ -31,13 +31,13 @@ tasks.register<duckshop.GenerateMutantsTask>("generatePricingMutants") {
     coreSrc.set("reference/src/main/kotlin")
     // Include :core unchanged; the reference needs Duck, DiscountRule, and AdmissionPolicy.
     alsoCompile.set("../spec-test-driven/core/src/main/kotlin")
-    // Test these mutants with the pricing properties, not the admission tests from 11.2.
+    // Test these mutants with the pricing properties, not the admission tests from the test-writing exercise.
     defaultTests.set("pricing-properties/kotlin")
 }
 
 tasks.register<duckshop.MutationReportTask>("verifyPricingMutants") {
     group = "verification"
-    description = "Run the property tests against each pricing mutant from exercise 11.4. " +
+    description = "Run the property tests against each pricing mutant from the spec-writing exercise. " +
             "Params: [-PmutantTests=<test source dir>] [-PmutantsStrict]."
     catalogPath.set("pricing-mutants/catalog.json")
     defaultTests.set("pricing-properties/kotlin")
@@ -75,13 +75,13 @@ tasks.named<duckshop.PrepareImplementationTask>("prepareImplementation") {
     reportCommand.set("./gradlew verifyImplementations -Pagent=<agent>")
 }
 
-// Exercise 11.4, step 3e: see what an agent builds using only the specification.
+// The spec-writing exercise, step 3e: see what an agent builds using only the specification.
 tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     group = "verification"
     description = "Compare implementations built from a spec alone with the reference, " +
             "excluding out-of-scope checks. Params: -Pagent=<name> [-Pkey=<key.json>]. " +
             "Code that does not compile appears in the report instead of counting as a build failure."
-    keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+    keyPath.convention(providers.gradleProperty("key").orElse("fixtures/write-spec/key.json"))
     // Look only at the requested agent. A different agent's broken module must not stop
     // this report. A broken module belonging to this agent is useful information, so
     // running with --continue should still let the report show DID NOT BUILD.

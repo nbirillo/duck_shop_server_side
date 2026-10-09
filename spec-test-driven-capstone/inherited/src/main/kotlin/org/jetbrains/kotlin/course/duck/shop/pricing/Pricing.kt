@@ -3,7 +3,7 @@ package org.jetbrains.kotlin.course.duck.shop.pricing
 import org.jetbrains.kotlin.course.duck.shop.admission.Duck
 
 /**
- * Pricing, as settled in exercise 11.4. **Not part of the capstone** — treat it as existing code with a
+ * Pricing, as settled in the spec-writing exercise. **Not part of the capstone** — treat it as existing code with a
  * contract, and use it rather than reimplementing it.
  *
  * Each decision below was open in the original brief and is now written down, which is the only reason
@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.course.duck.shop.admission.Duck
  */
 fun priceFor(duck: Duck, rule: DiscountRule): Int = apply(duck, rule, duck.price)
 
-/** The flat-list form the basic tier of 11.4 specifies: the rules run one after another. */
+/** The flat-list form the basic tier of the spec-writing exercise specifies: the rules run one after another. */
 fun priceFor(duck: Duck, rules: List<DiscountRule>): Int =
     rules.fold(duck.price) { price, rule -> apply(duck, rule, price) }
 

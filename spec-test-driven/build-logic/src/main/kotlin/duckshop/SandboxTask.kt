@@ -8,7 +8,7 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * Creates a sandbox for exercise 11.4 with the data types, the student's specification,
+ * Creates a sandbox for the spec-writing exercise with the data types, the student's specification,
  * and a starter implementation. Students open their agent in this folder and work normally.
  *
  * ### Why use a folder instead of a prompt?
@@ -91,7 +91,7 @@ abstract class SandboxTask @Inject constructor(
 
         val core = root.resolve("core/src/main/kotlin/$pkg")
         src.resolve("admission/Domain.kt").writeText(core.resolve("admission/Domain.kt").readText())
-        // Include AdmissionPolicy because OnlyIf needs it, without copying all of exercise 11.2.
+        // Include AdmissionPolicy because OnlyIf needs it, without copying all of the test-writing exercise.
         src.resolve("admission/AdmissionPolicy.kt")
             .writeText(core.resolve("admission/AdmissionPolicy.kt").readText())
         src.resolve("pricing/DiscountRule.kt")
@@ -198,7 +198,7 @@ abstract class SandboxTask @Inject constructor(
         number of `.kt` files, named and arranged however you like — only Kotlin is copied, because
         only Kotlin runs. They are your contract in executable form.
         **The agent must make them pass without editing them.**
-        A property edited to pass is the oldest trick there is — it is what exercise 11.2 was about —
+        A property edited to pass is the oldest trick there is — it is what the test-writing exercise was about —
         and this task tells you when the copies stop matching your originals.
 
         Whether the implementation is *right* is not something this folder can settle. That comes from

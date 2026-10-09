@@ -24,9 +24,9 @@ fun autoDiscover(dir: String) = file(dir).listFiles()
 autoDiscover("exercises")   // learner-facing exercises (e.g. write-tests)
 autoDiscover("test-suites") // agent-generated test suites (runAgent -Pmode=tests)
 autoDiscover("hardened")    // agent-hardened suites (runAgent -Pmode=verify-harden)
-autoDiscover("mutants")     // mutation testing: :core with one injected defect (11.2, generateMutants)
-autoDiscover("variants")    // conformance check: :core rewritten without changing what it decides (11.2 advanced)
-autoDiscover("attacks")     // adversary: implementations that try to pass the suite and still be wrong (11.2 advanced)
+autoDiscover("mutants")     // mutation testing: :core with one injected defect (test-writing exercise, generateMutants)
+autoDiscover("variants")    // conformance check: :core rewritten without changing what it decides (test-writing exercise, advanced tier)
+autoDiscover("attacks")     // adversary: implementations that try to pass the suite and still be wrong (test-writing exercise, advanced tier)
 
 // Implementations an agent wrote in a sandbox and `prepareImplementation` collected, one module per
 // (agent, specification). These exist so two readings of the same spec can be compared; they hold no

@@ -19,7 +19,7 @@ import javax.inject.Inject
  *
  * Getting the same answer five times doesn't mean the answer is right. `runAgent` uses
  * temperature 0, so repeated answers are expected. This task checks accuracy instead:
- * it compares the hand-written `fixtures/11.4/key.json` with the results saved by
+ * it compares the hand-written `fixtures/write-spec/key.json` with the results saved by
  * `runAgent -Pmode=spec-extract` in `extractions/<agent>/`.
  *
  * It looks for two kinds of mistakes:

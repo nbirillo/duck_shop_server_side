@@ -1,4 +1,4 @@
-# Exercise 11.4 — Property Catalog and Answer Key
+# The spec-writing exercise — Property Catalog and Answer Key
 
 These notes are for teachers only.
 This guide explains how we check the claims made by students' specifications, 
@@ -6,7 +6,7 @@ how we measure the accuracy of the AI claim extractor, and how to prepare the ma
 
 ## First, two things that are easy to confuse
 
-Exercise 11.4 uses two separate artifacts.
+The spec-writing exercise uses two separate artifacts.
 
 **1. The property catalog**
 
@@ -18,7 +18,7 @@ We run these properties against the reference implementation and every mutant.
 
 **2. The answer key**
 
-`fixtures/11.4/key.json`
+`fixtures/write-spec/key.json`
 
 This is a hand-written record of which claims each example specification actually makes.
 We use it to measure whether the AI claim extractor reads specifications correctly.
@@ -183,7 +183,7 @@ The repository is public, and that's intentional.
 Someone studying independently can choose to read the teacher grading build. At that point, the exercise depends on their willingness to work through it honestly.
 But when you're teaching a group, you control which materials you hand out.
 
-**When you distribute `fixtures/11.4/`, rename the specification files.**
+**When you distribute `fixtures/write-spec/`, rename the specification files.**
 The original filenames reveal which AI model wrote each specification.
 That matters because students are supposed to compare the texts without knowing their authors.
 
@@ -197,17 +197,17 @@ For example:
 ```bash
 mkdir -p handout
 
-cp fixtures/11.4/written/claude-code.md \
+cp fixtures/write-spec/written/claude-code.md \
    handout/A.md
 
-cp fixtures/11.4/written/ollama-qwen2.5-coder-1.5b.md \
+cp fixtures/write-spec/written/ollama-qwen2.5-coder-1.5b.md \
    handout/B.md
 
-cp fixtures/11.4/written/ollama-qwen2.5-coder-32b.md \
+cp fixtures/write-spec/written/ollama-qwen2.5-coder-32b.md \
    handout/C.md
 ```
 
-These are the three specifications we used in the compression experiment, so the results in [`exercise-11.4-corpus-results.md`](exercise-11.4-corpus-results.md) correspond to this set.
+These are the three specifications we used in the compression experiment, so the results in [`write-spec-corpus-results.md`](write-spec-corpus-results.md) correspond to this set.
 You can choose other specifications too.
 Just make sure the set includes **one longer specification and two shorter ones**.
 Otherwise, there may be very little for students to combine or compress.
@@ -352,7 +352,7 @@ If you want to measure the extractor's accuracy, create a small reviewed dataset
 **1. Choose five or six specifications.**
 
 Include examples of different quality levels.
-You can reuse the specifications in `fixtures/11.4/` or create your own.
+You can reuse the specifications in `fixtures/write-spec/` or create your own.
 
 **2. Read every specification against every claim.**
 
@@ -394,7 +394,7 @@ You can show it during the debrief if that helps your group understand the diffe
 But **show it only after students have written their own specifications**.
 Once the reference is visible, the exercise changes.
 Instead of deciding what the business description means, students can simply copy the decisions we've already made.
-And that's not the skill exercise 11.4 is designed to teach.
+And that's not the skill the spec-writing exercise is designed to teach.
 
 ---
 

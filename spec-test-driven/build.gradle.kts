@@ -8,7 +8,7 @@ plugins {
     id("duck-shop.spec")
 }
 
-// Exercise 11.2 feedback, kept under its original name: the hand-written practice-bugs/ copies were
+// The test-writing exercise feedback, kept under its original name: the hand-written practice-bugs/ copies were
 // replaced by generated mutants (one engine instead of two), and `verifyMutants` is the report.
 tasks.register("practiceCatch") {
     group = "duck-shop"

@@ -1,4 +1,4 @@
-# Running a Frontier Agent as the Implementer (Exercise 11.4)
+# Running a Frontier Agent as the Implementer (The spec-writing exercise)
 
 These notes are for teachers only.
 This guide explains how to ask a strong AI agent to implement `priceFor` from a specification, then compare its result with implementations produced by other agents.
@@ -16,7 +16,7 @@ And that's exactly what we observed.
 **One specification of just 397 words went from 7/8 to 8/8 correct behaviors when a stronger agent implemented it.**
 The resulting implementation also matched the reference on **all 4,021 probed inputs**.
 So the differences we saw with the mid-sized model didn't necessarily survive when we used a stronger reader.
-This is why exercise 11.4 doesn't rely only on whether an implementation matches our reference.
+This is why the spec-writing exercise doesn't rely only on whether an implementation matches our reference.
 
 **We also compare what two different agents produce from the same specification.**
 That helps us see whether the specification communicates its decisions clearly or whether the agent is filling in missing information on its own.
@@ -261,7 +261,7 @@ The implementation looked good partly because the agent supplied missing decisio
 We call this **faithful by vacuity**: the implementation can appear faithful because the specification says too little to constrain it.
 Neither score describes the quality of a specification by itself.
 
-For the complete comparison and measured results, see [`exercise-11.4-corpus-results.md`](exercise-11.4-corpus-results.md).
+For the complete comparison and measured results, see [`write-spec-corpus-results.md`](write-spec-corpus-results.md).
 
 ---
 
@@ -276,4 +276,4 @@ That's why we need both kinds of evidence:
 - Does the specification explicitly rule out incorrect behavior?
 - Do different agents interpret and implement it consistently?
 
-The goal of exercise 11.4 is to teach students to write specifications that communicate decisions clearly enough that the result doesn't depend on which agent happens to read them.
+The goal of the spec-writing exercise is to teach students to write specifications that communicate decisions clearly enough that the result doesn't depend on which agent happens to read them.

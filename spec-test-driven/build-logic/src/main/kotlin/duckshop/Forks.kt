@@ -7,7 +7,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 /**
- * The fork-discrimination engine for the 11.6 capstone — the fourth direction of the same idea, and
+ * The fork-discrimination engine for the capstone — the fourth direction of the same idea, and
  * the one the capstone is actually graded on.
  *
  * ### Why it had to exist

@@ -3,11 +3,11 @@ package org.jetbrains.kotlin.course.duck.shop.pricing
 import org.jetbrains.kotlin.course.duck.shop.admission.Duck
 
 /**
- * TEACHER-ONLY reference implementation of the 11.4 feature. It lives in the grading build, outside
+ * TEACHER-ONLY reference implementation of the spec-writing feature. It lives in the grading build, outside
  * the student folder, because a learner who can read this does not have to specify anything.
  *
  * Every decision below is one the business brief leaves open. They are ours, not the only defensible
- * ones, and each is written down in `teacher/exercise-11.4-answer-key.md` with the reasoning:
+ * ones, and each is written down in `teacher/write-spec-answer-key.md` with the reasoning:
  *
  *  1. Rules **compound** — each sees the price left by the ones before it, not the shelf price.
  *  2. A percentage takes a **rounded-down discount**, which is not the same function as keeping a
@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.course.duck.shop.admission.Duck
  */
 fun priceFor(duck: Duck, rule: DiscountRule): Int = apply(duck, rule, duck.price)
 
-/** The flat-list form the basic tier of 11.4 specifies: the rules run one after another. */
+/** The flat-list form the basic tier of the spec-writing exercise specifies: the rules run one after another. */
 fun priceFor(duck: Duck, rules: List<DiscountRule>): Int =
     rules.fold(duck.price) { price, rule -> apply(duck, rule, price) }
 

@@ -1,4 +1,4 @@
-# Exercise 11.4 — Measuring the Specification Corpus Four Ways
+# The spec-writing exercise — Measuring the Specification Corpus Four Ways
 
 These notes are for teachers only.
 We collected **13 specifications of the same pricing feature**, written by six AI models from the same business brief.
@@ -107,7 +107,7 @@ And it still didn't communicate the general rule as effectively as one sentence 
 We held the reader constant: the same 32b implementer handled both specifications.
 It overflowed when given the example-only version and avoided overflow when given the explicit requirement.
 So the difference came from **how the specification was written**, not from changing the model.
-This connects directly to the examples-versus-properties lesson in exercise 11.2.
+This connects directly to the examples-versus-properties lesson in the test-writing exercise.
 An example tells us what should happen for one input.
 A general requirement tells us what must happen across a whole class of inputs.
 
@@ -313,7 +313,7 @@ Run these commands from `spec-test-driven-grading/`.
 ### Layer 1 — Check the specification deterministically
 
 ```bash
-./gradlew verifySpec -Pspec=fixtures/11.4/written
+./gradlew verifySpec -Pspec=fixtures/write-spec/written
 ```
 
 ### Layer 2 — Measure claim-extraction accuracy against the key

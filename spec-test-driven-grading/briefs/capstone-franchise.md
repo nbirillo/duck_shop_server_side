@@ -67,7 +67,7 @@ Two questions, in this order, and the same procedure that saved 11.4 and would h
 Also to check before committing: that a suite of the key corner cases is **passable** by a weak agent,
 or the exercise is unwinnable.
 
-`runAgent -Pmode=spec -Pbrief=briefs/11.6-franchise.md` reads the business text from this file.
+`runAgent -Pmode=spec -Pbrief=briefs/capstone-franchise.md` reads the business text from this file.
 
 ---
 
