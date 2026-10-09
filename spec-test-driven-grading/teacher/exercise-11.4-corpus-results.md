@@ -1,154 +1,389 @@
-# 11.4 — the corpus, measured four ways
+# Exercise 11.4 — Measuring the Specification Corpus Four Ways
 
-Teacher-only. Thirteen specifications of the same feature, written by six models from the same brief,
-put through every check the module has. This is the evidence behind the slides; the numbers here are
-reproducible from the repository, not quoted from memory.
+These notes are for teachers only.
+We collected **13 specifications of the same pricing feature**, written by six AI models from the same business brief.
+Then we evaluated them using every measurement available in this module.
+This document explains the results, what they tell us, and where our first interpretations turned out to be wrong.
+These are the measurements behind the course slides. The numbers come from reproducible runs in the repository, not from memory.
 
-## The four axes, and why no single one is enough
+## 1. Why do we need four measurements?
 
-| axis | question it answers | what it cannot see |
-| --- | --- | --- |
-| **mutants killed** | how much does the text *pin*? | nothing about whether the text is *right* |
-| **agreement with the reference** | did an implementer get it *wrong*? | thinness — it collapses as the implementer gets stronger |
-| **cases left open** (two readers) | how much did the text leave to *chance*? | whether that was on purpose; and it inherits the weaker reader's mistakes |
-| **cases left open** (one reader twice) | a lower bound on ambiguity | almost everything — see below |
+A specification can look strong under one measurement and weak under another.
+That's why we don't rely on a single score.
 
-## The table
+| Measurement                            | What it tells us                                                                   | What it cannot tell us                                                                         |
+|----------------------------------------|------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| **Mutants killed**                     | How much incorrect behavior does the specification explicitly rule out?            | Whether the specification's requirements are actually correct.                                 |
+| **Agreement with the reference**       | Did an agent implement the specification in a way that differs from our reference? | Whether the specification is incomplete. A strong agent may fill in missing details correctly. |
+| **Open cases — two different readers** | How often do two agents make different decisions from the same specification?      | Whether those differences are intentional. Results can also be distorted by a weak reader.     |
+| **Open cases — the same reader twice** | Can two independent runs of one model produce different behavior?                  | Most ambiguity. Agreement between two runs is especially weak evidence.                        |
 
-Basic tier: 6 mutants are reachable (`BestOf` and `OnlyIf` are not in that brief), and 8 properties
-are in tier. Advanced tier: 8 and 10.
+Each measurement answers a different question.
+**The useful picture comes from reading them together.**
 
-| specification | words | mutants killed | vs reference (32b) | vs reference (frontier) | open, frontier vs 32b |
-| --- | --- | --- | --- | --- | --- |
-| `written/claude-code` | 2670 | **6/6** | 8/8 | **8/8** | **0** / 4021 |
-| `compressed/claude-code` | 1312 | 6/6 | 8/8 | 8/8 | **0** / 4021 |
-| `compressed/ollama-qwen2.5-coder-32b` | 639 | 6/6 | 7/8 | 8/8 | **300** / 4021 |
-| `written/ollama-qwen2.5-coder-32b` | 487 | 4/6 | 6/8 | 6/8 | 276 / 4021 |
-| `written/ollama-qwen2.5-coder-7b` | 247 | 3/6 | 6/8 | — | — |
-| `written/ollama-llama3.2-3b` | 304 | 3/6 | 6/8 | — | — |
-| `written/ollama-qwen2.5-coder-1.5b` | 397 | **2/6** | 7/8 | **8/8** | **674** / 4021 * |
-| `written/ollama-qwen2.5-coder-14b` | 648 | 2/6 | 5/8 | 5/8 | 504 / 4021 |
-| `compressed/*` (the other four) | 746–2644 | 6/6 | 8/8 | — | — |
-| `advanced/ollama-qwen2.5-coder-32b` | 512 | 6/8 | 9/10 | — | — |
+---
 
-\* measured against 32b as the second reader, like the rest of that column.
+## 2. The corpus results
 
-Blank cells are unrun, not zero. The frontier column needed a hand-driven session per specification,
-so it covers the six that answer a question rather than all thirteen.
+The basic tier has **6 reachable mutants** and **8 properties**.
+`BestOf` and `OnlyIf` aren't included in the basic brief, so they don't count toward its results.
+The advanced tier has **8 mutants** and **10 properties**.
 
-## What the table is for
+| Specification                         |     Words | Mutants killed | Reference agreement: 32b | Reference agreement: frontier | Open cases: frontier vs. 32b |
+|---------------------------------------|----------:|---------------:|-------------------------:|------------------------------:|-----------------------------:|
+| `written/claude-code`                 |     2,670 |        **6/6** |                      8/8 |                       **8/8** |                **0 / 4,021** |
+| `compressed/claude-code`              |     1,312 |            6/6 |                      8/8 |                           8/8 |                **0 / 4,021** |
+| `compressed/ollama-qwen2.5-coder-32b` |       639 |            6/6 |                      7/8 |                           8/8 |              **300 / 4,021** |
+| `written/ollama-qwen2.5-coder-32b`    |       487 |            4/6 |                      6/8 |                           6/8 |                  276 / 4,021 |
+| `written/ollama-qwen2.5-coder-7b`     |       247 |            3/6 |                      6/8 |                             — |                            — |
+| `written/ollama-llama3.2-3b`          |       304 |            3/6 |                      6/8 |                             — |                            — |
+| `written/ollama-qwen2.5-coder-1.5b`   |       397 |        **2/6** |                      7/8 |                       **8/8** |              **674 / 4,021** |
+| `written/ollama-qwen2.5-coder-14b`    |       648 |            2/6 |                      5/8 |                           5/8 |                  504 / 4,021 |
+| `compressed/*` — other four           | 746–2,644 |            6/6 |                      8/8 |                             — |                            — |
+| `advanced/ollama-qwen2.5-coder-32b`   |       512 |            6/8 |                     9/10 |                             — |                            — |
 
-**Read the first and the last column together.** `written/ollama-qwen2.5-coder-1.5b` scores **8/8**
-against the reference under a frontier implementer — byte-identical to it on all 4021 probed inputs —
-and its claims kill **2 of 6** mutants while leaving **674** cases open. It is the corpus's proof that
-one number cannot describe a specification: by the middle column it is as good as the best text we
-have, and it is not.
+The `1.5b` open-case result uses the 32b model as the second reader, just like the rest of that column.
+**A dash means we haven't run that comparison. It doesn't mean zero.**
+Each frontier implementation required a separate interactive session, so we selected the six comparisons that would answer specific questions rather than running all thirteen.
 
-**The two Claude columns disagree exactly once**, on `compressed/ollama-qwen2.5-coder-32b`: 7/8 under
-32b, 8/8 under the frontier. That single cell is what "a stronger implementer hides a weaker
-specification" looks like in practice.
+### How should we read this table?
 
-## Four findings, and two retractions
+Start by comparing **mutants killed** with **open cases**.
+The `1.5b` specification is the clearest example of why that matters.
 
-Each of these is measured. The retractions are here on purpose: they are the module's own thesis
-applied to us, and they belong in the materials next to the findings.
+When a frontier agent implements it, the result gets **8/8 properties correct** and matches the reference byte-for-byte on all **4,021 probed inputs**.
+By that measurement, it looks just as good as the strongest specification in the corpus.
 
-### 1. A worked example does not transmit a requirement
+But its claims kill only **2 of 6 mutants**, and two different readers disagree on **674 inputs**.
+The specification is weak. The frontier implementer simply made good choices where the text left things open.
+**A correct implementation doesn't prove that the specification communicated enough.**
 
-Two compressions of the *same* source, both keeping all eight in-tier claims, both scoring 8/8:
+There's another revealing result.
+For `compressed/ollama-qwen2.5-coder-32b`, the 32b implementer scored **7/8**, while the frontier implementer scored **8/8**.
+That is the only difference between those two reference-agreement columns.
+It's a concrete example of a stronger agent making a weaker specification look more complete.
 
-- Claude's kept the **requirement** — *"an implementation multiplying `price * percent` in 32-bit
-  arithmetic overflows here and is wrong; a `Long` intermediate is required"* → **0 open**.
-- 32b's kept only the **expected value** — *"E14 — the largest shelf price: `Int.MAX_VALUE,
-  [Percentage(10)] → 1932735283`"* → **300 open**, every one at the top of the `Int` range.
+---
 
-The example was not a hint; it was the exact answer for that input. It still did not transmit, while
-one sentence naming the arithmetic did. The reader is held constant across both — 32b overflows on
-one text and not on the other — so this is about the wording.
+## 3. Finding 1 — A worked example doesn't always communicate a requirement
 
-Same shape as the properties-versus-examples point in 11.2, from the other side: an example cannot
-say *"for every input"*, and it cannot say *"do it differently"* either.
+We compared two compressed versions of the same source specification.
+Both retained all eight in-tier claims.
+Both scored **8/8** on reference agreement.
+But their implementations behaved differently on the differential probe.
 
-### 2. A false claim transmits perfectly, and manufactures new ambiguity downstream
+### Claude's compression kept the general requirement
 
-`written/ollama-qwen2.5-coder-14b` states two things that are false. Both readers read them the same
-way:
+It explicitly said that multiplying `price * percent` using 32-bit arithmetic can overflow and is incorrect.
+It required a `Long` intermediate.
 
-```
-price=100, [BigSpenderBonus(100, 20)]  →  both 100, reference 80   (its §3: a price exactly at the
-                                                                    threshold does not fire)
-price=100, [Percentage(150)]           →  both -50, reference 0    (its §3 shows -50 → -60)
-```
+Result:
+**0 open cases out of 4,021.**
 
-1008 of 4021 cases, agreed between readers and wrong. **Being wrong produces no confusion anywhere to
-notice** — that is worse than being vague, and it is the case a learner will not expect.
+### The 32b compression kept only an example
 
-Then the part nobody planned. Its 504 open cases are almost all an off-by-one on **negative** prices
-(−1623/−1624, −125/−126). The specification says *"rounding down"* and, separately, permits negative
-prices. Neither statement is ambiguous alone; together they create territory its author never saw —
-what "down" means below zero — and two readers split on it.
+It included this expected result:
 
-**A wrong decision does not sit still. It manufactures undecided ground further down.** The author of
-that text did not make a rounding mistake; they allowed a minus, and the rounding followed.
+```text
+E14 — the largest shelf price
 
-### 3. A guarantee stated per rule leaves a hole where you forgot to repeat it
-
-`written/ollama-qwen2.5-coder-32b`, §2, lines 12–14 — the floor is attached to two rules of three:
-
-```
-- A percentage rule reduces the price by `percent` percent of the original price, rounding down…
-- An amount off rule directly subtracts `amount`…, with the result not going below zero.
-- A big-spender bonus rule applies an additional discount…, with the result not going below zero.
+Int.MAX_VALUE, [Percentage(10)] → 1932735283
 ```
 
-The two readers split precisely there: `Percentage(150)` on 100 gives 0 or −50, 276 cases. The
-reference states the floor **once, for the function** (B9) and has no such hole.
+That's the exact correct answer for that input.
+But the specification didn't explicitly require wider arithmetic.
 
-### 4. The frontier implementer is faithful, not good
+Result:
+**300 open cases out of 4,021.**
 
-It added `Long` arithmetic where the text asked for it and overflowed where the text did not — on
-`written/ollama-qwen2.5-coder-32b` it returned `Int.MAX_VALUE` unchanged, agreeing with 32b and
-differing from the reference. It is not a safety net. That is what makes it a usable instrument for
-measuring a text.
+Every disagreement was near the upper end of the `Int` range.
 
-### Retracted: "same agent twice" as the measurement
+### Why is this important?
 
-On `written/ollama-qwen2.5-coder-1.5b`: two independent frontier sessions gave **0 open of 4021**,
-the same clean zero the best specification in the corpus gets. The cross-agent pair gave 674. The two
-sessions wrote genuinely different code and produced identical behaviour.
+The example wasn't vague.
+It gave the correct answer for precisely the kind of input where overflow matters.
+And it still didn't communicate the general rule as effectively as one sentence about using `Long`.
 
-"Left open" is relative to a **population of readers**, and two sessions of one model are one reader
-twice — both reached for `coerceAtLeast(0)` and for `Long` although the text mentions neither.
+We held the reader constant: the same 32b implementer handled both specifications.
+It overflowed when given the example-only version and avoided overflow when given the explicit requirement.
+So the difference came from **how the specification was written**, not from changing the model.
+This connects directly to the examples-versus-properties lesson in exercise 11.2.
+An example tells us what should happen for one input.
+A general requirement tells us what must happen across a whole class of inputs.
 
-So **agreement between two runs of one agent proves nothing**; disagreement still proves ambiguity.
-It is a lower bound and never a clean bill of health, and `verifyDivergence` says so when it detects
-that pairing.
+---
 
-### Retracted: "compression narrows the set of readers"
+## 4. Finding 2 — A false requirement can be understood perfectly
 
-With `qwen2.5-coder:14b` as the second reader, Claude's compression showed 391 open cases against 0
-for the long version — which looked like a real result. Re-measured with a frontier second reader:
-**0**. The 391 were the weak reader's incapacity; it is the same model that elsewhere in this corpus
-imports `DiscountRule` from the wrong package and does not compile at all.
+The specification `written/ollama-qwen2.5-coder-14b` contains two incorrect requirements.
+Both implementing agents followed them in the same way.
 
-The rule is not "use two readers" but **use two readers competent at the task**. This number is only
-as trustworthy as the weaker of the pair.
+<text weight="medium">Example A — Bonus threshold</text>
 
-## Reproducing it
+```text
+Input:
+price = 100
+[BigSpenderBonus(100, 20)]
 
-From `spec-test-driven-grading/`:
-
-```
-./gradlew verifySpec -Pspec=fixtures/11.4/written                 # layer 1, deterministic
-./gradlew scoreExtraction -Pagent=corpus32b                       # layer 2 against the key
-./gradlew pricingPropertyMatrix                                   # layer 3, property → mutants
-./gradlew verifyClaims -Pclaims=<ids>                             # what a claim set is worth
-./gradlew verifyImplementations -Pagent=<run> --continue           # vs the reference, tier-aware
-./gradlew verifyDivergence -PagentA=<run> -PagentB=<run>           # what the text left open
+Both readers: 100
+Reference:     80
 ```
 
-An implementation that does not compile is a **result**, and three of `impl14b`'s thirteen do not —
-they are reported as DID NOT BUILD OR NEVER RAN alongside the nine that scored. That used to require
-`--continue` and did not actually work even with it; the report is reachable now either way (see
-`../../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts`). The flag is still worth
-typing — it keeps the other modules going — but nothing depends on remembering it.
+The specification says a price exactly at the threshold doesn't qualify for the bonus.
+Our reference says it does.
+
+<text weight="medium">Example B — Negative prices</text>
+
+```text
+Input:
+price = 100
+[Percentage(150)]
+
+Both readers: -50
+Reference:       0
+```
+
+The specification allows negative results. Its section 3 even contains an example that continues from −50 to −60.
+Our reference clamps the result at zero.
+
+### What happened?
+
+On **1,008 of the 4,021 inputs**, the two readers agreed with each other but disagreed with the reference.
+That's an important failure mode.
+**A specification can be completely clear and completely wrong.**
+Two agents agreeing doesn't prove that the requirement is correct.
+They may simply be following the same incorrect instruction.
+
+### Then the false requirement created another problem
+
+The same specification had **504 open cases** where the two readers disagreed.
+
+Almost all of them involved rounding negative prices.
+The differences were usually just one unit:
+
+- −1623 versus −1624.
+- −125 versus −126.
+
+Why?
+The specification said to **round down**.
+It also allowed prices to become negative.
+Neither statement is necessarily ambiguous by itself.
+
+But together they raise a question the author never addressed: what exactly does “round down” mean when the intermediate result is below zero?
+The two readers made different choices.
+This is a subtle but valuable lesson.
+
+**One incorrect decision can create new unanswered questions elsewhere in the specification.**
+The author didn't simply make a rounding error.
+They allowed negative prices, and that choice exposed additional rounding behavior they hadn't considered.
+
+---
+
+## 5. Finding 3 — A guarantee stated for individual rules may leave a gap
+
+Look at `written/ollama-qwen2.5-coder-32b`, section 2, lines 12–14.
+
+It describes three discount rules.
+In simplified form:
+
+```text
+Percentage:
+Reduce the original price by percent, rounding down.
+
+AmountOff:
+Subtract the amount, without going below zero.
+
+BigSpenderBonus:
+Apply another discount, without going below zero.
+```
+
+Notice the difference.
+The zero-price floor is explicitly stated for `AmountOff` and `BigSpenderBonus`.
+But it isn't stated for `Percentage`.
+
+What should happen if the percentage is greater than 100?
+For example:
+
+```text
+price = 100
+[Percentage(150)]
+```
+
+One reader returned **0**.
+The other returned **−50**.
+That gap accounted for **276 disagreements**.
+
+The reference specification avoids the problem by stating the zero-price floor **once, as a guarantee of the whole `priceFor` function**.
+That's property B9.
+
+### The lesson
+
+When a guarantee applies to every rule, it's often safer to state it at the function level.
+Otherwise, readers may assume that a guarantee mentioned for two rule types doesn't apply to the third.
+**Where you place a requirement changes how it can be interpreted.**
+
+---
+
+## 6. Finding 4 — The frontier implementer followed the text, not our intentions
+
+The frontier model was strong, but it wasn't a magical safety net.
+When a specification required `Long` arithmetic, it used `Long`.
+When the specification didn't require it, the model could still produce overflow behavior.
+
+For `written/ollama-qwen2.5-coder-32b`, it returned `Int.MAX_VALUE` unchanged on an overflow-sensitive case.
+That matched the 32b implementer but differed from the reference.
+This is useful for the experiment.
+
+We don't want an agent that silently corrects every weak specification according to what it thinks we intended.
+We want to observe what behavior the specification actually communicates.
+**The frontier model's value here is that it can follow the text faithfully, including when the text is incomplete or wrong.**
+
+---
+
+## 7. Retraction 1 — Two runs of the same model are not enough
+
+We originally considered measuring ambiguity by running the same frontier model twice.
+That sounded reasonable: two independent sessions might make different choices if the specification was unclear.
+But the results showed a serious limitation.
+
+For `written/ollama-qwen2.5-coder-1.5b`:
+
+| Comparison                                |      Open cases |
+|-------------------------------------------|----------------:|
+| Frontier session A vs. frontier session B |   **0 / 4,021** |
+| Frontier vs. 32b                          | **674 / 4,021** |
+
+The two frontier sessions produced genuinely different code.
+But their behavior was identical on all probed inputs.
+Both independently chose `coerceAtLeast(0)` and `Long` arithmetic, even though the specification didn't mention either.
+They filled the same gaps with the same defaults.
+
+### What did we get wrong?
+
+We treated two independent sessions as if they were two independent readers.
+They weren't.
+They were two runs of the same model, with similar training and similar preferences.
+
+The important concept is that **ambiguity is relative to a population of readers**.
+If two runs disagree, that proves the specification allows different interpretations.
+But if they agree, we haven't established that the text is unambiguous.
+We may simply have sampled the same model's preferred interpretation twice.
+
+So we're retracting the idea that same-model agreement can establish completeness.
+`verifyDivergence` now warns when it detects that pairing.
+**Disagreement is evidence of ambiguity. Agreement is not proof of clarity.**
+
+---
+
+## 8. Retraction 2 — Compression didn't necessarily increase ambiguity
+
+We also thought we'd found evidence that compression made a strong specification less precise.
+Using `qwen2.5-coder:14b` as the second reader, we measured:
+
+- **0 open cases** for Claude's long specification.
+- **391 open cases** for Claude's compressed specification.
+
+That looked like a clear result.
+But when we repeated the comparison with a frontier second reader, the compressed specification had:
+**0 open cases.**
+
+The original 391 disagreements came from the weaker reader's mistakes, not from a demonstrated loss of clarity in the compressed text.
+This was the same `14b` model that, elsewhere in the corpus, imported `DiscountRule` from the wrong package and failed to compile.
+
+### What did we learn?
+
+It's not enough to use two different readers.
+**Both readers need to be competent at the task.**
+
+Otherwise, the divergence score mixes two things:
+
+- Genuine ambiguity in the specification.
+- Errors caused by an implementer that struggles with the task.
+
+That makes the number difficult to interpret.
+So we're retracting the conclusion that this compression increased ambiguity.
+The result didn't survive a stronger comparison.
+
+---
+
+## 9. How to reproduce the measurements
+
+Run these commands from `spec-test-driven-grading/`.
+
+### Layer 1 — Check the specification deterministically
+
+```bash
+./gradlew verifySpec -Pspec=fixtures/11.4/written
+```
+
+### Layer 2 — Measure claim-extraction accuracy against the key
+
+```bash
+./gradlew scoreExtraction -Pagent=corpus32b
+```
+
+### Layer 3 — See which properties kill which mutants
+
+```bash
+./gradlew pricingPropertyMatrix
+```
+
+### Check the value of a declared claim set
+
+```bash
+./gradlew verifyClaims -Pclaims=<ids>
+```
+
+### Compare implementations with the reference
+
+```bash
+./gradlew verifyImplementations -Pagent=<run> --continue
+```
+
+This comparison respects the basic and advanced tiers.
+
+### Compare two implementations of the same specification
+
+```bash
+./gradlew verifyDivergence -PagentA=<run> -PagentB=<run>
+```
+
+This measures where the two implementations behave differently.
+Remember that it measures **disagreement between readers**, not correctness by itself.
+
+### What if an implementation doesn't compile?
+
+That's a result too.
+Three of the thirteen implementations produced by `impl14b` failed to compile.
+
+The report marks them:
+
+`DID NOT BUILD OR NEVER RAN`
+
+The other nine implementations still receive their scores.
+Earlier, a compilation failure prevented the report from being produced, even with `--continue`.
+That has been fixed.
+
+The report is now reachable either way through:
+
+`../../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts`
+
+It's still worth using `--continue`, because it lets other Gradle modules keep running.
+But the report no longer depends on remembering that flag.
+
+---
+
+## The main takeaway
+
+The corpus gives us four different views of specification quality.
+A specification may:
+
+- Kill many mutants but state incorrect requirements.
+- Produce an implementation that matches the reference because a strong agent filled in missing details.
+- Produce different implementations because it leaves decisions open.
+- Produce identical implementations because two agents share the same assumptions, not because the text is complete.
+
+And our own calibration produced two useful corrections.
+We learned that two runs of the same model aren't enough to establish clarity, and that a weak second reader can make a good compression look worse than it is.
+
+**The lesson is not to find one perfect score. It's to understand what each measurement proves, what it misses, and whether the conclusion survives a better experiment.**

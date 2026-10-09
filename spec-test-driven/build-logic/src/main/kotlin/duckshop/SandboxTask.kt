@@ -8,27 +8,20 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * Lays out a folder for the implement-from-spec step (11.4) containing the data types, the
- * learner's specification, and nothing else. The learner then opens their agent **in that folder**
- * and works the way they always do — files, iteration, compiling — with no special protocol.
+ * Creates a sandbox for exercise 11.4 with the data types, the student's specification,
+ * and a starter implementation. Students open their agent in this folder and work normally.
  *
- * ### Why this exists rather than a curated prompt
+ * ### Why use a folder instead of a prompt?
  *
- * The first version of this step pasted a hand-assembled prompt into a chat window with no file
- * access. That measures a situation which never occurs: a learner opens an agent inside the project
- * and says "implement this from my spec". Measuring the sterile case answers a question nobody asked.
+ * A prompt pasted into a chat without file access is not how students usually work.
+ * This sandbox lets the agent read files, edit code, and compile it.
  *
- * ### What it can and cannot guarantee
+ * ### What stays out of reach?
  *
- * The reference and the property catalog are in a different build, so they are genuinely out of
- * reach. **The brief is not.** It ships with the exercise, and a learner who has the repository has
- * it; no directory layout changes that, and neither would a temporary folder outside the checkout,
- * because an agent can walk upwards.
- *
- * So this is honest about what it is: the sandbox makes the correct path the **default** one, and
- * the exercise says once, plainly, that pointing the agent at the brief means the run measures the
- * brief instead of your specification — which costs you the only feedback the step provides. Same
- * stance as revealing the reference: available, discouraged, and explained rather than policed.
+ * The reference implementation and property catalog are in another build. The original
+ * business brief is still in the repository, though, and the agent could find it.
+ * The sandbox makes working from the specification the natural choice, not an enforced one.
+ * If the agent reads the brief, this exercise no longer tests what the specification says.
  *
  * Params: `-Pspec=<SPEC.md>`, `[-Pname=<folder>]`, `[-Ptier=basic|advanced]`.
  */
@@ -52,23 +45,19 @@ abstract class SandboxTask @Inject constructor(
         val pricing = dir.resolve("src/main/kotlin/$PKG/pricing/Pricing.kt")
         val force = providers.gradleProperty("force").isPresent
 
-        // Refusing to clobber, because the previous version did. This folder is gitignored — it is
-        // derived — so an agent's work here has no other copy, and re-running with the same -Pname
-        // used to delete it without a word.
+        // Do not overwrite an existing implementation without -Pforce.
+        // The sandbox is gitignored, so it may be the only copy of the agent's work.
         if (pricing.isFile && pricing.readText() != stub() && !force) {
             error(
                 "sandbox/$name already holds an implementation. Nothing here is under version " +
-                    "control, so this task will not delete it.\n" +
-                    "  keep it   — use a different -Pname for the next attempt\n" +
-                    "  drop it   — add -Pforce, or delete sandbox/$name yourself",
+                        "control, so this task will not delete it.\n" +
+                        "  keep it   — use a different -Pname for the next attempt\n" +
+                        "  drop it   — add -Pforce, or delete sandbox/$name yourself",
             )
         }
 
-        // The copy of the specification is the one an agent reads, and it is the one a learner is
-        // looking at while they talk to it — so edits land in the wrong file and vanish on the next
-        // run. Say so rather than discovering it later.
-        // An agent that cannot satisfy a property sometimes edits the property. In 11.2 that was the
-        // whole attack surface; here it is silent, because the copy is derived and nobody looks at it.
+        // Check whether the agent changed copied tests before replacing the sandbox.
+        // Such changes can hide failing properties; the originals must stay intact.
         val editedProperties = (dir.resolve("src/test/kotlin").takeIf { it.isDirectory }
             ?.walkTopDown()?.filter { it.extension == "kt" }?.filter { copy ->
                 val origin = root.resolve(
@@ -78,20 +67,19 @@ abstract class SandboxTask @Inject constructor(
             }?.toList().orEmpty())
         if (editedProperties.isNotEmpty()) {
             logger.warn("")
-            logger.warn("[sandbox] The properties in sandbox/$name were CHANGED:")
+            logger.warn("[sandbox] Some properties in sandbox/$name have changed:")
             editedProperties.forEach { logger.warn("[sandbox]   ${it.relativeTo(dir)}") }
-            logger.warn("[sandbox] If the agent did that, read it before anything else — a property")
-            logger.warn("[sandbox] edited to pass is the oldest trick there is, and it is exactly what")
-            logger.warn("[sandbox] exercise 11.2 was about. Your originals are untouched.")
+            logger.warn("[sandbox] Check these changes before continuing. The agent may have edited")
+            logger.warn("[sandbox] tests to make them pass. Your original files are unchanged.")
         }
 
         val copied = dir.resolve("SPEC.md")
         if (copied.isFile && copied.readText() != spec.readText()) {
             logger.warn("")
             logger.warn("[sandbox] sandbox/$name/SPEC.md differs from ${spec.relativeTo(root)}.")
-            logger.warn("[sandbox] The copy is DERIVED and about to be overwritten. If those edits")
-            logger.warn("[sandbox] were yours, put them in ${spec.relativeTo(root)} — that is the file")
-            logger.warn("[sandbox] you are graded on, and the only one under version control.")
+            logger.warn("[sandbox] This copy will be replaced. If you want to keep those edits,")
+            logger.warn("[sandbox] move them to ${spec.relativeTo(root)} first.")
+            logger.warn("[sandbox] The original is the file used for grading and tracked by git.")
         }
 
         dir.deleteRecursively()
@@ -103,34 +91,29 @@ abstract class SandboxTask @Inject constructor(
 
         val core = root.resolve("core/src/main/kotlin/$pkg")
         src.resolve("admission/Domain.kt").writeText(core.resolve("admission/Domain.kt").readText())
-        // AdmissionPolicy comes along because OnlyIf refers to it; the leaves do not, so the
-        // sandbox never becomes a second copy of exercise 11.2.
+        // Include AdmissionPolicy because OnlyIf needs it, without copying all of exercise 11.2.
         src.resolve("admission/AdmissionPolicy.kt")
             .writeText(core.resolve("admission/AdmissionPolicy.kt").readText())
         src.resolve("pricing/DiscountRule.kt")
             .writeText(withoutExerciseNotes(core.resolve("pricing/DiscountRule.kt").readText()))
         src.resolve("pricing/Pricing.kt").writeText(stub())
 
-        // The learner's OWN properties, if they wrote any. Ours never come here — they state the
-        // claims, so they would hand over what the reference decided — but a learner's own are theirs,
-        // and putting them in front of the agent is the point: the agent now has something to satisfy
-        // rather than only prose to interpret. That is the 11.2 loop, driven by their specification.
+        // Copy only the student's own properties, if any. Teacher properties would reveal
+        // expected behavior. Student properties give the agent runnable checks to work with.
         val ownProperties = root.resolve(
             providers.gradleProperty("properties").getOrElse("exercises/write-spec/properties"),
         )
         val propertyFiles = ownProperties.takeIf { it.isDirectory }
             ?.walkTopDown()?.filter { it.extension == "kt" }?.toList().orEmpty()
-        // Anything that is not Kotlin is silently unrunnable, and silence here is the worst outcome:
-        // a learner who wrote their properties as prose gets a green build and zero tests, and
-        // concludes the agent satisfied them.
+        // Warn about non-Kotlin files: prose cannot run as a test, even if the build passes.
         val notKotlin = ownProperties.takeIf { it.isDirectory }
             ?.walkTopDown()?.filter { it.isFile && it.extension != "kt" }?.toList().orEmpty()
         if (notKotlin.isNotEmpty()) {
             logger.warn("")
-            logger.warn("[sandbox] Not copied, because only Kotlin can be run:")
+            logger.warn("[sandbox] Skipped non-Kotlin files (they cannot run as tests):")
             notKotlin.forEach { logger.warn("[sandbox]   ${it.relativeTo(root)}") }
-            logger.warn("[sandbox] A property written as prose is a claim, not a check. Keep the prose")
-            logger.warn("[sandbox] in your specification; put the runnable version in a .kt file here.")
+            logger.warn("[sandbox] Keep written claims in your specification and put runnable")
+            logger.warn("[sandbox] checks in .kt files.")
         }
 
         propertyFiles.forEach { file ->
@@ -142,8 +125,7 @@ abstract class SandboxTask @Inject constructor(
         dir.resolve("SPEC.md").writeText(spec.readText())
         dir.resolve("README.md").writeText(readme(name))
         dir.resolve("build.gradle.kts").writeText(buildScript(propertyFiles.isNotEmpty()))
-        // Its OWN settings file, or Gradle walks up and adopts the student build's — and then the
-        // sandbox is a module of the very project it is supposed to be separate from.
+        // Give the sandbox its own settings file so Gradle treats it as a separate build.
         dir.resolve("settings.gradle.kts").writeText("rootProject.name = \"$name\"\n")
 
         logger.lifecycle("")
@@ -157,9 +139,7 @@ abstract class SandboxTask @Inject constructor(
     }
 
     /**
-     * Strips the KDoc from `DiscountRule.kt`. It says in as many words that defining this behaviour
-     * *is* exercise 11.4 and points at the tier structure — a straight answer key for any agent that
-     * opens the file. Declarations only.
+     * Removes exercise hints from `DiscountRule.kt` so the agent sees only declarations.
      */
     private fun withoutExerciseNotes(source: String): String =
         source.replace(Regex("""/\*\*[\s\S]*?\*/\s*""", RegexOption.MULTILINE), "")
@@ -231,9 +211,8 @@ abstract class SandboxTask @Inject constructor(
         """.trimIndent() + "\n"
 
     /**
-     * The sandbox build. It grows a test setup only when the learner brought properties of their own —
-     * with none, there is deliberately nothing to run here, so the step cannot turn into "make these
-     * pass" against a suite somebody else wrote.
+     * Adds test support only when the student supplied their own properties.
+     * Without them, the sandbox has no test suite.
      */
     private fun buildScript(hasProperties: Boolean): String = BUILD_SCRIPT + if (!hasProperties) "" else
         """

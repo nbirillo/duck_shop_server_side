@@ -1,48 +1,88 @@
-# Verify and harden an AI's tests
+# Verify and Improve AI-Generated Tests
 
-The admission-policy algebra (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`,
-`AllOf`, `AnyOf`, `Not`) is **given and correct** in `:core`. You are NOT implementing it.
+In this exercise, you'll work with tests written by an AI agent.
+The admission policies (`KotlinOnly`, `MaxBudget`, `RequiresAccessory`, `MinAccessories`, `AllOf`, `AnyOf`, `Not`) are already implemented in `:core`, and the implementation is correct.
+**You don't need to implement anything!**
+Instead, an AI agent has already written a test suite in `PolicyTests.kt`.
+**Your task is to check whether these tests are correct, find what's missing, and improve them.**
+There are three steps in this exercise, and **it's important to follow them in order!**
+In the last step, you'll get a report that helps you find missing tests. 
+But we want you to try finding these problems yourself first, without any hints.
 
-An AI wrote the test suite in `PolicyTests.kt`. Your job is to **verify and harden** it.
+## Step 1. Check if the tests are correct
 
-Do the steps in order. Step 3 gives you a checklist, and once you have seen a checklist it is very
-hard to think past it — so steps 1 and 2 have to happen first, without it.
+First, run the existing tests:
 
-1. **Make it truthful.** At least one test contradicts the real behaviour. Find it and fix it.
+```bash
+./gradlew :exercises:write-tests:test
+```
 
-   ```bash
-   ./gradlew :exercises:write-tests:test
-   ```
+At least one test is wrong: it expects behavior that doesn't match the actual implementation.
+Your first task is to **find the incorrect test and fix it**.
+Once all tests pass, you can move to the next step.
+But remember: **passing tests don't mean that the test suite is complete!**
+They only mean that the current tests don't contradict the implementation.
 
-   Green means no test contradicts the code. It does not mean the suite is complete.
+## Step 2. Find what's missing
 
-2. **Make it complete — on your own.** Add the cases the AI skipped, and pin down anything the
-   specification leaves open; deciding what the contract *should* be is part of the job. Do not run
-   the mutation testing from step 3 yet, and commit (or copy aside) the suite you end up with — you
-   will want to compare.
+Now it's time to improve the test suite yourself!
+Read the specification carefully and think about what the AI agent might have missed.
+Are all the policies covered? What about their combinations? Are there any edge cases that should be tested?
+You might also notice that the specification doesn't explain some behavior clearly. 
+In this exercise, you can make your own decisions about these cases and define how they should work.
+**The goal is to make the test suite as complete as possible without any additional tools or hints.**
+Don't run mutation testing yet! We'll do that in the next step.
+Before moving on, commit your changes or save a copy of your test suite. You'll want to compare your results later.
 
-3. **Only now, check it with mutation testing.** Your tests are run against copies of the algebra
-   that each contain one defect. Every defect your suite fails to notice is reported as a surviving
-   mutant.
+## Step 3. Check your tests with mutation testing
 
-   ```bash
-   ./gradlew verifyMutants --continue
-   ./gradlew verifyMutants -PmutantsStrict     # fails until every must-kill mutant is dead
-   ```
+Now let's see how good your test suite actually is!
+We'll use **mutation testing** to check whether your tests can catch bugs.
+The idea is simple: we take the correct implementation, create several copies, and introduce one bug into each copy.
+Then we run your tests against these modified implementations.
+If your tests catch the bug, great! If not, the mutant survives, which means your test suite might be missing something.
+Run:
 
-   Two things to keep in mind while you close the gaps:
+```bash
+./gradlew verifyMutants --continue
 
-   - Not every mutant is supposed to die. The report separates **must-kill** mutants from
-     **spec-dependent** ones, whose survival can be the right answer — decide, don't guess. See
-     [`../../mutants/README.md`](../../mutants/README.md).
-   - A clean report means "nothing the mutants know about is missing", not "the suite is complete".
-     The mutants are a sample of the ways an implementation can be wrong, not the definition of a
-     good suite. This is also why step 2 came first: it is worth noticing which gaps you found by
-     thinking about the algebra, and which ones only the report pointed at.
+./gradlew verifyMutants -PmutantsStrict
+```
+
+The first command runs the mutation checks and reports the results.
+The second command uses strict mode and will fail until all required mutants are caught.
+
+### A few important things to remember
+
+**Not every mutant needs to be caught!**
+The report separates mutants into two groups:
+
+- **Must-kill mutants:** These contain bugs that your tests should definitely catch.
+- **Spec-dependent mutants:** Whether these are bugs depends on how you interpret the specification.
+
+For the second group, you'll need to decide what behavior should be guaranteed.
+You can read more about this in the [Mutation Testing README](../../mutants/README.md).
+**Also, catching all mutants doesn't mean your test suite is perfect.**
+Mutation testing only checks the bugs we've included. There might still be other cases your tests don't cover.
+That's why we asked you to improve the tests yourself in step 2, before running mutation testing.
+
+Once you're done, compare your results:
+
+- Which missing tests did you find yourself?
+- Which problems did mutation testing help you discover?
+- Did the AI agent miss anything you didn't expect?
+
+The goal isn't just to get a green report, but to understand **how to check whether AI-generated tests are actually good enough**.
 
 ---
 
-Done, and it barely put up a fight? Your agent may simply be stronger than this task.
-[`README-advanced.md`](README-advanced.md) asks three harder questions — whether your suite forbids
-changes that were **allowed**, whether it could have said the same in **fewer** tests, and whether
-another agent can get past it **on purpose**.
+## Want an extra challenge?
+
+If this exercise felt too easy, try the [advanced version](README-advanced.md)!
+There, you'll explore three more questions:
+
+- Can your tests reject implementations that are actually correct?
+- Could you check the same behavior with fewer tests?
+- Can another AI agent intentionally find a way to pass your tests while breaking the specification?
+
+Good luck! 

@@ -1,47 +1,107 @@
-# 11.4 fixtures — every spec any agent has written for us
+# 11.4 Fixtures — Specifications Written by AI Agents
 
-**These are committed, unlike every other agent artifact in this repository.** The hardened suites,
-the generated solutions and the attacks are all git-ignored because anyone with Ollama can reproduce
-them. These cannot be: the frontier ones need an API key we do not have, and were produced by hand in
-a separate session. Losing them would cost us the only high-quality end of the range.
+This folder contains specifications written by different AI agents for exercise 11.4.
+**Unlike most other AI-generated files in this repository, these files are committed to Git.**
 
-They serve three purposes.
+Why?
+Most generated test suites, implementations, and attacks are git-ignored because we can easily reproduce them using Ollama.
+But some specifications here were written by frontier models in separate sessions. 
+Reproducing them would require API access we don't currently have.
+We don't want to lose those results, especially because they include some of the strongest specifications we've collected.
 
-**1. The handout for exercise 11.4b.** The compression task ("take these and produce one that is
-shorter and no weaker") needs a corpus spanning the range, and this is it. It also makes the exercise
-independent of which model the learner owns — a student with only a small local model still gets to
-work with a frontier spec, and a student with a frontier model still has to deal with a bad one.
-Hand out `written/` at 11.4b, **not before**: 11.4a is writing your own from the bare brief, and
-seeing these first would replace that with critiquing.
+## Why do we keep these files?
 
-**2. Benchmark fixtures for the checking machinery.** Layers 1 and 2 are to be benchmarked for
-*consistency* and *discrimination* — same spec, N runs, same verdict, and does it separate the vague
-from the precise. These are specs of genuinely graded quality, produced under identical conditions,
-which is exactly the fixture set that benchmark needs. We had planned to write such fixtures by hand;
-the calibration produced better ones for free.
+We use them for three things.
 
-**3. A regression corpus.** When the checker exists, run it over all of these and compare its ranking
-with the by-hand judgement recorded in `../../teacher/exercise-11.4-calibration.md`. Any checker that
-does not reproduce that ordering is wrong — and we already know one way to get it wrong, because our
-first keyword scan ranked the best spec last.
+### 1. Materials for exercise 11.4b
 
-## What is here
+In exercise 11.4b, students are asked to take several specifications and combine them into one that is **shorter but doesn't lose any important information**.
+For this exercise, we need examples of different quality, from weak specifications to very strong ones.
+That's exactly what this folder provides!
 
-`written/` — exercise 11.4a, the bare brief, one spec per agent. Range: 29 lines (7b, plausible and
-self-contradicting) to 269 (frontier, the only one that found the threshold-basis fork, the two
-rounding formulations and the overflow). `ollama-qwen2.5-coder-1.5b.md` is the useful bad example —
-it gives worked examples instead of rules, so rounding never surfaces at all.
+It also means that students can do the exercise regardless of which AI model they have access to.
+A student using a small local model can still work with a specification written by a frontier model. 
+And a student using a frontier model still has to figure out what to do with a weak specification.
+**Important: Only share `written/` when students reach exercise 11.4b!**
 
-`advanced/` — exercise 11.4 advanced, the composing version with the laws section. Only 32b so far;
-its four laws are three trivial or duplicated and one true-but-declared-false with a counterexample
-where both sides do nothing. The frontier run of this tier is still to be done.
+In exercise 11.4a, students should write their own specification using only the business description.
+If they see these examples too early, they'll start reviewing existing specifications instead of learning to write one themselves.
 
-`compressed/` — exercise 11.4b, the compression task, given `written/{1.5b, 32b, claude-code}`.
-Nobody managed it: sources were 269, 49 and 40 lines, outputs are 109 to 257. The failures split in
-two, and the split is worth showing to learners. 1.5b and 7b are **93–94% verbatim from the frontier
-spec with one original line each** — transcription, not merging. 14b and 32b genuinely rewrote (12–25%
-verbatim, 32–48 original lines) and still came out at 109 and 121, four times the substantive content.
+### 2. Testing our specification checkers
 
-That second finding is the strongest argument in the whole sub-module against reaching for a better
-model: **handed a frontier spec, the small models copied it.** A good example is not a substitute for
-knowing what to do with one.
+We also use these files to evaluate the tools that check students' specifications.
+In particular, we want to know two things:
+
+- **Consistency:** If we check the same specification several times, do we get the same result?
+- **Discrimination:** Can the checker tell the difference between a vague specification and a precise one?
+
+These specifications are useful because they were created under the same conditions but vary a lot in quality.
+We originally planned to write examples manually for this purpose, but our experiments gave us a better set of real AI-generated examples!
+
+### 3. Checking for regressions
+
+Once our specification checker is ready, we can run it on all these files.
+Then we can compare its results with our manual evaluation in [`../../teacher/exercise-11.4-calibration.md`](../../teacher/exercise-11.4-calibration.md).
+The checker should rank the specifications in the same order as our manual evaluation.
+If it doesn't, we need to investigate why.
+We've already seen how this can go wrong: our first checker simply looked for certain keywords, and it ranked the **best specification last**!
+So these files help us make sure that improvements to the checker don't accidentally make it worse.
+
+## What's inside?
+
+### `written/` — Original specifications (exercise 11.4a)
+
+These are specifications written by different AI agents using only the original business description.
+There's one specification per agent.
+The results vary quite a lot:
+
+- **29 lines:** A specification from the 7b model. It looks reasonable at first, but some of its rules contradict each other.
+- **269 lines:** A specification from a frontier model. It was the only one that identified the ambiguity about which price a threshold should use, two possible approaches to rounding, and the overflow problem.
+
+One especially useful example is `ollama-qwen2.5-coder-1.5b.md`.
+It's a good example of a weak specification because it mostly gives specific examples instead of general rules.
+As a result, it never properly explains how rounding should work.
+
+### `advanced/` — Advanced specifications
+
+These are specifications for the advanced version of exercise 11.4, where discount rules can be combined and students also need to describe general properties (laws).
+So far, we only have a result from the 32b model.
+It proposed four laws, but:
+
+- Three were trivial or repeated the same idea.
+- One was actually true, but the model incorrectly said it was false.
+- Its counterexample didn't demonstrate a failure because neither side changed the result.
+
+We still need to run this version with a frontier model.
+
+### `compressed/` — Combining specifications (exercise 11.4b)
+
+In this exercise, agents were given three specifications from `written/`:
+
+- A 269-line frontier specification.
+- A 49-line specification.
+- A 40-line specification.
+
+Their task was to combine them into one specification that was **shorter without losing important information**.
+None of the agents managed to do this successfully.
+The resulting specifications ranged from 109 to 257 lines.
+But the interesting part is *how* they failed.
+
+**The 1.5b and 7b models mostly copied the frontier specification.**
+Around 93–94% of their output was copied word for word, with only one original line each.
+That's not really combining specifications. It's mostly copying one of them!
+
+**The 14b and 32b models actually tried to rewrite and combine the information.**
+Only 12–25% of their output was copied word for word, and they added 32–48 original lines.
+But their final specifications were still 109 and 121 lines long, around four times the amount of substantive content they needed to preserve.
+So they did more real rewriting, but they still struggled to make the result concise.
+
+## What can we learn from this?
+
+One result is especially interesting:
+**Giving a small model a great specification doesn't mean it knows how to improve or combine specifications.**
+In our experiments, the smallest models mostly copied the frontier model's work instead of deciding what was important and what could be removed.
+And even the larger local models struggled to make the specification shorter without adding unnecessary text.
+This is a useful lesson for students: **having a good example isn't the same as knowing how to use it.**
+That's why this exercise isn't just about asking an AI agent to write or combine specifications.
+It's about learning how to evaluate what the agent produces, recognize missing information, and decide which details really matter.

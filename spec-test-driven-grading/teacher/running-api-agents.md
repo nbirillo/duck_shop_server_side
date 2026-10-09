@@ -1,103 +1,350 @@
-# Running API agents (`runAgent`) — teacher guide
+# Running API Agents (`runAgent`) — Teacher Guide
 
-Author-side tooling for evaluating the module against different agents over an OpenAI-compatible chat
-API (Ollama / Mistral / Anthropic). The counterpart for strong interactive agents without an API key
-is [`running-advanced-agents.md`](running-advanced-agents.md).
+These notes are for teachers.
+This guide explains how to use `runAgent` to evaluate the course exercises with different AI models through an OpenAI-compatible chat API.
 
-**Mostly not a student workflow.** `runAgent` exists to test the *course content across agents* — how
-each one does the same task, and whether the checks catch its mistakes. The one exception is
-`impl-from-spec`, which **is** a learner step: in 11.4 and in the capstone the learner hands their own
-specification to an agent and looks at the code that comes back.
+Supported providers include Ollama, Mistral, and Anthropic.
+If you want to evaluate a strong interactive coding agent such as Claude Code, JetBrains Junie, or Cursor without an API key, see [`running-advanced-agents.md`](running-advanced-agents.md).
 
-`-Pmode` is **required** — there is no default. Run the commands from **`spec-test-driven/`** unless a
-mode needs a brief or an author-side prompt, which live in this build (noted per mode below).
+## What is `runAgent` for?
 
-## Modes
+**Most of the time, `runAgent` is a teacher tool, not a student workflow.**
+We use it to test the course itself:
 
-| `-Pmode=` | What the agent does | Written to | Run from |
-| --- | --- | --- | --- |
-| `tests` | Writes a test suite for the given `:core` algebra, from a generic prompt | `test-suites/<agent>/` | student |
-| `verify-exercise` | Produces the flawed starter suite of 11.2 (the invalid `Not` test is injected afterwards) | `exercises/write-tests/…/PolicyTests.kt` | student |
-| `verify-harden` | Does the 11.2 task: verifies and hardens that flawed suite | `hardened/<agent>/` | student |
-| `attack` | The 11.2 advanced tier: an implementation that passes a given suite and still contradicts the spec | `attacks/<agent>/` | student |
-| `spec` | Writes a 11.4 specification from the bare brief | `specs/<agent>/` | **teacher** — needs `briefs/11.4-basic.md` |
-| `spec-advanced` | The same for the composing tier | `specs-advanced/<agent>/` | **teacher** — needs `briefs/11.4-advanced.md` |
-| `spec-compress` | 11.4b: merges several specifications into one, shorter and no weaker | `specs-short/<agent>/` | **teacher** — needs `-PspecsFrom=<dir>` |
-| `spec-extract` | Layer 2: lists which of the catalogued claims a specification asserts | `extractions/<agent>/` | **teacher** |
-| `impl-from-spec` | Implements from a specification and the surface alone — **the learner's own step** | `implementations/<agent>/<spec>/` | either |
+- How do different agents handle the same exercise?
+- Which mistakes do they make?
+- Do our verification tools detect those mistakes?
+- Is the exercise difficult enough to teach something useful?
 
-The prompt is assembled from the `:core` contract and the named specification — never the reference
-implementation, which is not even in the student folder — so an API agent cannot copy answers. The
-agent returns each file in a `// FILE: <path>` fenced block; weaker models that ignore this are merged
-into one file as a fallback, and the output is normalised (single `package`, hoisted imports,
-redeclarations of existing types stripped). **The normalisation touches wrapping only, never logic** —
-we grade what the model computed, not how well it followed a markdown contract. Every rescue is printed
-and written to `normalisation.txt` beside the module, so a broken output contract can never read as a
-clean run.
+There is one important exception.
+**`impl-from-spec` is a student-facing step.**
 
-For `tests`, `verify-exercise` and `verify-harden` the prompt is deliberately **generic** — it does not
-enumerate the corner cases, so the result measures what the model finds on its own.
+In exercise 11.4 and the capstone, students give an agent their own specification and examine the implementation it produces.
+That is part of the learning process, not just our course calibration.
 
-## Commands
+### Before you run anything
 
-```bash
-# Ollama (local, no key):
-./gradlew runAgent -Pmode=tests -Pprovider=ollama -Pmodel=qwen2.5-coder:7b
+You must always provide `-Pmode`.
+**There is no default mode.**
+Unless noted otherwise, run the commands from:
 
-# Mistral (needs MISTRAL_API_KEY in the environment):
-./gradlew runAgent -Pmode=tests -Pprovider=mistral -Pmodel=mistral-small-latest
+`spec-test-driven/`
 
-# Anthropic / Claude (needs ANTHROPIC_API_KEY; OpenAI-compatible endpoint):
-./gradlew runAgent -Pmode=tests -Pprovider=anthropic -Pmodel=claude-sonnet-4-5
+Some modes need teacher-only briefs or prompts and must be run from the grading build. Those are identified below.
 
-# See the assembled prompt without calling the API or writing files:
-./gradlew runAgent -Pmode=tests -Pprovider=ollama -Pmodel=qwen2.5-coder:7b -Pdry
+---
+
+## 1. Available modes
+
+| `-Pmode=`         | What the agent does                                                                                 | Output directory                         | Run from                                           |
+|-------------------|-----------------------------------------------------------------------------------------------------|------------------------------------------|----------------------------------------------------|
+| `tests`           | Writes a test suite for the `:core` algebra from a generic prompt                                   | `test-suites/<agent>/`                   | Student project                                    |
+| `verify-exercise` | Generates the flawed starter suite for 11.2; the incorrect `Not` test is injected afterward         | `exercises/write-tests/…/PolicyTests.kt` | Student project                                    |
+| `verify-harden`   | Verifies and improves the flawed suite from 11.2                                                    | `hardened/<agent>/`                      | Student project                                    |
+| `attack`          | Advanced 11.2: writes an implementation that passes a given suite but contradicts the specification | `attacks/<agent>/`                       | Student project                                    |
+| `spec`            | Writes a basic-tier 11.4 specification from the business brief                                      | `specs/<agent>/`                         | **Teacher build**, using `briefs/11.4-basic.md`    |
+| `spec-advanced`   | Writes a specification for the composable advanced tier                                             | `specs-advanced/<agent>/`                | **Teacher build**, using `briefs/11.4-advanced.md` |
+| `spec-compress`   | Exercise 11.4b: combines several specifications into one that should be shorter and no weaker       | `specs-short/<agent>/`                   | **Teacher build**, with `-PspecsFrom=<dir>`        |
+| `spec-extract`    | Layer 2: identifies which claims from the property catalog appear in a specification                | `extractions/<agent>/`                   | **Teacher build**                                  |
+| `impl-from-spec`  | Implements a feature using only its specification and the available API surface                     | `implementations/<agent>/<spec>/`        | Either project                                     |
+
+The teacher-only modes use briefs and prompts that aren't included in the student project.
+That separation is intentional.
+
+---
+
+## 2. What information does the agent receive?
+
+The harness builds its prompt from:
+
+- The contract in `:core`.
+- The relevant specification.
+- The task-specific agent prompt.
+
+It does **not** include the reference implementation.
+The reference isn't even present in the student folder.
+So an API agent can't simply copy the expected solution from the grading materials.
+
+### How does the agent return code?
+
+The prompt asks the agent to return each generated file in a fenced block marked with:
+
+```text
+// FILE: <path>
 ```
 
-`-Pagent=<name>` overrides the folder name (default `<provider>-<safe model>`). Then score the result:
+Stronger models usually follow this format.
+Smaller models sometimes ignore it and return everything as one block.
+The harness has a fallback for that case: it can combine the output into one file and normalize the structure.
+Normalization may:
+
+- Keep a single `package` declaration.
+- Move imports to the correct location.
+- Remove redeclarations of types that already exist.
+- Repair the file wrapping needed to make the generated output usable.
+
+**Normalization never changes the agent's logic.**
+We're trying to measure whether the model solved the programming task, not whether it followed every detail of a Markdown output format.
+But we also don't want a broken output format to look like a completely clean run.
+
+Every normalization step is:
+
+1. Printed in the run output.
+2. Recorded in `normalisation.txt` beside the generated module.
+
+That way, you can always see when the harness had to rescue the model's output.
+
+### Why are the prompts deliberately generic?
+
+For these modes:
+
+- `tests`
+- `verify-exercise`
+- `verify-harden`
+
+the prompts don't list the corner cases students are expected to discover.
+That's important for calibration.
+
+If we tell an agent exactly which boundaries and negative cases to test, we're no longer measuring what it can find independently.
+We're measuring whether it can follow a checklist.
+
+---
+
+## 3. Running agents with different providers
+
+All the examples below use `-Pmode=tests`.
+Run them from `spec-test-driven/`.
+
+### Ollama — local, no API key
 
 ```bash
-./gradlew ":test-suites:<name>:test"             # tests mode: the generated suite against :core
-./gradlew ":hardened:<name>:test"                # verify-harden: validity on :core
-./gradlew verifyAttack -Pagent=<name> --continue # attack mode: did the suite catch it
+./gradlew runAgent \
+    -Pmode=tests \
+    -Pprovider=ollama \
+    -Pmodel=qwen2.5-coder:7b
 ```
 
-For the mutation score of a hardened suite see [`mutation-testing-notes.md`](mutation-testing-notes.md);
-for scoring a specification, [`exercise-11.4-answer-key.md`](exercise-11.4-answer-key.md).
+### Mistral — requires an API key
 
-## Where the harness prompts live
+Set `MISTRAL_API_KEY` in your environment.
+Then run:
 
-Student-side, in `spec-test-driven/tools/agent-prompt*.md`: `-tests`, `-verify`, `-attack` and
-`-impl-spec`. Deliberately **not** a root `AGENTS.md`, so a learner's own agent does not auto-load them.
-They carry only the task statement and the output contract, no answers, which is why they can stay there.
+```bash
+./gradlew runAgent \
+    -Pmode=tests \
+    -Pprovider=mistral \
+    -Pmodel=mistral-small-latest
+```
 
-Author-side, in this build: `prompts/agent-prompt-spec.md`, `-extract.md`, `-compress.md`, and
-`prompts-capstone/agent-prompt-compress.md` (the capstone's consolidation prompt, whose instruction is
-the *inverse* of the 11.4b one — keep everything, decide nothing). These name what the exercise is
-about, so they are not in the student folder.
+### Anthropic / Claude — requires an API key
 
-The principle behind the split: **student-facing requirements are the specification itself** — the KDoc
-contract, the exercise README and the module materials — never an agent-instruction file.
+Set `ANTHROPIC_API_KEY` in your environment.
+The harness uses an OpenAI-compatible endpoint.
 
-## Difficulty calibration
+```bash
+./gradlew runAgent \
+    -Pmode=tests \
+    -Pprovider=anthropic \
+    -Pmodel=claude-sonnet-4-5
+```
 
-The task an agent gets has to be hard enough to make verification meaningful, and the module found its
-level by measurement rather than by guessing:
+### Preview the prompt without calling a model
 
-- The plain in-memory policy task was **too easy** — every tested model, down to `qwen2.5-coder:1.5b`,
-  one-shot it. Writing well-specified logic is not where agents fail.
-- So 11.2 is not "implement it" but **verify and harden a given suite**, which does separate the tiers:
-  every model fixes the planted wrong test, almost none finds what is missing.
-- Where a frontier agent still saturates 11.2, the **advanced tier** is the answer — conformant
-  variants, the test budget, the adversary. All three were measured as frontier-only; see
-  [`advanced-tier-notes.md`](advanced-tier-notes.md).
-- 11.4 moves the object up a level (the text, not the code), and the capstone gives the whole cycle at
-  once on artifacts somebody else left behind.
+Use `-Pdry`:
 
-> An earlier calibration used an opening-schedule engine, where `7b` and `14b` got the wrap-around wrong
-> in opposite directions. That exercise was cut on 2026-09-18 — it never reached the slides — and its
-> `-Pmode=impl` went with it. The finding is kept here because it is the cleanest example of two models
-> failing the same case in opposite directions.
+```bash
+./gradlew runAgent \
+    -Pmode=tests \
+    -Pprovider=ollama \
+    -Pmodel=qwen2.5-coder:7b \
+    -Pdry
+```
 
-The current model matrix and per-model quirks are in the project notes; the measured mutation scores are
-in [`mutation-testing-notes.md`](mutation-testing-notes.md).
+This prints the assembled prompt without making an API call or writing generated files.
+It's useful when you're checking what information an agent will receive.
+
+---
+
+## 4. Naming and scoring the generated results
+
+By default, the harness names the output folder using:
+
+`<provider>-<safe model>`
+
+You can override that name with:
+
+`-Pagent=<name>`
+
+This is useful when you want to keep separate runs of the same model.
+
+### Test a generated suite against `:core`
+
+For `tests` mode:
+
+```bash
+./gradlew ":test-suites:<name>:test"
+```
+
+### Check a hardened suite
+
+For `verify-harden` mode:
+
+```bash
+./gradlew ":hardened:<name>:test"
+```
+
+This verifies that the tests pass against the correct `:core` implementation.
+
+### Evaluate an attack
+
+For `attack` mode:
+
+```bash
+./gradlew verifyAttack -Pagent=<name> --continue
+```
+
+This checks whether the target test suite catches the agent's adversarial implementation.
+
+### Where are the other scoring instructions?
+
+For mutation scoring of a hardened suite, see [`mutation-testing-notes.md`](mutation-testing-notes.md).
+For specification evaluation, see [`exercise-11.4-answer-key.md`](exercise-11.4-answer-key.md).
+
+---
+
+## 5. Where do the agent prompts live?
+
+The prompts are deliberately split between the student project and the teacher build.
+
+### Student-side prompts
+
+These live in:
+
+`spec-test-driven/tools/agent-prompt*.md`
+
+They cover:
+
+- `-tests`
+- `-verify`
+- `-attack`
+- `-impl-spec`
+
+These files contain only the task description and output format.
+They don't reveal answers.
+
+That's why they can safely remain in the student project.
+They are also deliberately **not** placed in a root-level `AGENTS.md`.
+A student's own coding agent shouldn't automatically load our evaluation prompts.
+
+### Teacher-side prompts
+
+These live in the grading build:
+
+- `prompts/agent-prompt-spec.md`
+- `prompts/agent-prompt-extract.md`
+- `prompts/agent-prompt-compress.md`
+- `prompts-capstone/agent-prompt-compress.md`
+
+The capstone compression prompt has a different goal from the 11.4b compression prompt.
+In exercise 11.4b, the agent tries to make a specification **shorter without making it weaker**.
+In the capstone, the instruction is effectively the opposite:
+
+**Keep everything. Decide nothing.**
+The capstone agent consolidates existing information without silently resolving open decisions.
+These teacher-side prompts describe what the exercises are testing, so they don't belong in the student folder.
+
+### The principle behind the separation
+
+**Student-facing requirements belong in the specification itself.**
+That means:
+
+- The KDoc contract.
+- The exercise README.
+- The module's learning materials.
+
+An agent-instruction file should never become the hidden source of requirements that students are expected to discover.
+
+---
+
+## 6. How we calibrated the difficulty
+
+An exercise needs to be challenging enough that verification actually matters.
+We didn't choose the difficulty by guessing.
+We tested the tasks against different agents and adjusted the course based on the results.
+
+### The original implementation task was too easy
+
+Our first task used a simple in-memory admission-policy algebra.
+Every model we tested could implement it in one attempt, including `qwen2.5-coder:1.5b`.
+That told us something important:
+**Implementing well-specified logic wasn't a useful challenge for these agents.**
+We needed to test a different skill.
+
+### Exercise 11.2 focuses on verification
+
+Instead of asking students to implement the algebra, exercise 11.2 asks them to **verify and harden an existing AI-written test suite**.
+This separates model capabilities much more clearly.
+Every tested model could fix the deliberately incorrect test.
+
+But most failed to identify the missing cases.
+Finding a visible error and discovering an absent requirement are different tasks.
+The second is much harder.
+
+### The advanced tier challenges frontier agents
+
+A frontier agent can still solve the basic 11.2 task very well.
+So the advanced tier adds different challenges:
+
+- **Conformant variants.**
+- **A calibrated test budget.**
+- **An adversary.**
+
+All three were measured as challenges appropriate for frontier-level agents.
+See [`advanced-tier-notes.md`](advanced-tier-notes.md) for the experiments and what each task measures.
+
+### Exercise 11.4 moves from code to specifications
+
+Exercise 11.4 shifts the focus.
+Instead of asking whether the implementation is correct, it asks whether the **specification text communicates enough to produce the intended behavior**.
+The capstone then brings the entire process together.
+Students have to work with specifications, tests, implementations, and feedback — including artifacts left behind by someone else.
+
+---
+
+## 7. A removed experiment worth remembering
+
+An earlier version of the course included an opening-schedule engine.
+In calibration, the `7b` and `14b` models both mishandled a schedule that wrapped around a boundary.
+Interestingly, they made mistakes in **opposite directions**.
+That was a useful example of two models failing the same case differently.
+But the exercise never reached the course slides.
+
+We removed it on **September 18, 2026**, along with its `-Pmode=impl` mode.
+The experiment is no longer part of the active course.
+We keep the observation here because it clearly illustrates why comparing different agents can reveal more than repeatedly running the same one.
+
+---
+
+## 8. Where to find the current measurements
+
+The current model matrix and individual model quirks are recorded in the project notes.
+For measured mutation scores, including the differences between local and frontier agents, see [`mutation-testing-notes.md`](mutation-testing-notes.md).
+Those results are the evidence behind the difficulty choices described above.
+
+---
+
+## The main takeaway
+
+`runAgent` is primarily a way to **test the course against different AI agents**.
+It helps us find out whether an exercise is too easy, whether our checks detect real mistakes, and whether different models fail in useful ways.
+
+The key rules are straightforward:
+
+- Keep student-facing requirements separate from teacher-only evaluation materials.
+- Use generic prompts when measuring what agents discover independently.
+- Record output normalization so rescued results remain visible.
+- Score generated work with deterministic checks.
+- Increase task difficulty when strong agents consistently succeed, rather than making the evaluation less strict.
+
+And remember the one student-facing exception: **`impl-from-spec` lets learners test whether their own specification is clear enough for an agent to implement.**
+That's where the tooling becomes part of the lesson itself.

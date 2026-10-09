@@ -11,68 +11,37 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * **How much did the specification leave to chance?**
+ * Checks how much two agents had to guess when implementing the same specification.
+ * It compares their recorded answers, and also checks against the reference when available.
+ * No AI model judges the results.
  *
- * Two independent implementations of the *same* text, compared with each other and with the
- * reference. This exists because scoring one implementation against the reference stops
- * discriminating as the implementer gets stronger: we measured a specification with no rounding
- * rule, no compounding rule and a self-contradictory bonus coming out 8/8, level with the best in
- * the corpus, because a capable agent fills every gap with the same default the reference chose.
+ * Why compare two agents? A strong agent can fill in missing rules and still match the
+ * reference. We saw a vague specification score 8/8 even though it never settled
+ * rounding, compounding, or a contradictory bonus.
  *
- * Agreement is the measurement, so no model has to be believed about anything:
+ * The report separates three outcomes:
+ * - Both agree with the reference: they made the same choices as our implementation.
+ * - Both agree with each other, but not the reference: they may have followed a clear
+ *   alternative rule, or they may simply share the same assumption. Read the spec to tell.
+ * - LEFT OPEN: the agents disagree, so the text allowed different interpretations.
  *
- *  - **settled, as we did** — A and B agree, and agree with the reference.
- *  - **both read it the same way, and not ours** — A and B agree with each other and differ from the
- *    reference. Do **not** read this as "the specification decided it differently": it also happens
- *    when the text says nothing and both readers reach for the same default. Measured: on
- *    llama3.2-3b's specification both agents returned −50 for `Percentage(150)` on a price of 100
- *    and both overflowed at `Int.MAX_VALUE` — that text mentions neither clamping nor arithmetic
- *    width, so the agreement came from a shared habit, not from the page. Only reading the sentence
- *    separates the two, and this label deliberately no longer pretends otherwise.
- *  - **left open** — A and B differ. The text did not decide, and each agent decided for itself.
- *    This is the number the reference-agreement score cannot see.
+ * Not every open choice is a problem. A spec can deliberately leave behavior flexible.
+ * The report counts disagreements; the spec tells you whether they were intentional.
  *
- * A specification is not better for having fewer open cases in every situation — deliberately
- * leaving something free is a legitimate choice, and section 4 of the template exists to record it.
- * What this measures is how much is open *at all*; whether that was on purpose is in the text.
+ * Use TWO DIFFERENT agents that can both handle the task. In calibration, two runs of
+ * one model found 0 open cases out of 4021, while different agents found 674.
+ * Both runs of the same model can make the same guess, even with different code.
  *
- * ### The two runs have to come from DIFFERENT agents
+ * The second agent must also be capable. A weaker reader once reported 391 open cases
+ * on a compressed spec; a stronger reader found 0 out of 4021. Those differences came
+ * from the weaker model's errors, not from missing requirements.
  *
- * Measured, and it went against the intuition: on a specification with no rounding rule, no
- * compounding rule and a self-contradictory bonus,
+ * Agreement alone does not prove a specification is complete. Disagreement is useful
+ * evidence of different interpretations, but check that neither model simply made a bug.
+ * This task cannot tell which models produced the runs, so it reminds you in the report.
  *
- * ```
- * two sessions of the same agent    0 open / 4021
- * two different agents            674 open / 4021
- * ```
- *
- * The two sessions wrote genuinely different code and produced byte-identical behaviour, so the same
- * agent twice reported the same clean zero it reports for the best specification in the corpus.
- *
- * "Left open" is relative to a **population of readers**, and two sessions of one model are one
- * reader twice: the gaps close identically because whatever closes them is identical — both sessions
- * reached for `coerceAtLeast(0)` and for `Long` arithmetic although the text mentions neither.
- *
- * ### The second reader has to be strong, and here is what happens when it is not
- *
- * `qwen2.5-coder:14b` as the second reader reported **391** open cases on the compression of
- * `written/claude-code.md`, against 0 on the long version — which looked like a real result about
- * compression narrowing the set of readers for whom a text is determinate. It was not. Re-measured
- * with a frontier second reader, the same compression leaves **0 of 4021** open.
- *
- * The 391 were the weak reader's incapacity: it overflowed at the top of the `Int` range, and it is
- * the same model that elsewhere in this corpus imported `DiscountRule` from the wrong package and
- * failed to compile at all. A reader whose failures are about itself contributes noise that reads
- * exactly like ambiguity in the text.
- *
- * So the rule is not "use two readers" but **use two readers competent at the task**. The number this
- * task prints is only as trustworthy as the weaker of the pair.
- *
- * So: **agreement between two runs of one agent proves nothing.** Disagreement still proves
- * ambiguity, which makes the same-agent pair a lower bound and never a clean bill of health. This
- * task does not know which pair it was given, so it says so in the footer rather than pretending.
- *
- * Params: `-PagentA=<run>`, `-PagentB=<run>`, `[-Pspec=<one specification>]`, `[-Pexamples=<n>]`.
+ * Options: `-PagentA=<run>`, `-PagentB=<run>`, `[-Pspec=<one specification>]`,
+ * `[-Pexamples=<n>]`.
  */
 abstract class DivergenceReportTask @Inject constructor(
     private val providers: ProviderFactory,
@@ -86,19 +55,19 @@ abstract class DivergenceReportTask @Inject constructor(
     @TaskAction
     fun run() {
         val root = layout.projectDirectory.asFile
-        val a = providers.gradleProperty("agentA").orNull ?: error("Missing -PagentA=<run>")
-        val b = providers.gradleProperty("agentB").orNull ?: error("Missing -PagentB=<run>")
-        require(a != b) { "-PagentA and -PagentB are the same run ($a); nothing to compare." }
+        val a = providers.gradleProperty("agentA").orNull ?: error("Please provide -PagentA=<run>")
+        val b = providers.gradleProperty("agentB").orNull ?: error("Please provide -PagentB=<run>")
+        require(a != b) { "-PagentA and -PagentB both point to $a. Choose two different runs." }
         val examples = providers.gradleProperty("examples").orNull?.toInt() ?: 3
 
         val reference = root.resolve(referenceRecording.get())
             .takeIf { it.isFile }
             ?.readLines()
             ?: run {
-                // Normal in the student build: there is no reference there, and comparing two
-                // readers with each other needs none. Only the teacher's side has one.
+                // The student project has no reference, and that's fine. We can still compare
+                // the two agents with each other. Only the teacher build has a reference.
                 logger.lifecycle("")
-                logger.lifecycle("No reference here — reporting what the two readers agreed and disagreed on.")
+                logger.lifecycle("No reference available. We can still compare where the two agents agree or disagree.")
                 null
             }
 
@@ -106,20 +75,19 @@ abstract class DivergenceReportTask @Inject constructor(
         val specs = (recordings(root, a).keys + recordings(root, b).keys)
             .filter { only == null || it == only }
             .sorted()
-        require(specs.isNotEmpty()) { "No recordings for $a / $b. Run their :test tasks first." }
+        require(specs.isNotEmpty()) { "No recordings found for $a / $b. Run both :test tasks first." }
 
         logger.lifecycle("")
-        logger.lifecycle("How much each specification left to chance — $a vs $b")
-        logger.lifecycle("Two independent implementations of the same text. No model is trusted here;")
-        logger.lifecycle("the measurement is whether they agree.")
-        // Stated every time rather than guessed at. The previous version tried to detect a
-        // same-agent pair from the run names and fired on `reader-a` vs `reader-b` — the naming this
-        // very exercise recommends — so it warned precisely when the learner had done it right.
+        logger.lifecycle("How much did the spec leave open? Comparing $a and $b")
+        logger.lifecycle("Two implementations from the same specification. We do not ask a model to judge them;")
+        logger.lifecycle("we compare their recorded answers instead.")
+        // Always show this reminder. Run names don't tell us whether two runs used
+        // the same model; guessing from names caused misleading warnings before.
         logger.lifecycle("")
-        logger.lifecycle("Only as good as the pair: two runs of ONE agent share one set of habits, so")
-        logger.lifecycle("agreement between them proves nothing (measured: 0 open where two different")
-        logger.lifecycle("agents found 674). Disagreement always proves ambiguity. And a reader too weak")
-        logger.lifecycle("for the task contributes mistakes that read exactly like gaps in your text.")
+        logger.lifecycle("Choose your agents carefully. Two runs of the SAME model often make the same guesses, so")
+        logger.lifecycle("agreement is not proof the spec is complete (we measured 0 open cases where two")
+        logger.lifecycle("different agents found 674). Disagreement may reveal an open choice. A model too weak")
+        logger.lifecycle("for the task can also make mistakes that look like gaps in the spec.")
 
         val ra = recordings(root, a)
         val rb = recordings(root, b)
@@ -128,7 +96,7 @@ abstract class DivergenceReportTask @Inject constructor(
             val lb = rb[spec]?.readLines()
             logger.lifecycle("")
             if (la == null || lb == null) {
-                logger.lifecycle("── $spec — only one run recorded (${if (la == null) b else a})")
+                logger.lifecycle("── $spec — only one recording found (${if (la == null) b else a})")
                 return@forEach
             }
             report(spec, la, lb, reference, examples)
@@ -137,8 +105,8 @@ abstract class DivergenceReportTask @Inject constructor(
 
     private fun report(spec: String, la: List<String>, lb: List<String>, ref: List<String>?, examples: Int) {
         require(la.size == lb.size) {
-            "$spec: recordings are ${la.size} and ${lb.size} lines. The probe corpus changed between " +
-                "runs, so the two are not comparable — re-run both."
+            "$spec: recordings have ${la.size} and ${lb.size} lines. The probe cases changed between " +
+                    "runs, so we cannot compare them. Run both again."
         }
         var open = 0
         var differentlySettled = 0
@@ -166,26 +134,26 @@ abstract class DivergenceReportTask @Inject constructor(
         val total = la.size
         val settled = total - open - differentlySettled
         logger.lifecycle("── $spec")
-        logger.lifecycle("   $total probed inputs")
+        logger.lifecycle("   $total cases checked")
         if (ref == null) {
-            // The student build has no reference and must not be told it agrees with one.
-            logger.lifecycle("   the two readers agreed on         $settled")
+            // Without a reference, report agreement between the agents only.
+            logger.lifecycle("   agents agreed on                $settled")
             logger.lifecycle("   LEFT OPEN                        $open")
         } else {
-            logger.lifecycle("   agreed, same as the reference    $settled")
-            logger.lifecycle("   agreed, differs from reference   $differentlySettled")
+            logger.lifecycle("   both match the reference        $settled")
+            logger.lifecycle("   both agree, but not with reference $differentlySettled")
             logger.lifecycle("   LEFT OPEN                        $open")
         }
-        settledExamples.forEach { logger.lifecycle("     agreed, not ours: $it") }
+        settledExamples.forEach { logger.lifecycle("     both agreed, but not with reference: $it") }
         if (settledExamples.isNotEmpty()) {
-            logger.lifecycle("       ↳ both readers landed on the same answer and neither matched us. That is")
-            logger.lifecycle("         either the text deciding it differently — fine, ours is one legal answer —")
-            logger.lifecycle("         or the text saying NOTHING and both defaulting the same way. Read it.")
+            logger.lifecycle("       ↳ Both agents gave the same answer, but it differs from the reference.")
+            logger.lifecycle("         Maybe the spec clearly chose another valid answer. Or maybe both agents")
+            logger.lifecycle("         made the same guess. Read the spec to find out.")
         }
         openExamples.forEach { logger.lifecycle("     open: $it") }
         if (openExamples.isNotEmpty()) {
-            logger.lifecycle("       ↳ the text did not decide, and each agent decided for itself. Whether")
-            logger.lifecycle("         that was on purpose is in your section 4, not in this report.")
+            logger.lifecycle("       ↳ The agents chose different answers. Check whether the spec leaves this")
+            logger.lifecycle("         open on purpose; section 4 should explain that.")
         }
     }
 

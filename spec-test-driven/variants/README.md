@@ -1,38 +1,78 @@
-# The conformance check
+# Conformance Testing
 
-Mutation testing asks whether your suite notices defects. It never asks the opposite question, and a
-suite can score perfectly on it by nailing things down that were never nailed down to begin with —
-pinning *how* the algebra is written rather than *what* it decides. Tests like that pass today and
-break the first time somebody refactors, which is worse than useless: they punish a change that was
-allowed.
+In mutation testing, we check whether your tests can catch bugs.
+But there's another important question:
+**Can your tests fail even when the implementation is correct?**
 
-This is the other half. Each variant here is a **legal rewrite** of `:core` — the behaviour is
-unchanged, so a faithful suite stays green on all of them.
+This might sound strange, but it happens!
+Sometimes tests check details that aren't actually required by the specification.
+For example, a test might expect policies to be evaluated in a particular order, even though the specification doesn't require that.
+Such a test might pass today but fail after someone refactors the code, even if the new implementation is still correct.
+**We don't want our tests to reject valid implementations!**
+That's what conformance testing helps us check.
+
+## How does conformance testing work?
+
+The idea is similar to mutation testing, but this time we're looking for the opposite result.
+Instead of introducing bugs, we create different implementations that still follow the specification.
+We call these implementations **variants**.
+Each variant is a valid alternative implementation of `:core`.
+Your tests should pass on all of them!
+If a test fails, it means your test suite might be checking something that the specification doesn't actually guarantee.
+
+## How to run conformance testing
+
+Use these commands:
 
 ```bash
-./gradlew verifyVariants --continue          # run your suite against every variant
-./gradlew verifyVariants -PmutantsStrict     # fail the build while any false alarm remains
-./gradlew generateVariants                   # only needed after editing catalog.json
+./gradlew verifyVariants --continue          # Run your tests against every variant
+./gradlew verifyVariants -PmutantsStrict     # Fail if any false alarm remains
+./gradlew generateVariants                   # Only needed after editing catalog.json
 ```
 
-## Reading the report
+We use `--continue` so that one failing check doesn't stop the others.
+This way, you can see the full report.
 
-- **OK** — your suite is indifferent to that rewrite, which is what it should be.
-- **FALSE ALARM** — a test of yours fails on code that behaves exactly like `:core`. The report names
-  the failing tests, because those are the ones to relax.
-- **NOT RUN** — your suite did not compile against that variant.
+## How to read the report
 
-A false alarm is not a bug in the variant. It means a test asserts something the contract does not
-promise, so the honest fix is almost always to weaken or delete that test — not to argue the variant
-should have been forbidden.
+You'll see one of these results for each variant:
 
-## What counts as legal
+| Result          | What it means                                                     |
+|-----------------|-------------------------------------------------------------------|
+| **OK**          | Your tests pass on this valid implementation. Great!              |
+| **FALSE ALARM** | One or more tests fail even though the implementation is correct. |
+| **NOT RUN**     | Your test suite didn't compile against this variant.              |
 
-Only the contract decides, and for this tier the contract includes the addendum in
-[`../exercises/write-tests/contract-addendum.md`](../exercises/write-tests/contract-addendum.md).
-Read it first: it settles two questions the class documentation leaves open, and both of them are
-questions a thorough suite is tempted to answer on its own.
+If you get a **FALSE ALARM**, the report will show which tests failed.
+These are the tests you need to look at!
+Usually, the problem is that a test requires behavior that the specification doesn't promise.
+For example, it might check the order of function calls or some other implementation detail.
+**The solution is usually to change or remove the test, not to change the variant.**
+Remember, the variant is already a valid implementation. Our goal is to make sure the test suite accepts it.
 
-The catalog carries no descriptions, deliberately. Saying which behaviour each variant frees would
-tell you which tests to drop before you had the chance to work out what the contract actually
-promises — and that is the whole exercise.
+## What makes a variant correct?
+
+The specification decides which implementations are valid.
+For this advanced exercise, the specification also includes the additional rules in [`contract-addendum.md`](../exercises/write-tests/contract-addendum.md).
+**Please read that file before running these checks!**
+It explains two behaviors that were left open in the basic exercise.
+These are exactly the kinds of details that are easy to test by accident, even when the specification doesn't guarantee them.
+
+### Why doesn't the catalog explain each variant?
+
+You might notice that the variant catalog doesn't describe what each variant changes.
+That's intentional!
+If we told you exactly what was different, you'd immediately know which tests to change.
+But the goal of this exercise is to **figure out what the specification actually guarantees**.
+So when you see a false alarm, read the failing test, compare it with the contract, and ask yourself:
+**Does the specification really promise this behavior, or did my test assume too much?**
+That's the skill we're practicing here.
+
+---
+
+Mutation testing and conformance testing work together:
+
+- **Mutation testing** checks whether your tests catch incorrect implementations.
+- **Conformance testing** checks whether your tests accept correct implementations.
+
+A good test suite should do both!

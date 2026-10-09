@@ -9,21 +9,20 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * Which property kills which mutant — the table that gives "load-bearing" a definition.
+ * Shows which mutants each property catches. This is how we check whether a claim really matters.
  *
- * `verifyMutants` answers "did this suite kill that mutant". This inverts it: for each property, the
- * mutants it is the reason for killing. That matters because of what it says about the ones with an
- * empty row.
+ * `verifyMutants` tells you whether the whole test suite catches a mutant. This report looks at it
+ * from the other direction: which mutants does each individual property catch?
  *
- * > **A claim is load-bearing exactly when the property derived from it kills at least one mutant.**
+ * **A claim is load-bearing if its property catches at least one mutant.**
  *
- * A property that kills nothing is not necessarily false — it may be perfectly true and still
- * constrain no implementation anybody could have written. A specification full of those reads as
- * rigour and decides nothing, which is the failure the advanced tier of 11.2 called claiming a law
- * nothing can violate. Scoring a learner's spec then comes down to two numbers: the mutants the
- * claims it makes still kill, and how long it is.
+ * A property that catches nothing is not necessarily wrong. It might be true, but it does not rule
+ * out any of the alternative implementations in our catalog. A long specification can sound very
+ * precise without actually making useful decisions. That is why we look at both the mutants its
+ * claims catch and how much the specification says.
  *
- * Reads the JUnit XML the mutant modules already produce, so it costs nothing extra to run.
+ * This task reads the JUnit XML results already produced by the mutant modules. No extra test runs
+ * are needed.
  */
 abstract class PropertyMatrixTask @Inject constructor(
     private val layout: ProjectLayout,
@@ -43,14 +42,14 @@ abstract class PropertyMatrixTask @Inject constructor(
 
         val baseline = failingTests(root.resolve("$out/$BASELINE/build/test-results/test"))
         if (baseline == null) {
-            logger.lifecycle("The baseline never ran — generate the modules and run the suite first.")
+            logger.lifecycle("No reference test results yet. Generate the modules and run the tests first.")
             return
         }
         if (baseline.isNotEmpty()) {
             logger.lifecycle("")
-            logger.lifecycle("${baseline.size} propert(y/ies) fail against the REFERENCE and are simply wrong:")
+            logger.lifecycle("${baseline.size} properties fail on the REFERENCE implementation:")
             baseline.sorted().forEach { logger.lifecycle("   $it") }
-            logger.lifecycle("They are excluded below — a property that contradicts correct code proves nothing.")
+            logger.lifecycle("These are left out below. A property that fails on correct code cannot show that a mutant is wrong.")
         }
 
         val killedBy = linkedMapOf<String, MutableList<String>>()
@@ -65,10 +64,10 @@ abstract class PropertyMatrixTask @Inject constructor(
         val width = (all.maxOfOrNull { it.length } ?: 0) + 2
 
         logger.lifecycle("")
-        logger.lifecycle("Property → the mutants it kills")
+        logger.lifecycle("Each property and the mutants it catches")
         all.filterNot { it in baseline }.forEach { prop ->
             val kills = killedBy[prop].orEmpty()
-            logger.lifecycle("  ${prop.padEnd(width)}${if (kills.isEmpty()) "— kills nothing" else kills.joinToString()}")
+            logger.lifecycle("  ${prop.padEnd(width)}${if (kills.isEmpty()) "— catches no mutants" else kills.joinToString()}")
         }
 
         val idle = all.filterNot { it in baseline }.filter { killedBy[it].isNullOrEmpty() }
@@ -76,14 +75,14 @@ abstract class PropertyMatrixTask @Inject constructor(
         val uncovered = catalog.filter { it.mustKill }.map { it.id } - covered.toSet()
 
         logger.lifecycle("")
-        logger.lifecycle("${covered.size}/${catalog.count { it.mustKill }} mutants are killed by some property.")
+        logger.lifecycle("${covered.size}/${catalog.count { it.mustKill }} mutants are caught by at least one property.")
         if (uncovered.isNotEmpty()) {
-            logger.lifecycle("No property kills: ${uncovered.joinToString()} — the catalog has a behaviour nothing claims.")
+            logger.lifecycle("No property catches these mutants: ${uncovered.joinToString()}. Your claims do not cover these behaviours.")
         }
         if (idle.isNotEmpty()) {
-            logger.lifecycle("Kills nothing: ${idle.joinToString()}")
-            logger.lifecycle("  ↳ true, perhaps, but constraining no implementation. Not load-bearing.")
+            logger.lifecycle("Properties that catch no mutants: ${idle.joinToString()}")
+            logger.lifecycle("  ↳ They might be true, but they do not rule out any implementation here. They are not load-bearing.")
         }
-        if (notRun.isNotEmpty()) logger.lifecycle("Never ran: ${notRun.joinToString()}")
+        if (notRun.isNotEmpty()) logger.lifecycle("Mutants with no test results: ${notRun.joinToString()}")
     }
 }

@@ -1,109 +1,244 @@
-# The capstone: a franchise
+# The Capstone — A Franchise of Duck Shops
 
-You have met every piece of this separately. This time you do the whole thing.
+You've worked with every part of this process separately.
+Now it's time to put everything together.
 
-## What you are walking into
+## 1. The situation you're walking into
 
-A chain of duck shops. Each shop already had its own door policy and its own promotions; the chain has
-rules of its own as well. A customer with one duck wants to know **where in the chain to buy it and what
-they will pay**.
+Imagine a franchise of duck shops.
+Each shop has its own admission policy and promotions. The franchise also has rules that apply across the chain.
+A customer brings one duck and wants to know:
+**Which shop should they choose, and how much will they pay?**
+That sounds straightforward. But you're not starting from scratch.
+Someone has already worked on this feature.
 
-Somebody has already started. In `inherited/` you will find:
+In `inherited/`, you'll find a specification, an implementation written by an AI agent, and the tests that came with it.
+You don't know whether they agree with one another.
+You also don't know which decisions were made deliberately and which were simply assumed.
+That's the situation you're taking over.
 
-- **`SPEC.md`** — the specification of the feature as it currently stands.
-- **`src/main/kotlin/.../BestOffer.kt`** — an implementation an agent wrote from that specification.
-- **`src/main/kotlin/.../Pricing.kt`** — `priceFor`, settled back when you wrote its specification.
-  Not your problem here.
-- **`src/test/kotlin/.../FranchiseTests.kt`** — the tests that came with the implementation.
+### What you inherited
 
-None of it is yours to defend. It is a starting position, and the only thing you are told about it is
-that it was produced the way things usually are: under time pressure, by more than one person, with an
-agent doing the typing.
+| Path                                            | What you'll find                                                                                                              |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `inherited/SPEC.md`                             | The existing specification. Read it before changing anything.                                                                 |
+| `inherited/src/main/kotlin/…/BestOffer.kt`      | The agent-written implementation. You'll **replace this file** with the implementation generated from your own specification. |
+| `inherited/src/main/kotlin/…/Pricing.kt`        | The existing `priceFor` implementation. Its behavior was settled earlier in the course. **Use it; don't reopen it.**          |
+| `inherited/src/test/kotlin/…/FranchiseTests.kt` | The tests that came with the inherited implementation.                                                                        |
+| [`surface.md`](surface.md)                      | The existing API surface you give an agent together with **your specification**, and nothing else.                            |
+| `work/src/test/kotlin/`                         | The place for **your own tests**. It starts empty.                                                                            |
 
-### Everything in this folder
+The `:core` module comes from the neighboring `spec-test-driven/` project, which you already have.
+There is no reference implementation, answer key, or hidden grading suite in this folder.
 
-| Path | What it is |
-| --- | --- |
-| `inherited/SPEC.md` | The specification you inherited. Read it before you change anything |
-| `inherited/src/main/kotlin/…/BestOffer.kt` | The implementation written from it — **replace this file** when your agent produces a better one |
-| `inherited/src/main/kotlin/…/Pricing.kt` | `priceFor`, settled when you specified it earlier. Use it; do not reopen it |
-| `inherited/src/test/kotlin/…/FranchiseTests.kt` | The tests that came with the implementation |
-| [`surface.md`](surface.md) | What you hand the agent together with **your** specification, and nothing else |
-| `work/src/test/kotlin/` | **Your** tests. Empty until you put something in it |
+### A note about the inherited work
 
-`:core` comes from the `spec-test-driven/` folder next door, which you already have. There is nothing
-else here — no reference, no answer key, no graded checks.
+You don't have to defend any of it.
+Treat it as the starting point, not as the truth.
+It was produced the way real software often is: under time pressure, with several people involved and an AI agent writing some of the code.
+Your job is to find out what it actually guarantees, what it leaves undecided, and what needs to change.
 
-## What you deliver
+---
 
-1. **A specification you would be willing to hand to a stranger.** It may be a rewrite of the one you
-   inherited, or several documents if that reads better — long is not a virtue.
-2. **A test suite that pins what your specification says.** This is the deliverable that carries the
-   weight, for the reason the whole module has been about: it is the part a machine cannot check for you.
-3. **An implementation an agent writes from your specification alone** — not from your tests, not from
-   the code you inherited, not from a conversation. `surface.md` says what to hand it.
+## 2. What you need to deliver
 
-Then the obvious question, and it is the graded one: **does the implementation your agent wrote do what
-you meant?** If it does not, decide whether the agent was wrong or your specification was, and say which.
+There are three deliverables.
 
-## Running it
+### 1. A specification you would trust someone else to implement
 
-**1 — see where you are starting from.**
+You can rewrite `inherited/SPEC.md` or organize your specification into several documents if that makes it clearer.
+Don't make it long just to make it look thorough.
+The goal is a specification that another developer — human or AI — can use without having to guess what you meant.
+
+### 2. A test suite that makes your decisions observable
+
+Write tests for the behavior your specification requires.
+**This is the most important deliverable.**
+Throughout the module, you've seen why: a tool can tell you whether a test passes, but it can't decide which behavior your business contract should require.
+That's your responsibility.
+Your tests should make those decisions visible.
+
+### 3. An implementation generated from your specification alone
+
+Give an AI agent:
+
+- Your specification.
+- The existing API surface from [`surface.md`](surface.md).
+
+**Nothing else.**
+Don't give it your tests, the inherited implementation, the original brief, or your earlier conversation about the feature.
+You want to measure what the specification communicates on its own.
+
+### The question you'll be graded on
+
+**Does the implementation your agent produced actually do what you meant?**
+If it doesn't, investigate why.
+Did the agent contradict a clear requirement?
+Or did your specification leave something open, allowing the agent to make a reasonable choice you didn't intend?
+Be ready to explain the difference.
+
+---
+
+## 3. How to run the capstone
+
+### Step 1 — Check the inherited starting point
+
+Run the existing tests against the existing implementation:
 
 ```bash
-./gradlew :inherited:test    # the tests you inherited, against the code you inherited
+./gradlew :inherited:test
 ```
 
-**2 — write your specification.** A file in this folder; `my-spec.md` below, name it what you like.
+This tells you where you're starting.
+It doesn't prove the inherited feature is correct.
+It only tells you whether the inherited tests pass against the inherited code.
 
-**3 — have an agent implement it, from that text and nothing else.**
+### Step 2 — Write your specification
+
+Create a Markdown file in this folder.
+For the commands below, we'll call it:
+
+`my-spec.md`
+
+You can choose another filename.
+Your specification should describe the behavior you want the new implementation to follow.
+
+### Step 3 — Ask an agent to implement your specification
+
+For example:
 
 ```bash
-./gradlew runAgent -Pmode=impl-from-spec -Pagent=my-run -Pspec=my-spec.md \
-    -Pprovider=ollama -Pmodel=qwen2.5-coder:14b
+./gradlew runAgent \
+    -Pmode=impl-from-spec \
+    -Pagent=my-run \
+    -Pspec=my-spec.md \
+    -Pprovider=ollama \
+    -Pmodel=qwen2.5-coder:14b
 ```
 
-`-Pagent` names the run, so a second run does not overwrite the first. `-Pspec` is your text — the agent
-receives it and `surface.md`, nothing else. `-Pprovider`/`-Pmodel` choose the agent.
+Here's what the arguments mean:
 
-It writes one file: `implementations/my-run/my-spec/src/main/kotlin/…/pricing/Pricing.kt`.
+| Argument                    | Purpose                                                         |
+|-----------------------------|-----------------------------------------------------------------|
+| `-Pmode=impl-from-spec`     | Asks the agent to implement the feature from a specification.   |
+| `-Pagent=my-run`            | Names this run so you can keep it separate from other attempts. |
+| `-Pspec=my-spec.md`         | Selects **your specification**.                                 |
+| `-Pprovider=ollama`         | Chooses the API provider.                                       |
+| `-Pmodel=qwen2.5-coder:14b` | Chooses the model.                                              |
 
-**4 — put it in place of what you inherited**, overwriting
-`inherited/src/main/kotlin/…/pricing/BestOffer.kt`. That is the deliverable: you are replacing that file,
-not adding next to it. Keep the earlier one somewhere if you want to compare.
+The agent receives exactly your specification and `surface.md`.
+It doesn't receive the inherited code or your tests.
 
-**5 — run your own tests against it.**
+The generated implementation is written to:
+`implementations/my-run/my-spec/src/main/kotlin/…/pricing/Pricing.kt`
+
+### Step 4 — Replace the inherited implementation
+
+Take the file your agent generated and use it to **replace**:
+`inherited/src/main/kotlin/…/pricing/BestOffer.kt`
+
+Overwrite the existing file.
+Don't add the new implementation alongside the old one.
+
+You can save a copy of the original somewhere else if you want to compare them later.
+The point is to test the implementation produced from **your** specification, not the one you inherited.
+
+### Step 5 — Run your own tests
+
+Now run:
 
 ```bash
-./gradlew :work:test         # your tests, against whatever is in inherited/ right now
+./gradlew :work:test
 ```
 
-Run the same agent more than once before you conclude anything about it. Two different agents on the
-same specification is more interesting still — where they disagree, your specification did not say.
+This runs your tests against whichever implementation is currently in `inherited/`.
+If a test fails, investigate the disagreement.
+Don't immediately change the test to match the code.
+Ask whether the code violated your specification or whether your specification failed to express the behavior you expected.
 
-## The check your tests will face
+### Step 6 — Compare agent runs
 
-There is one more instrument, and **you do not run it** — it is run on your work, and you will see it
-demonstrated in class rather than in this folder.
+Run the same agent more than once before drawing conclusions about it.
+Then, if possible, try a different agent using exactly the same specification.
+This can be even more revealing.
+When two agents make different choices, investigate what allowed that difference.
+**If both implementations are reasonable readings of your text, you've found a decision your specification didn't settle.**
 
-It takes **two complete implementations** of the feature. Both are sensible, both pass the tests that came
-with this project, and they answer one question the business text never settled **differently**. Then it
-runs *your* tests against each of them and asks a single thing: **do your tests tell them apart?**
+---
 
-- **SETTLED** — your tests accept only one of the two. You decided, and the decision is visible in code.
-- **LEFT OPEN** — your tests accept both. That is not a bug you missed; it is a decision nobody made,
-  not by whoever wrote what you inherited, and so far not by you.
+## 4. The hidden check your tests will face
 
-Neither of the two is wrong, so nothing here tells you which to pick — only whether you picked. That is a
-different kind of failure from a bug, and no mutant will ever find it for you.
+There's one more evaluation tool.
+**You won't run it yourself.**
+We'll run it against your work and demonstrate the results in class.
 
-**Why it is not in this folder:** each of those implementations is a complete, working answer to the
-feature. Handing you the source would hand you our answer — and would hand it to any agent you point at
-this directory, which is the one thing this exercise cannot survive.
+Here's what it does.
+It takes **two complete implementations** of the franchise feature.
+Both implementations are sensible.
+Both pass the tests that came with the inherited project.
+But they make **different choices about one question the original business text never settled**.
 
-## How this is judged
+The evaluator runs your test suite against both implementations.
+Then it asks one question:
+**Can your tests tell these two interpretations apart?**
 
-Not on matching our answer. Wherever the feature leaves a real choice, we do not have an answer — we have
-a choice of our own, which we made and can defend. You are judged on whether **you** made yours, whether
-your tests hold you to it, and whether you can say which of the things you inherited were decisions and
-which were nobody's decision at all.
+### Possible outcomes
+
+| Result        | What it means                                                                                                                  |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------|
+| **SETTLED**   | Your tests accept one implementation and reject the other. You've made a decision, and that decision is visible in your tests. |
+| **LEFT OPEN** | Your tests accept both implementations. The behavior is still undecided as far as your test suite is concerned.                |
+
+### Why isn't LEFT OPEN just a bug?
+
+Because neither implementation is necessarily wrong.
+The original business text didn't settle the question.
+The people who produced the inherited work didn't settle it either.
+And if your tests accept both interpretations, you haven't settled it yet.
+The evaluator doesn't tell you which interpretation to choose.
+It tells you whether you've made that choice **explicit and testable**.
+
+That's different from detecting an implementation defect.
+A mutation test can reveal that code violates an established requirement.
+It can't tell you which requirement to establish when the business text allows more than one reasonable answer.
+
+### Why can't you see the two implementations?
+
+Because each one is a complete, working implementation of the feature.
+Giving you their source code would effectively give you our answers.
+It would also make those answers available to any AI agent you point at this folder.
+That would undermine the central experiment: can you write a specification and tests that express your own decisions without being shown the expected solutions?
+So the implementations stay outside the student project.
+
+---
+
+## 5. How your work will be evaluated
+
+**You are not graded on whether your implementation matches ours.**
+When the feature leaves a genuine choice open, we don't have one uniquely correct answer.
+We have our own interpretation — a choice we've made and can explain.
+You can make a different choice.
+What matters is whether you can show that the choice was deliberate.
+
+We'll look at three things:
+
+1. **Did you make the necessary decisions?** Your specification should settle the important questions rather than leave them to the implementing agent.
+2. **Do your tests enforce those decisions?** The expected behavior should be observable in executable checks, not just described in prose.
+3. **Can you explain what you inherited?** You should be able to distinguish deliberate requirements from assumptions that nobody actually agreed on.
+
+A passing test suite is useful evidence.
+But it isn't the whole answer.
+The stronger result is being able to explain **why** those tests exist and **which decisions** they protect.
+
+---
+
+## The main takeaway
+
+This capstone isn't about writing the cleverest implementation.
+It's about taking responsibility for a feature that someone else started.
+You inherit a specification, code, and tests. You investigate what they say, decide what the contract should guarantee, and write tests that hold the implementation to those decisions.
+Then you give your specification to an agent and see what comes back.
+
+**If the agent has to guess, that's something you need to know. If your tests can't distinguish two reasonable interpretations, that's something you need to decide.**
+By the end, you should have more than working code.
+You should have a specification you can hand to someone else, tests that explain what matters, and a clear account of the decisions you've made.

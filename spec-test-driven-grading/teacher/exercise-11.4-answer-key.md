@@ -1,171 +1,413 @@
-# 11.4 — the property catalog and the key
+# Exercise 11.4 — Property Catalog and Answer Key
 
-Teacher-only. Two artifacts are described here, and they are easy to confuse:
+These notes are for teachers only.
+This guide explains how we check the claims made by students' specifications, 
+how we measure the accuracy of the AI claim extractor, and how to prepare the materials for class.
 
-- **the property catalog** — `pricing-properties/.../PricingProperties.kt`, one test per claim a
-  specification might make. It runs against the reference and against every mutant. This is the
-  load-bearing layer: it is code, it is deterministic, and no model touches it.
-- **the key** — `fixtures/11.4/key.json`, a hand-written record of which claims each fixture
-  specification *actually makes*. It measures the **claim extractor**, and nothing else.
+## First, two things that are easy to confuse
 
-The key is not a rubric. It is never shown to a learner as one, and no mark is computed from it.
+Exercise 11.4 uses two separate artifacts.
 
-## Why the key exists
+**1. The property catalog**
 
-The extractor asks a model, for each property in the catalog, whether a given specification asserts
-that claim. Five identical runs of it agreed verbatim. That is reproducibility, and it is what you
-would expect at temperature 0 — it says nothing about whether the answers are right.
+`pricing-properties/.../PricingProperties.kt`
 
-They are not always right. On the strongest specification in the corpus the extractor answered NO to
-"no rule ever raises the price", a claim that spec makes twice (`0 <= priceFor(duck, rules) <=
-duck.price`, and again as monotonicity). Without a key that miss is indistinguishable from a genuine
-gap, and the tool reports a fault in work that has none.
+This is Kotlin test code. Each test represents a claim that a specification might make about `priceFor`.
+We run these properties against the reference implementation and every mutant.
+**This is the part that actually checks behavior.** It's deterministic, and no AI model changes it during evaluation.
 
-Current measurement against the shipped catalog: see `./gradlew scoreExtraction -Pagent=<run>`.
+**2. The answer key**
 
-## Reading the key
+`fixtures/11.4/key.json`
 
-Three verdicts per claim, because silence and error are different facts:
+This is a hand-written record of which claims each example specification actually makes.
+We use it to measure whether the AI claim extractor reads specifications correctly.
+**The key is not a grading rubric.** Students aren't graded against it, and no mark is calculated from it.
+That distinction matters throughout this guide.
 
-| verdict | meaning | what it costs downstream |
-| --- | --- | --- |
-| `yes` | the text asserts it | — |
-| `no` | the text is silent | an implementer is left free; usually fine, sometimes a gap |
-| `contra` | the text asserts something incompatible | an implementer is sent the wrong way |
+---
 
-`outOfScope` lists claims the fixture's own brief never showed its author — a basic-tier spec is
-silent about `BestOf` because the basic brief has no `BestOf`. That is correct work. The extractor
-should still answer NO; the distinction matters only to a person reading the report.
+## 1. Why do we need an answer key?
 
-Note what the third verdict exposes: the extractor cannot express "the specification says the
-opposite". It answers a yes/no question, so on a `contra` cell it says NO, which is *right about the
-absence and silent about the more serious fault*. `scoreExtraction` counts those as agreement and
-lists them separately. A reader catches what the extractor structurally cannot.
+The claim extractor reads a specification and answers a question for each property in the catalog:
+**Does this specification explicitly make this claim?**
 
-## The appeal — `verifyClaims`
+We ran the extractor five times with identical settings.
+All five runs produced exactly the same answers.
+That's good for reproducibility, and it's what we'd expect at temperature 0.
+But reproducibility doesn't guarantee correctness.
 
-A learner who thinks the extractor misread them can declare their claims directly:
+### A real example
 
+On the strongest specification in our corpus, the extractor answered **NO** to the claim:
+
+> No rule ever increases the price.
+
+But the specification states this twice.
+First, as a bound:
+
+```text
+0 <= priceFor(duck, rules) <= duck.price
 ```
+
+And again through a monotonicity requirement.
+So the claim really is present.
+The extractor simply missed it.
+
+Without a hand-written key, we couldn't tell the difference between:
+
+- A specification that forgot to state the rule.
+- An extractor that failed to recognize the rule.
+
+And that would mean our tool could report a problem in a specification that was actually correct.
+To see the current extractor accuracy against the shipped catalog, run:
+
+```bash
+./gradlew scoreExtraction -Pagent=<run>
+```
+
+---
+
+## 2. How to read the key
+
+The key uses three possible verdicts for each claim.
+
+| Verdict  | Meaning                                                       | Why it matters                                                                |
+|----------|---------------------------------------------------------------|-------------------------------------------------------------------------------|
+| `yes`    | The specification explicitly makes the claim.                 | The behavior is stated.                                                       |
+| `no`     | The specification doesn't address the claim.                  | An implementer is free to choose. That may be acceptable or may reveal a gap. |
+| `contra` | The specification says something incompatible with the claim. | An implementer may be directed toward the wrong behavior.                     |
+
+It's important to distinguish **silence from contradiction**.
+A specification that doesn't mention a behavior is different from one that explicitly requires the opposite behavior.
+
+### What does `outOfScope` mean?
+
+The key also has an `outOfScope` list.
+These are claims the author wasn't expected to make because they weren't included in that specification's business description.
+For example, a basic-tier specification doesn't need to describe `BestOf`, because `BestOf` wasn't part of the basic-tier brief.
+The extractor should still answer `NO` for those claims.
+But when a teacher reads the report, `outOfScope` explains why that absence isn't a problem.
+
+### A limitation of the extractor
+
+The extractor only answers YES or NO.
+It cannot say:
+
+> This specification explicitly requires the opposite behavior.
+
+So when the correct key verdict is `contra`, the extractor answers `NO`.
+Technically, that's correct: the expected claim isn't present.
+But it misses the more serious issue: **the text actively contradicts the claim**.
+
+`scoreExtraction` counts these cells as agreement but reports them separately.
+That's a limitation of the extractor's design, not something the score can fix.
+A human reader can recognize a contradiction that a yes/no extractor cannot express.
+
+---
+
+## 3. What if a student disagrees with the extractor?
+
+That's what `verifyClaims` is for.
+Students can challenge the extractor by declaring which claims their specification makes.
+For example:
+
+```bash
 ./gradlew verifyClaims -Pclaims=1,3,4,6
-./gradlew verifyClaims -Pspec=<SPEC.md> -Pagent=<run>   # reads claims.txt beside the spec
 ```
 
-Numbers, full claim names, or any unambiguous fragment. Everything after the declaration is
-deterministic: those properties run against the reference and the mutants, and the report says which
-mutants each claim kills. No model, and no key needed — which is why this path stays trustworthy on
-a catalog of your own.
+Or, if they have a `claims.txt` file next to their specification:
 
-What to look at in the output is the **disagreement**, not the score:
-
-- **CONTESTED** — declared, not extracted. Ask them to show you the sentence. Either the checker
-  misread it, or the claim lives in the learner's head and not in the text. Both are worth the
-  conversation, and the report deliberately does not decide which it is.
-- **NOT DECLARED** — extracted, not declared. They wrote something down that pins an implementation
-  and did not realise they had. Usually the more instructive of the two.
-
-Note the honest failure mode this preserves: a learner can win the appeal and still lose the point.
-On our best fixture, claim 2 is genuinely stated, the extractor genuinely missed it — and the
-property kills no mutant, so the claim they were defending constrains nobody. The report says both
-things in the same run.
-
-## Handing out the corpus — rename the files
-
-The repository is public, deliberately. Someone studying alone may read the grading build; the
-exercise then rests on their honesty, which is their business. A teacher running the course downloads
-everything and hands the group only what the step needs.
-
-**When you hand out `fixtures/11.4/`, rename the files.** They are named by the model that wrote them,
-and the slides promise the learner an anonymous set — a name on the file does the reading for them, and
-in the compression step it makes everyone defer to whichever one they believe is best. Use `A.md`,
-`B.md`, `C.md`, in an order you shuffle yourself:
-
+```bash
+./gradlew verifyClaims -Pspec=<SPEC.md> -Pagent=<run>
 ```
+
+They can identify claims using:
+
+- Claim numbers.
+- Full claim names.
+- Any unambiguous fragment of a claim name.
+
+Once the claims are declared, the rest of the process is deterministic.
+The tool runs those properties against the reference implementation and mutants, then reports which mutants each claim rules out.
+
+**No AI model is involved in that step, and the answer key isn't needed.**
+That's why this process also works with a property catalog you've written yourself.
+
+### What should we look for in the report?
+
+The interesting part isn't just the score.
+It's where the student's declared claims and the extractor's results disagree.
+
+#### CONTESTED — The student declared a claim, but the extractor didn't find it
+
+Ask the student:
+**Where does your specification say this?**
+
+There are two possibilities.
+The extractor may have missed a real statement.
+Or the student may believe the rule is obvious without having written it down.
+
+Both are worth discussing.
+The report deliberately doesn't decide which explanation is correct.
+
+#### NOT DECLARED — The extractor found a claim the student didn't declare
+
+This is often even more interesting.
+It means the student wrote something that constrains the implementation without realizing it.
+They may have accidentally made a decision they didn't intend to make.
+Ask them to find the sentence and explain whether that behavior should really be part of the contract.
+
+### Winning an appeal doesn't guarantee a better score
+
+Here's a useful example from our corpus.
+In the strongest specification, claim 2 is genuinely present.
+The extractor missed it.
+So the student would be right to challenge the result.
+
+But the corresponding property **doesn't kill any mutant**.
+That means the claim, although correctly stated, doesn't rule out any of the defects in our catalog.
+Both facts can be true:
+
+- The extractor was wrong.
+- The claim adds no distinguishing power against the available mutants.
+
+The report shows both results together.
+**A correct appeal fixes the reading of the specification. It doesn't automatically make the specification stronger.**
+
+---
+
+## 4. Preparing the specification corpus for students
+
+The repository is public, and that's intentional.
+Someone studying independently can choose to read the teacher grading build. At that point, the exercise depends on their willingness to work through it honestly.
+But when you're teaching a group, you control which materials you hand out.
+
+**When you distribute `fixtures/11.4/`, rename the specification files.**
+The original filenames reveal which AI model wrote each specification.
+That matters because students are supposed to compare the texts without knowing their authors.
+
+A model name can influence their judgment before they've read a single sentence.
+It can also affect the compression exercise: students may automatically prefer whichever model they believe is strongest.
+
+### Make an anonymous handout
+
+For example:
+
+```bash
 mkdir -p handout
-cp fixtures/11.4/written/claude-code.md                 handout/A.md
-cp fixtures/11.4/written/ollama-qwen2.5-coder-1.5b.md   handout/B.md
-cp fixtures/11.4/written/ollama-qwen2.5-coder-32b.md    handout/C.md
+
+cp fixtures/11.4/written/claude-code.md \
+   handout/A.md
+
+cp fixtures/11.4/written/ollama-qwen2.5-coder-1.5b.md \
+   handout/B.md
+
+cp fixtures/11.4/written/ollama-qwen2.5-coder-32b.md \
+   handout/C.md
 ```
 
-Those three are the set we used for the compression run, so the results in
-`exercise-11.4-corpus-results.md` line up with them. Any three work; keep one long and two short, or
-there is nothing to merge.
+These are the three specifications we used in the compression experiment, so the results in [`exercise-11.4-corpus-results.md`](exercise-11.4-corpus-results.md) correspond to this set.
+You can choose other specifications too.
+Just make sure the set includes **one longer specification and two shorter ones**.
+Otherwise, there may be very little for students to combine or compress.
 
-Keep your own mapping. You will want it when a learner asks which was which — after they have finished,
-not before.
+Shuffle the order yourself, rather than always using the same mapping.
+And keep a private record of which file came from which model.
+Students may want to know the authors afterward.
+That's a good discussion to have **after they've finished comparing the specifications**, not before.
 
-## Handing the learner the tool and the list, if you want to
+---
 
-The default is that the claim list and the property run stay on your side: the learner writes the
-specification, gets the list back with their feedback, and argues with it in writing. Slide 41 has
-them grade their own list by hand first, and that step needs nothing from you.
+## 5. Should students get the property catalog?
 
-You can go further and give them the catalog and `verifyClaims` outright. It is one copy and one
-gradle property — the task is already in the shared plugin, and the student build only lacks
-`implTests`. Before you do, the trade, because it is not small:
+By default, the claim list and property checks stay with the teacher.
+Students write their specifications first.
+Then they receive feedback about the claims their text appears to make and can challenge that feedback in writing.
+Slide 41 also asks students to assess their own claim lists manually before using the tool.
 
-**What they gain.** A tight loop. Write a claim, run it, see whether it holds against correct code and
-whether it rules anything out — without waiting for you. For a strong group, or a second pass through
-the exercise, that is worth a lot.
+That step doesn't require any extra materials from you.
+But you can choose to give students the property catalog and `verifyClaims` directly.
+The task already exists in the shared Gradle plugin. The student build only lacks `implTests`, so enabling this workflow is a small change.
+There is a real trade-off, though.
 
-**What it costs.** The list becomes a **visible target**, and a visible target is one people write to
-fit. We have measured that in this very module more than once, on ourselves: the moment a number was
-in view, effort reorganised around it. A learner holding the catalog will produce a specification that
-asserts those ten claims — which is a different and much easier task than deciding what the feature
-should do. It also spoils the two comparisons the exercise ends with, since their text was written
-against the same list it is scored on.
+### What students gain
 
-**A middle setting that keeps most of both.** Give them the tool and the list **after** their first
-specification is handed in — as the second attempt. The first pass measures what they decided
-unprompted; the second teaches the loop. The order matters more than the access.
+They get immediate feedback.
+They can write a claim, run the property check, and find out:
 
-**What must not travel either way.** The reference implementation and the mutant catalog. Those are
-answers, not targets: with the mutants in hand there is nothing left to discover, and with the
-reference the exercise is "guess what we wrote".
+- Does the claim hold against the correct implementation?
+- Does it rule out any known incorrect implementations?
 
-## Making your own property catalog
+They don't have to wait for you to run the checks.
+For a strong group, or a second attempt at the exercise, this can be extremely useful.
 
-Supported, and it is the honest way to use this material — our catalog is a default, not a
-definition of what a good specification says.
+### What it costs
 
-1. Write your own `PricingProperties.kt`, or generate one with a model of your choosing and read
-   every line of it. Two rules decide whether a property earns its place:
-   - a property that **fails on the reference** is simply wrong;
-   - a property that **kills no mutant** pins nothing, however true it is.
-   `./gradlew pricingPropertyMatrix` reports the second. Two of ours kill nothing and are kept
-   deliberately, as the live example of that distinction — do not read the matrix as a to-do list.
-2. Test names are the claim ids. The extractor reads them straight out of the file, so they cannot
-   drift; renaming a test renumbers everything downstream, including the key.
+The catalog becomes a **visible target**.
+Once students see the list of properties, they can write specifications specifically to satisfy those checks.
+We've seen this effect in our own experiments more than once.
+As soon as a score becomes visible, agents and people may start organizing their effort around improving that number.
 
-## Making your own key — and the trade if you do not
+A student with the catalog can simply write a specification that asserts the ten listed claims.
+But that's a different task from reading a business description and deciding which behaviors need to be specified.
+It also weakens the final comparisons in the exercise, because the resulting specifications were written with the evaluation criteria already visible.
 
-**A key is valid only for the catalog it was written against.** Change the properties and
-`key.json` describes claims that no longer exist. Ours is renumbered by hand whenever the catalog
-changes, and `scoreExtraction` fails loudly on a length mismatch rather than scoring the wrong cells.
+### A useful compromise
 
-So, plainly:
+**Give students the catalog after they submit their first specification.**
+Then let them use it for a second attempt.
+This preserves two different learning experiences:
 
-- **With the shipped catalog**, the extractor's accuracy is measured and you can quote it.
-- **With your own catalog**, it is unmeasured. The layer still runs and still produces a report;
-  you just have no idea how often that report is wrong.
+1. **First attempt:** Decide what the specification should say without seeing the evaluation criteria.
+2. **Second attempt:** Use the property catalog to check, refine, and strengthen those decisions.
 
-Nothing breaks either way, because no grade rests on the extractor — layer 3 does the load-bearing
-work, and layer 3 needs no key. Treat an unmeasured extractor as advisory and say so to the group.
+Students get the benefits of feedback without losing the independent reasoning exercise.
+The order matters more than whether they eventually receive the tool.
 
-If you want the measurement back, author a key over a handful of specifications:
+### What should remain teacher-only?
 
-1. Take 5–6 specs of varying quality. Ours are in `fixtures/11.4/` and you may reuse them.
-2. Read each one against each of your claims and record `yes` / `no` / `contra`, with a pointer to
-   where in the text — the `where` field. The pointer is what makes the key auditable later, and it
-   is what catches you when you disagree with your past self.
-3. Run `scoreExtraction` and read the misses. A miss is your tooling misreading a correct spec.
+Regardless of when you share the catalog, don't give students:
 
-Budget honestly: it is one careful reading per specification, and it does not parallelise. This is
-the price of knowing whether your checker works, and it is why the default catalog ships with one
-already written.
+- The reference implementation.
+- The mutant catalog.
 
-## Revealing the reference
+Those are answers, not just evaluation criteria.
+If students can read the mutants, they already know which defects the exercise expects them to discover.
+If they can read the reference implementation, the task changes from interpreting the business requirements to reproducing our chosen implementation.
 
-`reference/.../Pricing.kt` carries all seven decisions in its KDoc and is hidden by default. Show it
-if you want to — after the specs are written, never before. The moment it is visible the exercise
-stops being "decide what the business meant" and becomes "guess what we wrote".
+---
+
+## 6. Creating your own property catalog
+
+You don't have to use our catalog.
+In fact, creating your own is a good way to adapt this exercise to your course.
+Our catalog is a starting point, **not a universal definition of a good specification**.
+
+### Step 1: Write the properties
+
+Create your own `PricingProperties.kt`.
+You can write it yourself or ask an AI model to generate a first draft.
+If you use an agent, read every line before accepting it.
+
+There are two important checks.
+**A property that fails against the reference is incorrect.**
+It cannot be used as a valid requirement for that implementation.
+
+**A property that kills no mutant doesn't distinguish correct code from the incorrect implementations in the current catalog.**
+It may be true, but it doesn't help catch any of those defects.
+Run:
+
+```bash
+./gradlew pricingPropertyMatrix
+```
+
+This shows which mutants each property kills.
+Two properties in our own catalog kill no mutants.
+We keep them deliberately because they're useful examples of the distinction between a true claim and a claim that detects a defect.
+So don't treat the matrix as a checklist of properties you must delete.
+Use it to understand what each property contributes.
+
+### Step 2: Keep claim names stable
+
+The test names in `PricingProperties.kt` are also the claim identifiers.
+The extractor reads them directly from the source file.
+That prevents the claim list and property implementation from drifting apart.
+But it also means **renaming a test changes the identifiers used by downstream tools**.
+If you rename or reorder properties, remember to update anything that depends on those identifiers, including the answer key.
+
+---
+
+## 7. Creating your own answer key
+
+**An answer key is only valid for the property catalog it was written for.**
+If you change the properties, the existing `key.json` may refer to claims that no longer exist.
+We manually update our key whenever the catalog changes.
+And `scoreExtraction` checks the lengths: if the number of key entries doesn't match the catalog, it fails rather than silently comparing the wrong claims.
+
+### What happens if you don't write a new key?
+
+The tools still work.
+The extractor can still read specifications and produce reports.
+The deterministic property checks still run.
+But you no longer know how accurate the extractor is on your new catalog.
+
+Here's the difference:
+
+| Setup                              | What you can say about the extractor                                |
+|------------------------------------|---------------------------------------------------------------------|
+| Shipped catalog and key            | Its accuracy has been measured.                                     |
+| Custom catalog without a new key   | It produces results, but its accuracy is unknown.                   |
+| Custom catalog with a reviewed key | You can measure its accuracy on your own claims and specifications. |
+
+This doesn't break grading because **grades don't depend on the extractor's answers**.
+The deterministic property-testing layer does the actual behavioral checking, and it doesn't need the key.
+If you use an extractor that hasn't been measured against your catalog, describe its results as advisory.
+Tell students that the tool may misread their specifications.
+
+### How to write a new key
+
+If you want to measure the extractor's accuracy, create a small reviewed dataset.
+
+**1. Choose five or six specifications.**
+
+Include examples of different quality levels.
+You can reuse the specifications in `fixtures/11.4/` or create your own.
+
+**2. Read every specification against every claim.**
+
+For each pair, record:
+
+- `yes` if the specification makes the claim.
+- `no` if it doesn't address the claim.
+- `contra` if it asserts incompatible behavior.
+
+Also record a `where` field pointing to the relevant part of the specification.
+That reference makes the key auditable.
+It also helps when you revisit the key later and discover that you disagree with your earlier judgment.
+
+**3. Run the extractor evaluation.**
+
+Use `scoreExtraction` and inspect the mismatches.
+A mismatch may mean the extractor has misread a specification that a human correctly classified.
+
+### How much time should you budget?
+
+This takes careful reading.
+You need to evaluate every selected specification against the claims in your catalog.
+It's not work that becomes faster simply by running more models in parallel, because the whole point is to establish a human-reviewed reference.
+That's the cost of knowing whether your checker is accurate.
+And it's why the shipped catalog includes a key we've already written.
+
+---
+
+## 8. When should you reveal the reference implementation?
+
+The reference implementation lives in:
+
+`reference/.../Pricing.kt`
+
+Its KDoc documents all seven decisions used by the reference.
+We hide it by default.
+You can show it during the debrief if that helps your group understand the differences between specifications.
+
+But **show it only after students have written their own specifications**.
+Once the reference is visible, the exercise changes.
+Instead of deciding what the business description means, students can simply copy the decisions we've already made.
+And that's not the skill exercise 11.4 is designed to teach.
+
+---
+
+## The main takeaway
+
+This exercise has three separate questions:
+
+1. **What does the specification actually say?** The claim extractor helps answer this, but it can be wrong.
+2. **Which behaviors do those claims constrain?** The deterministic property catalog checks this against the reference and mutants.
+3. **Which decisions should the specification make in the first place?** That's the student's responsibility, based on the business description.
+
+The answer key helps us measure the first tool.
+The property catalog provides evidence for the second question.
+Neither should replace the student's work on the third.
+
+**The goal isn't to write a specification that scores well against a visible checklist. It's to make the important decisions explicit, then use tools to check whether the text really communicates them.**

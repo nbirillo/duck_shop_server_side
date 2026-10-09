@@ -15,26 +15,25 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * Scores the **extractor** — layer 2 — against the hand-authored key. Teacher-only.
+ * Checks how accurately the AI extractor (layer 2) reads specifications. Teacher-only.
  *
- * The five-run agreement we measured earlier is reproducibility, not accuracy: `runAgent` calls the
- * model at temperature 0, so identical answers are the expected outcome and say nothing about
- * whether the answers are right. This task supplies the missing half. It reads
- * `fixtures/11.4/key.json`, reads whatever `runAgent -Pmode=spec-extract` wrote under
- * `extractions/<agent>/`, and reports where the two disagree.
+ * Getting the same answer five times doesn't mean the answer is right. `runAgent` uses
+ * temperature 0, so repeated answers are expected. This task checks accuracy instead:
+ * it compares the hand-written `fixtures/11.4/key.json` with the results saved by
+ * `runAgent -Pmode=spec-extract` in `extractions/<agent>/`.
  *
- * Two errors are counted apart, because they cost different things:
+ * It looks for two kinds of mistakes:
  *
- *  - a **miss** — the key says the spec asserts a claim, the extractor says it does not. This is the
- *    one that harms a learner: it reports a gap that is not there, in work that is correct.
- *  - a **false claim** — the extractor credits a claim the text never makes. This flatters, and
- *    layer 3 catches it anyway when the property runs and the assertion turns out to be unsupported.
+ * - **Miss:** the spec makes a claim, but the extractor says it doesn't. This can make
+ *   a student think their specification is missing something that is already there.
+ * - **False claim:** the extractor says the spec makes a claim that isn't in the text.
+ *   The property checks in layer 3 can catch unsupported claims later.
  *
- * A claim the key marks `contra` is one the specification actively gets wrong. The extractor's `NO`
- * is right about the absence and blind to the contradiction, so those are reported separately rather
- * than folded into either count — see `_why_three` in the key.
+ * The key also uses `contra` when a spec says the opposite of what it should.
+ * The extractor can answer `NO`, but that doesn't tell us it noticed the contradiction.
+ * We show those cases separately. See `_why_three` in the key.
  *
- * Params: `-Pagent=<name>` (which extraction run to score), `[-Pkey=<path to key.json>]`.
+ * Options: `-Pagent=<name>` and, optionally, `-Pkey=<path to key.json>`.
  */
 abstract class ExtractionScoreTask @Inject constructor(
     private val providers: ProviderFactory,
@@ -52,7 +51,7 @@ abstract class ExtractionScoreTask @Inject constructor(
     fun run() {
         val root = layout.projectDirectory.asFile
         val who = agent.orNull ?: providers.gradleProperty("agent").orNull
-            ?: error("Missing -Pagent=<name> — which extraction run to score")
+        ?: error("Missing -Pagent=<name>. Choose the extraction run to check.")
         val keyFile = root.resolve(keyPath.get())
         require(keyFile.isFile) { "Key not found: $keyFile" }
 
@@ -63,13 +62,13 @@ abstract class ExtractionScoreTask @Inject constructor(
 
         val extractionDir = root.resolve("extractions/$who")
         require(extractionDir.isDirectory) {
-            "No extractions under $extractionDir — run: ./gradlew runAgent -Pmode=spec-extract " +
-                "-Pagent=$who -Pspec=<fixture>"
+            "No extraction results in $extractionDir. First run: ./gradlew runAgent -Pmode=spec-extract " +
+                    "-Pagent=$who -Pspec=<fixture>"
         }
 
         logger.lifecycle("")
-        logger.lifecycle("Extraction accuracy — $who against ${keyFile.name}")
-        logger.lifecycle("${claims.size} claims, key written by hand from the text of each specification")
+        logger.lifecycle("Extractor accuracy — $who compared with ${keyFile.name}")
+        logger.lifecycle("${claims.size} claims, checked against a hand-written answer key")
 
         var scored = 0
         var agreed = 0
@@ -83,10 +82,10 @@ abstract class ExtractionScoreTask @Inject constructor(
             val expected = obj.getValue("verdicts").jsonArray.map { it.jsonPrimitive.content }
             require(expected.size == claims.size) {
                 "$path: the key has ${expected.size} verdicts, the catalog has ${claims.size} claims. " +
-                    "The property catalog changed and the key was not renumbered with it."
+                        "The catalog may have changed. Update the claim numbers in the key."
             }
-            // The subdirectory is part of the filename on purpose — see writeExtraction. Two
-            // fixtures share the basename claude-code.md and must not share an extraction.
+            // Keep the subdirectory in the name. Two fixtures are called claude-code.md,
+            // and their extraction results must stay separate. See writeExtraction.
             val name = path.removeSuffix(".md")
             val file = extractionDir.resolve("$name.txt")
             if (!file.isFile) {
@@ -103,23 +102,23 @@ abstract class ExtractionScoreTask @Inject constructor(
                     want == "yes" && got -> agreed++
                     want == "yes" && !got -> {
                         misses += "$name #${i + 1}"
-                        lines += "   #${i + 1} MISS — key: asserted (${whereFor(obj, i + 1)}), extractor: no"
+                        lines += "   #${i + 1} MISS — the spec makes this claim (${whereFor(obj, i + 1)}), but the extractor says NO"
                     }
                     want == "no" && !got -> agreed++
                     want == "no" && got -> {
                         falseClaims += "$name #${i + 1}"
-                        lines += "   #${i + 1} FALSE CLAIM — the text does not say it, the extractor says it does"
+                        lines += "   #${i + 1} FALSE CLAIM — the extractor found a claim that isn't in the text"
                     }
-                    // "contra": the extractor cannot express "the spec says the opposite", so NO is
-                    // the closest it can get. Right about the absence, blind to the error.
+                    // For "contra", NO is the closest answer the extractor can give.
+                    // It can't say that the spec actually makes the opposite claim.
                     want == "contra" && !got -> {
                         agreed++
                         blindToContra += "$name #${i + 1}"
                     }
                     else -> {
                         falseClaims += "$name #${i + 1}"
-                        lines += "   #${i + 1} FALSE CLAIM — the text asserts the OPPOSITE " +
-                            "(${whereFor(obj, i + 1)}) and the extractor credited it"
+                        lines += "   #${i + 1} FALSE CLAIM — the text actually says the opposite " +
+                                "(${whereFor(obj, i + 1)}), but the extractor counted the claim"
                     }
                 }
             }
@@ -143,42 +142,41 @@ abstract class ExtractionScoreTask @Inject constructor(
     ) {
         logger.lifecycle("")
         if (absent.isNotEmpty()) {
-            logger.lifecycle("Not scored — no extraction on file for ${absent.size}: ${absent.joinToString()}")
+            logger.lifecycle("Skipped ${absent.size} specification(s) with no extraction results: ${absent.joinToString()}")
         }
         if (scored == 0) {
-            logger.lifecycle("Nothing scored. Run the extractor over the fixtures first.")
+            logger.lifecycle("Nothing to score yet. Run the extractor on the fixtures first.")
             return
         }
-        logger.lifecycle("Agreement with the key: $agreed/$scored (${agreed * 100 / scored}%)")
-        logger.lifecycle("  misses (a real claim reported as absent): ${misses.size}${list(misses)}")
-        logger.lifecycle("  false claims (credited but not in the text): ${falseClaims.size}${list(falseClaims)}")
+        logger.lifecycle("Matches the answer key: $agreed/$scored (${agreed * 100 / scored}%)")
+        logger.lifecycle("  missed claims (in the spec, but not found): ${misses.size}${list(misses)}")
+        logger.lifecycle("  false claims (not actually in the spec): ${falseClaims.size}${list(falseClaims)}")
         if (blindToContra.isNotEmpty()) {
             logger.lifecycle("")
             logger.lifecycle(
-                "Counted as agreement but worth knowing: ${blindToContra.size} claim(s) the " +
-                    "specification actively CONTRADICTS${list(blindToContra)}",
+                "Counted as matches, but worth checking: ${blindToContra.size} claim(s) the " +
+                        "specification actually CONTRADICTS${list(blindToContra)}",
             )
             logger.lifecycle(
-                "  The extractor answers a yes/no question, so it can only say 'not asserted'. It is",
+                "  The extractor only answers YES or NO. It can say a claim is missing,",
             )
             logger.lifecycle(
-                "  right, and it is silent about the more serious fault. A reader is not.",
+                "  but it cannot explain that the spec says the opposite.",
             )
         }
         logger.lifecycle("")
-        logger.lifecycle("This is the accuracy of the CHECKER, not of any specification. A miss here is the")
-        logger.lifecycle("checker telling a learner something is missing from work where it is present — which is")
-        logger.lifecycle("why no grade rests on this layer, and why a learner may override it with their own")
-        logger.lifecycle("claim list and let the property layer settle it without a model in the loop.")
+        logger.lifecycle("This score is about the CHECKER, not the quality of a specification. A miss means")
+        logger.lifecycle("the checker overlooked something the student actually wrote. That's why")
+        logger.lifecycle("this layer doesn't decide the grade. Students can provide their own claim list")
+        logger.lifecycle("and have the property checks verify it without involving a model.")
     }
 
     private fun list(items: List<String>) = if (items.isEmpty()) "" else " — ${items.joinToString()}"
 
     /**
-     * The key is a list of verdicts positioned by claim number, and the extractor takes its claim
-     * numbers from the test names in the catalog. Reorder or rename a test and every verdict in the
-     * key silently shifts onto the wrong claim — a scored benchmark that measures nothing. Cheap to
-     * check, so it is checked on every run rather than trusted.
+     * Claim numbers come from test names in the property catalog. If those tests move
+     * or get renamed, the hand-written key may point to the wrong claims.
+     * Check the names on every run so we don't report misleading scores.
      */
     private fun checkAgainstCatalog(root: File, claims: List<String>) {
         val catalog = root.resolve(
@@ -187,16 +185,16 @@ abstract class ExtractionScoreTask @Inject constructor(
             ),
         )
         if (!catalog.isFile) {
-            logger.warn("Catalog not found at $catalog — key/claim agreement not verified.")
+            logger.warn("Can't find the catalog at $catalog, so the key's claim list was not checked.")
             return
         }
         val actual = Regex("fun `([^`]+)`").findAll(catalog.readText()).map { it.groupValues[1] }.toList()
         require(actual == claims) {
-            "The key's claim list no longer matches ${catalog.name}.\n" +
-                "  catalog: ${actual.joinToString("\n           ")}\n" +
-                "  key:     ${claims.joinToString("\n           ")}\n" +
-                "Renumber the verdicts in the key by hand — they are positional, and a shifted key " +
-                "scores every fixture against the wrong claims while looking perfectly healthy."
+            "The claims in the key no longer match ${catalog.name}.\n" +
+                    "  catalog: ${actual.joinToString("\n           ")}\n" +
+                    "  key:     ${claims.joinToString("\n           ")}\n" +
+                    "Update the claim numbers in the key by hand. They depend on the order, and " +
+                    "the wrong order would give misleading scores for every fixture."
         }
     }
 
@@ -204,17 +202,16 @@ abstract class ExtractionScoreTask @Inject constructor(
         entry["where"]?.jsonObject?.get(claim.toString())?.jsonPrimitive?.content ?: "see the key"
 
     /**
-     * Reads `N: YES|NO` lines. A `NO*` — the extractor's marker for "contradicted" — counts as NO;
-     * it produced one of those on a claim about a rule kind the basic brief never mentions, so the
-     * marker is not yet trustworthy enough to score on.
+     * Read verdicts written as `N: YES|NO`. Treat `NO*` as NO too.
+     * The extractor sometimes uses `NO*` incorrectly, so we don't score it separately.
      */
     private fun readVerdicts(file: File, expected: Int, path: String): List<Boolean> {
         val found = Regex("""^\s*(\d+)\s*:\s*(\w+)""", RegexOption.MULTILINE)
             .findAll(file.readText())
             .associate { it.groupValues[1].toInt() to it.groupValues[2].uppercase().startsWith("Y") }
         require(found.size == expected) {
-            "$path: the extraction has ${found.size} verdicts, the key expects $expected. " +
-                "Re-run the extractor on this fixture — a short answer is a failed run, not a result."
+            "$path: found ${found.size} verdicts, but the key expects $expected. " +
+                    "Run the extractor again for this fixture. An incomplete answer can't be scored."
         }
         return (1..expected).map { found.getValue(it) }
     }

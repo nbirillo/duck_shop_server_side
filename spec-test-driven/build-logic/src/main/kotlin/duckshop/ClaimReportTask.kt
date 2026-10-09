@@ -11,42 +11,34 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * **The appeal.** Scores a claim set the learner declares for themselves, instead of the one a model
- * read out of their prose.
+ * Lets you check the claims you say your specification makes.
  *
- * Layer 2 asks a model which claims a specification makes, and it is wrong often enough to matter:
- * measured against the hand key it misses a stated claim about one time in eight, and its single
- * worst habit is answering NO to a bound written as an inequality rather than as a sentence. A
- * learner whose correct spec is marked incomplete needs something better than "argue with the
- * report", so:
+ * Normally, a model reads your spec and decides which claims it contains. But that
+ * reading can be wrong. In our checks, it missed roughly one stated claim in eight,
+ * especially when a limit was written as an inequality.
  *
- * > Declare the claims yourself, and this task runs **exactly those** properties against the
- * > reference and the mutants. From that point on no model is in the loop, and the answer is the
- * > same one the grading build would compute.
+ * Here you can declare the claims yourself. This task runs those exact properties
+ * against the reference and the mutants. No model decides the result.
  *
- * It also prints the **disagreement** with the extraction, when one is on file, and that is the part
- * worth reading. Three cases, and they mean different things:
+ * If a model extraction is available, the report also compares it with your list:
  *
- *  - *declared, not extracted* — either the checker misread you, or you are claiming something your
- *    text implies to you and states to nobody else. Both are worth knowing; only the sentence tells
- *    you which, so the task points at the sentence rather than deciding for you.
- *  - *extracted, not declared* — you said more than you meant to, and something downstream is now
- *    pinned that you never chose to pin.
- *  - *agreed* — the boring case, and the common one.
+ * - Declared but not extracted: the model may have missed a claim, or your wording
+ *   may not be clear enough to another reader. Check what the spec actually says.
+ * - Extracted but not declared: the spec may promise more than you intended.
+ * - Agreed: both lists include the same claim.
  *
- * Declaring a claim does not make it true. The property still has to pass against the reference, and
- * it still has to kill something to be load-bearing; a declaration that fails on correct code is a
- * claim that contradicts the feature, which the report says in as many words.
+ * Declaring a claim doesn't make it correct. It still has to pass against the
+ * reference. And to catch a mutant, it needs to rule out a real mistake.
  *
- * Params: `-Pclaims=<ids>` or a `claims.txt` beside the spec, `[-Pagent=<extraction to compare>]`,
- * `[-Pspec=<SPEC.md>]`.
+ * Use `-Pclaims=<ids>` or a `claims.txt` next to the spec. You can also pass
+ * `-Pagent=<extraction to compare>` and `-Pspec=<SPEC.md>`.
  */
 abstract class ClaimReportTask @Inject constructor(
     private val providers: ProviderFactory,
     private val layout: ProjectLayout,
 ) : DefaultTask() {
 
-    /** The property catalog, whose test names are the claim ids. */
+    /** Property tests. Their names are the claim IDs. */
     @get:Input
     abstract val propertyFile: Property<String>
 
@@ -67,20 +59,18 @@ abstract class ClaimReportTask @Inject constructor(
         val declared = declared(root, claims)
 
         logger.lifecycle("")
-        logger.lifecycle("Declared claims — no model in this report")
-        logger.lifecycle("${declared.size} of ${claims.size} claims declared")
+        logger.lifecycle("Your declared claims — checked without a model")
+        logger.lifecycle("You declared ${declared.size} of ${claims.size} claims")
 
         compareWithExtraction(root, claims, declared)
         scoreAgainstMutants(root, claims, declared)
     }
 
-    // ── what the learner declared ────────────────────────────────────────────────────────────────
+    // ── Claims chosen by the learner ─────────────────────────────────────────────────────────────
 
     /**
-     * Accepts claim **numbers** (`2,4,7`) and claim **names**, in full or as any unambiguous
-     * fragment (`raises the price`). Names are the better habit — they survive a change to the
-     * catalog, where a number silently comes to mean a different claim — but numbers are what the
-     * report prints, so refusing them would be perverse.
+     * You can select claims by number (`2,4,7`), full name, or a unique part of a name
+     * (`raises the price`). Names are safer because numbers can change when the catalog changes.
      */
     private fun declared(root: File, claims: List<String>): Set<Int> {
         val inline = providers.gradleProperty("claims").orNull
@@ -97,14 +87,14 @@ abstract class ClaimReportTask @Inject constructor(
                 file.readLines().map { it.substringBefore('#') }
             }
             else -> error(
-                "Nothing declared. Either -Pclaims=<ids or names, comma-separated>, or a claims.txt " +
-                    "beside your spec with one claim per line. The claims:\n" +
-                    claims.mapIndexed { i, c -> "  ${i + 1}. $c" }.joinToString("\n"),
+                "No claims provided. Use -Pclaims=<ids or names, comma-separated>, or put a claims.txt " +
+                        "next to your spec with one claim per line. Available claims:\n" +
+                        claims.mapIndexed { i, c -> "  ${i + 1}. $c" }.joinToString("\n"),
             )
         }
 
         val wanted = raw.map { it.trim().trim('-', '*', ' ') }.filter { it.isNotEmpty() }
-        require(wanted.isNotEmpty()) { "The claim declaration is empty." }
+        require(wanted.isNotEmpty()) { "Your claim list is empty." }
 
         return wanted.map { token -> resolve(token, claims) }.toSortedSet()
     }
@@ -112,23 +102,23 @@ abstract class ClaimReportTask @Inject constructor(
     private fun resolve(token: String, claims: List<String>): Int {
         token.toIntOrNull()?.let { n ->
             require(n in 1..claims.size) {
-                "Claim $n does not exist — the catalog has ${claims.size}."
+                "Claim $n is not in the catalog. There are ${claims.size} claims."
             }
             return n
         }
         val hits = claims.withIndex().filter { (_, name) -> name.contains(token, ignoreCase = true) }
         require(hits.isNotEmpty()) {
-            "No claim matches \"$token\". The catalog:\n" +
-                claims.mapIndexed { i, c -> "  ${i + 1}. $c" }.joinToString("\n")
+            "No claim matches \"$token\". Available claims:\n" +
+                    claims.mapIndexed { i, c -> "  ${i + 1}. $c" }.joinToString("\n")
         }
         require(hits.size == 1) {
-            "\"$token\" matches ${hits.size} claims and must not be guessed at:\n" +
-                hits.joinToString("\n") { "  ${it.index + 1}. ${it.value}" }
+            "\"$token\" matches ${hits.size} claims. Please use a more specific name:\n" +
+                    hits.joinToString("\n") { "  ${it.index + 1}. ${it.value}" }
         }
         return hits.first().index + 1
     }
 
-    // ── the disagreement ─────────────────────────────────────────────────────────────────────────
+    // ── Differences from the model extraction ───────────────────────────────────────────────────
 
     private fun compareWithExtraction(root: File, claims: List<String>, declared: Set<Int>) {
         val who = agent.orNull ?: providers.gradleProperty("agent").orNull ?: return
@@ -136,7 +126,7 @@ abstract class ClaimReportTask @Inject constructor(
         val parts = spec.trimEnd('/').removeSuffix(".md").split('/').filter { it.isNotEmpty() }
         val file = root.resolve("extractions/$who/${parts.takeLast(2).joinToString("/")}.txt")
         if (!file.isFile) {
-            logger.lifecycle("No extraction on file for $who — declaration reported on its own.")
+            logger.lifecycle("No model extraction found for $who. Showing your declared claims only.")
             return
         }
 
@@ -150,30 +140,30 @@ abstract class ClaimReportTask @Inject constructor(
         val unclaimed = extracted - declared
 
         logger.lifecycle("")
-        logger.lifecycle("Against the extraction ($who): ${(declared intersect extracted).size} agreed")
+        logger.lifecycle("Compared with the model extraction ($who): ${(declared intersect extracted).size} claims match")
         if (contested.isEmpty() && unclaimed.isEmpty()) {
-            logger.lifecycle("   no disagreement.")
+            logger.lifecycle("   No differences found.")
             return
         }
         contested.forEach {
             logger.lifecycle("   CONTESTED  #$it ${claims[it - 1]}")
         }
         if (contested.isNotEmpty()) {
-            logger.lifecycle("     ↳ you say your spec states these and the checker did not find them. Go and")
-            logger.lifecycle("       find the sentence. If it is there, the checker was wrong and the run below")
-            logger.lifecycle("       stands. If what you find is vaguer than you remembered, the checker read it")
-            logger.lifecycle("       the way a stranger would — which is the more useful result of the two.")
+            logger.lifecycle("     ↳ You declared these claims, but the model did not find them. Check")
+            logger.lifecycle("       the wording in your spec. If the claim is clearly there, the model")
+            logger.lifecycle("       missed it. If the wording is vague, another reader might miss it too.")
+            logger.lifecycle("       The checks below still use the claims you declared.")
         }
         unclaimed.forEach {
             logger.lifecycle("   NOT DECLARED  #$it ${claims[it - 1]}")
         }
         if (unclaimed.isNotEmpty()) {
-            logger.lifecycle("     ↳ your text says this and your declaration does not. Either it is a claim you")
-            logger.lifecycle("       did not mean to make, or one you forgot you made. Both pin an implementation.")
+            logger.lifecycle("     ↳ The model found these claims in your spec, but you did not declare them.")
+            logger.lifecycle("       Check whether you meant to promise this behavior.")
         }
     }
 
-    // ── what the declared claims are worth ───────────────────────────────────────────────────────
+    // ── Check the declared claims against real code ──────────────────────────────────────────────
 
     private fun scoreAgainstMutants(root: File, claims: List<String>, declared: Set<Int>) {
         val out = outPath.get().trim('/')
@@ -181,8 +171,8 @@ abstract class ClaimReportTask @Inject constructor(
         val baseline = failingTests(baselineDir)
         if (baseline == null) {
             logger.lifecycle("")
-            logger.lifecycle("The properties have not been run, so what these claims are worth is unknown.")
-            logger.lifecycle("Run the property suite against the reference and the mutants first.")
+            logger.lifecycle("The property tests have not run yet, so these claims cannot be checked.")
+            logger.lifecycle("Run the property tests against the reference and mutants first.")
             return
         }
 
@@ -195,44 +185,44 @@ abstract class ClaimReportTask @Inject constructor(
 
         val ran = everyTest(baselineDir).toSet()
         logger.lifecycle("")
-        logger.lifecycle("Each declared claim, run as a property:")
+        logger.lifecycle("Results for each claim you declared:")
         val wrong = mutableListOf<Int>()
         val idle = mutableListOf<Int>()
         declared.forEach { n ->
             val name = claims[n - 1]
             val kills = killedBy[name].orEmpty()
             val verdict = when {
-                name in baseline -> { wrong += n; "FAILS ON THE REFERENCE — the claim contradicts correct code" }
-                name !in ran -> "never ran"
-                kills.isEmpty() -> { idle += n; "holds, kills nothing" }
-                else -> "holds, kills ${kills.joinToString()}"
+                name in baseline -> { wrong += n; "FAILS ON THE REFERENCE — this claim disagrees with correct code" }
+                name !in ran -> "not run"
+                kills.isEmpty() -> { idle += n; "passes, but catches no mutants" }
+                else -> "passes, catches ${kills.joinToString()}"
             }
             logger.lifecycle("   #$n ${name.padEnd(claims.maxOf { it.length } + 2)}$verdict")
         }
 
         val covered = declared.map { claims[it - 1] }.flatMap { killedBy[it].orEmpty() }.distinct()
         logger.lifecycle("")
-        logger.lifecycle("Your claims kill ${covered.size}/${catalog.size} mutants.")
+        logger.lifecycle("Your claims catch ${covered.size}/${catalog.size} mutants.")
         val missed = catalog.map { it.id } - covered.toSet()
         if (missed.isNotEmpty()) {
-            logger.lifecycle("Nothing you claimed catches: ${missed.joinToString()}")
-            logger.lifecycle("  ↳ a behaviour the feature has and your specification does not decide.")
+            logger.lifecycle("Mutants not caught by your claims: ${missed.joinToString()}")
+            logger.lifecycle("  ↳ These changes are not ruled out by the claims you declared.")
         }
         if (idle.isNotEmpty()) {
-            logger.lifecycle("Claimed and load-bearing on nothing: ${idle.joinToString { "#$it" }}")
-            logger.lifecycle("  ↳ may be perfectly true and still constrains no implementation anybody would write.")
+            logger.lifecycle("Claims that catch no mutants: ${idle.joinToString { "#$it" }}")
+            logger.lifecycle("  ↳ They may be correct, but they do not catch any changes in this catalog.")
         }
         if (wrong.isNotEmpty()) {
             logger.lifecycle("")
-            logger.lifecycle("Declaring a claim does not make it true: ${wrong.joinToString { "#$it" }} fail")
-            logger.lifecycle("against the reference. A specification can be wrong, and this is what that looks like.")
+            logger.lifecycle("Declaring a claim does not make it correct: ${wrong.joinToString { "#$it" }} fail")
+            logger.lifecycle("against the reference. Check whether your spec promises the wrong behavior.")
         }
     }
 
     private fun claimNames(file: File): List<String> {
-        require(file.isFile) { "Property catalog not found: $file" }
+        require(file.isFile) { "Cannot find the property catalog: $file" }
         val names = Regex("fun `([^`]+)`").findAll(file.readText()).map { it.groupValues[1] }.toList()
-        require(names.isNotEmpty()) { "No properties found in $file" }
+        require(names.isNotEmpty()) { "No property tests found in $file" }
         return names
     }
 }

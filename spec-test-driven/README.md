@@ -1,94 +1,115 @@
 # Spec/Test-Driven Development with AI in Kotlin
 
-An AI-native module on **spec- and test-driven development in Kotlin**, built on top of the
-[Duck Shop server-side course](https://github.com/nbirillo/duck_shop_server_side).
+Welcome to the **Spec- and Test-Driven Development with AI in Kotlin** module!
+This module is based on the [Duck Shop server-side course](https://github.com/nbirillo/duck_shop_server_side).
+If you want to build the Duck Shop project from scratch, you can start with that course. 
+But you don't have to! This module is self-contained, so you can also start directly from here.
 
-> **Want to build the project from scratch first?** Start with the server-side course above.
-> This module is self-contained and can also be taken as the next step after it.
+## What will you learn?
 
-**You write the specification and the tests. An AI agent writes the code. The tests decide whether to
-accept it.** The skill the module teaches is the one that does not transfer to the agent:
-**verification** — saying precisely what correct means, and checking that what came back satisfies it.
+AI agents are getting better and better at writing code. But how do we know if the code they write is actually correct?
+That's exactly what we'll focus on in this module!
 
-You can use any agent you like, local or hosted. Everything here was measured on real runs across five
-local models and one frontier model, and the module is deliberately agent-agnostic: nothing in it
-depends on which one you open.
+**You'll learn how to write specifications and tests, let an AI agent implement the feature, and then check if the result is correct.**
 
-## Before anything else
+The main goal isn't to practise writing Kotlin code. Instead, we'll focus on how to describe what we want, decide what correct behavior means, and verify that an implementation actually does what we expect.
+You can use any AI agent you like, either local or hosted. We've tested the exercises with five local models and one frontier model, and designed the module to be **agent-agnostic**.
+So you don't need to learn how to use one specific agent. The ideas you'll learn here should work with different tools!
+
+## Before you start
+
+First, make sure everything works on your machine. Run:
 
 ```bash
 cd spec-test-driven
 ./gradlew :core:test
 ```
 
-This must be green before you start. If it is not, fix the setup first — every exercise compiles
-against `:core`.
+All tests should pass before you start the exercises.
+If something fails, check your setup first. All exercises depend on `:core`, so it's important to make sure it works.
 
 ## Running the app
 
-Nothing here needs a running server — every exercise is decided by tests. The app is there if you want
-to look at what the algebra is *for*: the IDE run configuration **Duck Shop server (bootRun)** in
-`.run/` starts it, and by hand it is
+You don't actually need to run the server for this module. All exercises are checked using tests.
+But if you want to start the Duck Shop server, you can use the **Duck Shop server (bootRun)** run configuration in your IDE (available in `.run/`).
+Or run it manually:
 
 ```bash
 cd ../server
 ./gradlew bootRun
 ```
 
-Both reach into the `server/` folder beside this one, so they need the whole course repository rather
-than this folder alone.
+Note that `server/` sits next to this folder in the main course repository. If you only have `spec-test-driven/`, it won't be there.
 
-## The one rule
+## One important rule
 
-**You never edit `core/`.** It is given, it is correct, and it is the thing your tests and your
-specifications are *about*. Your work lives in `exercises/`, and that is the only thing here you are
-expected to change.
+**Don't edit `core/`!**
+This part of the project is already implemented and correct. You'll use it to check your tests and specifications.
+All your work should be done in `exercises/`.
 
-## Where to go
+## Where should you start?
 
-Each exercise has its own README with the task, the commands and what to hand in. This file is only the
-map.
+The module has several exercises. Each one has its own README with instructions, commands, and information about what you need to submit.
+Here's a quick overview:
 
-| Start here | What it is |
-| --- | --- |
-| [`exercises/write-tests/README.md`](exercises/write-tests/README.md) | **A suite to verify** — an AI wrote a test suite for the given algebra. Decide whether it can be trusted, then make it complete. |
-| [`exercises/write-tests/README-advanced.md`](exercises/write-tests/README-advanced.md) | The harder tier of the same exercise, for when your agent found the basic one easy: did you forbid something legal · could you have said it in fewer tests · can another agent get past you on purpose |
-| [`exercises/write-spec/README.md`](exercises/write-spec/README.md) | **A contract to write** — the specification of a pricing function, precise enough that two correct implementations cannot disagree |
-| [`exercises/write-spec/README-advanced.md`](exercises/write-spec/README-advanced.md) | The harder tier: specify a thing that *composes*, and state the laws it obeys |
-| the capstone | Handed out separately when you get there — the whole cycle alone, on inherited artifacts |
+### Main exercises
 
-| Reference, when a report confuses you | What it explains |
-| --- | --- |
-| [`mutants/README.md`](mutants/README.md) | Mutation testing: where the mutants come from, and how to read the report |
-| [`variants/README.md`](variants/README.md) | The conformance check — the same engine with the opposite expectation: your suite must stay **green** |
-| [`exercises/write-tests/contract-addendum.md`](exercises/write-tests/contract-addendum.md) | The two questions the basic task left open, now written down as contract (advanced tier only) |
+| Exercise                                                                  | What you'll do                                                                                                                                                                             |
+|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Write Tests](exercises/write-tests/README.md)                            | An AI agent has written tests for a given specification. Your task is to check whether those tests are good enough and improve them if needed.                                             |
+| [Write Tests — Advanced](exercises/write-tests/README-advanced.md)        | A harder version of the first exercise. You'll check whether your tests reject valid implementations, whether you can simplify them, and whether another agent can find a way around them. |
+| [Write Specification](exercises/write-spec/README.md)                     | This time, you'll write the specification yourself! The goal is to make it clear enough that two different implementations following it will behave the same way.                          |
+| [Write Specification — Advanced](exercises/write-spec/README-advanced.md) | A more difficult specification task, where you'll need to think about how different rules work together.                                                                                   |
+| **Capstone project**                                                      | You'll get this task separately. Here, you'll put everything together and work with an existing project, specification, and tests.                                                         |
 
-## What is in here
+### Additional materials
 
-`:core` is the only Gradle module you compile against; everything else is either an exercise you edit
-or a generated feedback loop you run.
+You don't need to read everything right away, but these files might be useful when you're working on the exercises.
 
-| Directory | Role |
-| --- | --- |
-| `core/` | The **given** algebra — read-only. `AdmissionPolicy` with its four leaves and three combinators, `Duck`/`Accessory`/`Shop`, plus `DiscountRule` and `Franchise`/`Offer` for the later exercises |
-| `exercises/` | Your work — `write-tests/` (a suite to verify) and `write-spec/` (a contract to write) |
-| `mutants/` | `:core` with one defect injected per copy. Feedback while you harden the suite: a good one notices every mutant |
-| `variants/` | `:core` rewritten **without** changing what it decides. A good suite stays green on all of them |
-| `attacks/` | Advanced tier: implementations written to pass your suite and still contradict the specification. `demo-prefix/` is a worked example; `reference/` is the unmodified algebra the differential probe compares against |
-| `tools/` | The prompts handed to agents, and the differential probes the checks record with |
-| `sandbox/<name>/` | Appears when you run `sandbox`: your specification and the types, and nothing else — where an agent works. Derived, git-ignored |
-| `build-logic/` | The Gradle tasks behind every check. Nothing to edit |
+| File                                                            | What it's about                                                                                      |
+|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| [Mutation Testing](mutants/README.md)                           | Explains how mutation testing works, where the mutants come from, and how to understand the results. |
+| [Variants](variants/README.md)                                  | Explains how we check that your tests also pass on other correct implementations.                    |
+| [Contract Addendum](exercises/write-tests/contract-addendum.md) | Two additional rules for the advanced testing exercises.                                             |
 
-## Author-side material — not here on purpose
+## Project structure
 
-Everything that explains, hints at or answers an exercise lives in **`../spec-test-driven-grading/`**,
-outside this folder: the reference implementation, the graded catalogs, the answer keys and the spec
-corpus. The reason is mechanical rather than ceremonial — you open *this* folder in an IDE with an AI
-agent, and anything inside it is readable by that agent.
+Here's what you'll find in the repository:
 
-That build reaches into this one through a composite build (`includeBuild("../spec-test-driven")`), and
-the link points only **into** this project, never back out. So this folder knows nothing about grading,
-and nothing here depends on it.
+| Directory         | What's inside                                                                                                                                                                                                                                            |
+|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `core/`           | The given implementation and types. Includes `AdmissionPolicy` with its four basic rules and three combinators, `Duck`, `Accessory`, `Shop`, and the types used in later exercises: `DiscountRule`, `Franchise`, and `Offer`. Don't edit this directory! |
+| `exercises/`      | Your main working directory. Contains the exercises for writing tests and specifications.                                                                                                                                                                |
+| `mutants/`        | Copies of `:core`, each with one intentional bug. You'll use them to check whether your tests can catch incorrect behavior.                                                                                                                              |
+| `variants/`       | Different implementations of `:core` that should behave exactly like the original. Your tests should pass on all of them.                                                                                                                                |
+| `attacks/`        | Used in advanced exercises. Contains implementations that try to pass your tests while breaking the specification. `demo-prefix/` is an example, and `reference/` contains the original implementation used for comparison.                              |
+| `tools/`          | Prompts for AI agents and tools used to compare implementations and check results.                                                                                                                                                                       |
+| `sandbox/<name>/` | Created when you run the `sandbox` task. Contains your specification and the required types, but no implementation. This is where your AI agent will work. The directory is generated automatically and ignored by Git.                                  |
+| `build-logic/`    | Gradle tasks used by the exercises. You don't need to change anything here.                                                                                                                                                                              |
 
-It is in the same public repository, which means the separation is a matter of not looking rather than
-of a lock. Keeping it unread is on you, and it is the only way the checks tell you anything true.
+That's it! You can now start with the [first exercise](exercises/write-tests/README.md).
+Good luck, and remember: **the goal isn't just to make the tests pass, but to understand what you're testing and why!**
+
+## Where Are the Answers?
+
+You may have noticed that there are no answer keys in this folder.
+**That's intentional.**
+The reference implementations, graded mutants, answer keys, and other materials that reveal the solutions live in a separate folder alongside this one:
+`spec-test-driven-grading/`
+
+There's a simple reason for this.
+You'll be working on these exercises with an AI agent. That agent can read files in its workspace. If we kept the answers alongside the exercises, the agent could find them — and you wouldn't know whether it solved the problem or simply found the solution.
+
+The separation works in one direction:
+
+- The teacher project can use code from the student project.
+- The student project doesn't depend on or reference the teacher project.
+
+### Can you look at the answers anyway?
+
+Yes. Both folders are part of the same public repository, so nothing is actually locked away.
+But there's an important trade-off.
+**The checks are only meaningful if you and your agent haven't seen the answers beforehand.**
+Otherwise, a passing result won't tell you whether your specification was clear, your tests were strong, or your agent genuinely figured something out.
+We can't enforce that boundary for you.
+**Keeping the experiment honest is part of the exercise.**

@@ -11,35 +11,32 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * The deterministic half of checking a specification (exercise 11.4). **No model is involved.**
+ * Checks the parts of a specification that we can measure without an AI model.
+ * This is the first layer of exercise 11.4.
  *
- * It answers only questions that have a yes/no answer in the text itself: are the template's sections
- * there and filled, how long is it, and does it mention every name in the surface it is supposed to
- * describe. Everything that needs judgement — is a statement checkable, is a claim true, is an
- * assumption acknowledged — is left to the property layer and to a human.
+ * It checks whether the expected sections are present and filled in, counts the text,
+ * and looks for names from the API surface. It cannot tell whether a claim is true,
+ * testable, or based on an acknowledged assumption. That needs further review.
  *
- * One thing here is reported and deliberately **not scored**: a topic that appears both in the
- * behaviour section and in "deliberately not specified" or "open questions". During calibration a
- * keyword scan for exactly that ranked the best spec we had *last*, because the strongest spec
- * cross-lists on purpose — it decides in §2 and records in §5 that the business owns the real answer.
- * A weak spec that never mentions the topic at all comes out clean. The collision is worth a look and
- * is never a verdict, so the report says so in as many words.
+ * We also point out topics mentioned both as settled behavior and as open questions.
+ * This is a heads-up, not a score. A good spec may make a temporary decision while
+ * clearly saying the business still needs to confirm it. Earlier keyword checks
+ * mistakenly marked strong specs as weak, so we don't treat overlap as a failure.
  */
 abstract class SpecReportTask @Inject constructor(
     private val providers: ProviderFactory,
     private val layout: ProjectLayout,
 ) : DefaultTask() {
 
-    /** A single `SPEC.md`, or a directory to scan for them. */
+    /** Check one SPEC.md file or scan a directory for specifications. */
     @get:Input
     @get:Optional
     abstract val specPath: Property<String>
 
     /**
-     * What defines the surface a spec has to cover. Point it at **the brief the learner was given**,
-     * not at the codebase: if the brief never showed `BestOf`, a basic-tier spec that says nothing
-     * about it has no gap, and flagging one would penalise correct work — the same way the keyword
-     * collision scan ranked the best spec last during calibration.
+     * Use the brief the student actually received to decide which API names to check.
+     * Don't use the whole codebase: if the brief never mentioned `BestOf`, the student
+     * shouldn't lose credit for leaving it out.
      */
     @get:Input
     abstract val surfaceFile: Property<String>
@@ -49,34 +46,31 @@ abstract class SpecReportTask @Inject constructor(
         val root = layout.projectDirectory.asFile
         val target = root.resolve(
             specPath.orNull ?: providers.gradleProperty("spec").orNull
-                ?: error("Missing -Pspec=<SPEC.md or a directory of them>"),
+            ?: error("Please provide -Pspec=<SPEC.md or a directory of specs>"),
         )
         val specs = when {
             target.isFile -> listOf(target)
             target.isDirectory -> target.walkTopDown().filter { it.name.endsWith(".md") }
                 .filterNot { it.name.startsWith("README") || it.name.contains("template", ignoreCase = true) }
                 .sortedBy { it.path }.toList()
-            else -> error("Not found: $target")
+            else -> error("Could not find: $target")
         }
-        require(specs.isNotEmpty()) { "No specifications under $target" }
+        require(specs.isNotEmpty()) { "No specification files found in $target" }
 
         val surface = surfaceNames(root.resolve(surfaceFile.get()))
         logger.lifecycle("")
-        logger.lifecycle("Specification check — deterministic only, no model involved")
-        logger.lifecycle("Surface to describe: ${surface.size} names from ${surfaceFile.get().substringAfterLast('/')}")
+        logger.lifecycle("Specification check — simple checks only, no AI model")
+        logger.lifecycle("API surface: ${surface.size} names from ${surfaceFile.get().substringAfterLast('/')}")
 
-        // A specification may be ONE file or SEVERAL, and the requirements are on the specification —
-        // not on each part of it. Judging them per file punished exactly the good move: split a long
-        // contract into parts and every part gets blamed for names described in another, while a part
-        // holding only behaviour gets blamed for having no "open questions" section.
-        // Explicit, because file count cannot tell the two cases apart: `fixtures/11.4/written` holds
-        // SIX independent specifications by different authors, and aggregating those into one 14k-word
-        // blob reported as healthy is exactly the kind of quiet wrong answer this checker exists to
-        // avoid. Without the flag, every .md is its own specification, as before.
+        // A spec can span several files. With -Pparts, check them together rather than
+        // expecting every file to contain every section and API name.
+        // Keep this opt-in: a directory can also hold several independent specs.
+        // For example, fixtures/11.4/written contains six different authors' work.
+        // Without -Pparts, each Markdown file is checked on its own.
         val split = specs.size > 1 && providers.gradleProperty("parts").isPresent
         if (split) {
             logger.lifecycle("")
-            logger.lifecycle("${specs.size} parts, judged together — a specification in parts is still one specification")
+            logger.lifecycle("${specs.size} files checked together as one specification")
             specs.forEach { f ->
                 val t = f.readText()
                 logger.lifecycle("   ${f.name} · ${t.lines().size} lines · ${t.split(Regex("\\s+")).size} words")
@@ -100,39 +94,35 @@ abstract class SpecReportTask @Inject constructor(
             logger.lifecycle("── $label")
             logger.lifecycle("   ${text.lines().size} lines · ${text.split(Regex("\\s+")).size} words")
             logger.lifecycle(
-                "   sections: " + if (missing.isEmpty() && empty.isEmpty()) "all present and filled" else
+                "   sections: " + if (missing.isEmpty() && empty.isEmpty()) "all sections are present and filled in" else
                     (missing.takeIf { it.isNotEmpty() }?.let { "MISSING ${it.joinToString()}" }.orEmpty() +
-                        empty.takeIf { it.isNotEmpty() }?.let { " EMPTY ${it.joinToString()}" }.orEmpty()).trim(),
+                            empty.takeIf { it.isNotEmpty() }?.let { " EMPTY ${it.joinToString()}" }.orEmpty()).trim(),
             )
             logger.lifecycle(
                 "   surface: " + if (unmentioned.isEmpty()) "every name mentioned" else
-                    "NEVER MENTIONED — ${unmentioned.joinToString()}",
+                    "not mentioned — ${unmentioned.joinToString()}",
             )
             if (collisions.isNotEmpty()) {
-                logger.lifecycle("   also in §4/§5 after being settled in §2: ${collisions.joinToString()}")
+                logger.lifecycle("   mentioned as both settled and open: ${collisions.joinToString()}")
                 logger.lifecycle(
-                    "     ↳ not a verdict. Each one is either an acknowledged assumption (correct — the",
+                    "     ↳ This is not a failure. It might be a decision made for now, while",
                 )
                 logger.lifecycle(
-                    "       spec decided it and says the business owns the real answer) or a contradiction.",
+                    "       waiting for the business to confirm it. Or it might be a contradiction.",
                 )
-                logger.lifecycle("       Only reading them apart tells you which.")
+                logger.lifecycle("       Read those sections to see which it is.")
             }
         }
 
         logger.lifecycle("")
-        logger.lifecycle("Mentioning a name is not describing it, and a filled section is not a true one.")
-        logger.lifecycle("What the claims are worth is the property layer's question, not this one.")
+        logger.lifecycle("Mentioning an API name does not mean you explained it. A filled section can still be wrong.")
+        logger.lifecycle("Checking what the specification actually promises is the next step, not this one.")
     }
 
     /**
-     * Does the text refer to [name] at all — **including in prose**.
-     *
-     * `BigSpenderBonus` counts as mentioned by "the Big Spender Bonus rule" and by "big-spender
-     * bonus". Demanding the identifier verbatim was the third false positive of the same family this
-     * checker has produced: a specification is written for people, and naming a rule in words is not
-     * a gap. Every naive text rule here has penalised legitimate style until it was corrected against
-     * the fixtures — which is the argument for keeping the fixture corpus.
+     * Check whether [name] appears anywhere, including in ordinary prose.
+     * For example, `BigSpenderBonus`, "Big Spender Bonus", and "big-spender bonus"
+     * all count. A spec is written for people, so it shouldn't need exact code spelling.
      */
     private fun mentions(text: String, name: String): Boolean {
         val humps = Regex("(?<=[a-z0-9])(?=[A-Z])").split(name)
@@ -140,15 +130,15 @@ abstract class SpecReportTask @Inject constructor(
         return Regex("\\b$pattern\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)
     }
 
-    /** Declared type names and constructor parameter names — the vocabulary a spec has to cover. */
+    /** Collect the type, function, and field names the spec is expected to mention. */
     private fun surfaceNames(file: File): List<String> {
-        require(file.isFile) { "Surface file not found: $file" }
+        require(file.isFile) { "Could not find the API surface file: $file" }
         val raw = file.readText()
-        // A brief is Markdown: only the Kotlin it shows counts as the surface.
+        // For a Markdown brief, check only the Kotlin code blocks it shows.
         val src = if (file.extension == "md") {
             Regex("```kotlin\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
                 .findAll(raw).joinToString("\n") { it.groupValues[1] }
-                .ifBlank { error("No kotlin block in $file to read the surface from") }
+                .ifBlank { error("No Kotlin code block found in $file to check the API surface") }
         } else {
             raw
         }
@@ -188,3 +178,4 @@ abstract class SpecReportTask @Inject constructor(
         )
     }
 }
+

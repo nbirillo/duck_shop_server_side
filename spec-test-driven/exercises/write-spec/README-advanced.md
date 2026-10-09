@@ -1,20 +1,18 @@
-# Write the specification, advanced — specify a thing that composes
+# Write the Specification — Advanced
 
-Take this tier when the first brief did not fight back: you wrote the contract, the agent implemented
-it, and there was nothing much to argue about.
+Welcome to the advanced version of the specification exercise!
+If the first exercise felt too easy, this one is for you
+You'll work with the same feature — promotions in the Duck Shop. But this time, things are a bit more complicated.
+In the basic exercise, you worked with individual discount rules. Now, **discount rules can be combined with each other**, and you'll need to describe how these combinations should work.
 
-The feature is the same one. What changes is that promotions stop being a flat list and start
-combining, and a contract for something that composes has to say things a contract for a flat list
-never has to.
+## What is the task?
 
-Here is the whole of what the business said this time:
+Just like in the basic exercise, your teacher will give you a short description of what the business wants.
+The description isn't included in the repository on purpose. 
+Otherwise, your AI agent could read it too, and we wouldn't be able to check how well it can implement the feature using only your specification.
+**Your task is to write a clear specification based on this description.**
 
-> **Your teacher gives you the brief.** It is a short piece of business text — a few
-> lines about what the shop wants — and it is deliberately not in this repository: if it
-> were, the agent you hand your specification to could read it, and you would learn
-> nothing from what it builds.
-
-## What you are specifying
+## What are we specifying?
 
 ```kotlin
 sealed interface DiscountRule {
@@ -34,33 +32,39 @@ fun priceFor(duck: Duck, rule: DiscountRule): Int
 fun priceFor(duck: Duck, rules: List<DiscountRule>): Int
 ```
 
-`AdmissionPolicy` is the one you already know from the test-writing exercise — a yes/no question
-about a duck.
+You already know `AdmissionPolicy` from the test-writing exercise. It checks whether a duck satisfies a condition and returns a yes/no result.
+Here, we have three basic discount rules and three ways to combine them.
+The structure is similar to `AdmissionPolicy`, but there's one important difference: **we're working with prices instead of Boolean values.**
+And that means we also need to think about calculations, rounding, and how different discounts affect each other.
 
-Note the shape: three leaves and three combinators, the same skeleton as the admission algebra. What
-is new is that these combine *values* rather than yes/no answers, and values are where arithmetic can
-bite you.
+## What should you do?
 
-## The new section
+Use [`SPEC-template-advanced.md`](SPEC-template-advanced.md) to write your specification.
+It's almost the same template as in the basic exercise, but we've added one new section.
+This section is the main challenge of the advanced exercise!
 
-Use [`SPEC-template-advanced.md`](SPEC-template-advanced.md). It is the same template with one section
-added, and that section is the point of this tier.
+## What's new in this exercise?
 
-Once a thing composes, some ways of writing the same promotion ought to mean the same thing — and some
-of them will not. Your contract has to say which. That is a different kind of statement from anything
-you wrote in the basic tier: not "for this input, this output", but "for **every** input, these two
-expressions agree".
+When we combine discount rules, we need to think about more than just the result of one operation.
+For example, does applying discount A and then discount B always give the same result as applying B and then A?
+Or can two different combinations of rules produce the same result for every possible duck?
+**Your job is to decide which of these properties should hold and describe them in your specification.**
 
-Finding them is your job, and so is checking them. Beware of two traps:
+These are general rules that should work for all valid inputs, not just a few examples.
+There are two important things to keep in mind:
 
-- **A law that holds on the numbers you tried.** Some of these agree on most prices and disagree on a
-  few. Two or three examples will tell you a law holds when it does not.
-- **A law you would like to be true.** Guaranteeing one is not free: it rules out implementations, and
-  sometimes the design you already described is one of them. Then you either drop the guarantee or
-  change the design — and either is a legitimate answer, as long as it is deliberate.
+1. **Don't trust just a few examples.** Some rules might work for most prices but fail for specific cases. You'll need to check more than two or three inputs before deciding that a property always holds.
+2. **Don't assume that a property should hold just because it sounds reasonable.** Sometimes two rules can't work together in the way you'd expect. If you want to guarantee a certain behavior, you might need to change other parts of your specification.
 
-## What happens to your spec
+And that's fine! There isn't always one correct design.
+What's important is that you understand the decisions you're making and can explain why you made them.
 
-Everything from the basic tier, plus: the laws you claim are turned into **property-based tests** and
-run over generated inputs — a law that is false will be found, and a law that is true but vacuous
-(nothing could have violated it) shows up as pinning nothing.
+## How will we check your specification?
+
+We'll use the same checks as in the basic exercise, but with one additional step.
+**The properties you describe will be turned into property-based tests.**
+Instead of checking only a few examples, we'll generate different inputs and check whether your properties hold.
+This helps us find cases where a rule works for some inputs but fails for others.
+We'll also check whether your properties are actually useful. 
+For example, a property that every possible implementation satisfies doesn't help us distinguish correct implementations from incorrect ones.
+The goal is the same as before: **write a specification that clearly explains what correct behavior means, and then check whether an implementation follows it.**

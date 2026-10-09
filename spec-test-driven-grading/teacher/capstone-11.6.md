@@ -1,255 +1,488 @@
-# Teacher notes — 11.6, the capstone
+# Exercise 11.6 — Capstone: Teacher Notes
 
-Teacher-only. The learner gets `spec-test-driven-capstone/` and nothing in this build.
+These notes are for teachers only.
+Students should receive `spec-test-driven-capstone/`, not this grading project.
+This guide explains how the capstone was prepared, what we check, how to interpret the results, and how to give students useful feedback.
 
-## Why the capstone is a separate build
+## Why is the capstone a separate project?
 
-Not tidiness. What the capstone hands over includes a **working `priceFor`** — pricing was settled in
-11.4, and any real codebase would already have it. Committing that file inside `spec-test-driven/` would
-give a learner still on 11.4 the answer to its implement-from-specification step, and give it to any
-agent working in that folder. Same reason the grading build and the business briefs sit outside it.
+There's a practical reason for this.
+The capstone includes a **working implementation of `priceFor`**.
+Students already worked on pricing in exercise 11.4, and in a real software project, that feature would probably be finished by the time the next task begins.
+But if we put the working implementation inside `spec-test-driven/`, students who haven't finished exercise 11.4 could find the answer.
+And so could their AI agents.
+That's why we keep the capstone separate, just like the teacher grading tools and business descriptions.
+**Share `spec-test-driven-capstone/` only when students reach the capstone.**
+The capstone uses a Gradle composite build to access `:core` from the student project. The dependency goes in that direction only.
 
-So: hand out `spec-test-driven-capstone/` when the capstone starts. It borrows `:core` from the student
-build through a composite build, and the link points only inwards.
+### What about the inherited pricing code?
 
-`inherited/.../Pricing.kt` is the reference pricing with its KDoc rewritten in-universe — **the code is
-asserted identical to `reference/.../Pricing.kt` outside comments**, because the graded fork readings
-price with the reference and any drift would put the learner and the grading on different arithmetic.
+The capstone includes:
 
-## What is graded, and what is not
+`inherited/.../Pricing.kt`
 
-`verifyForks` in THIS build, against the learner's test suite: **9 readings over 4 forks** in
-`forks/catalog.json`. Per fork the verdict is SETTLED (and which reading), LEFT OPEN, CONTRADICTORY, or
-DID NOT BUILD. **There is no score and no right answer.** The learner is judged on whether a decision was
-made and held, not on matching our reference.
+This is the reference pricing implementation, with its KDoc rewritten to look like documentation inherited from an existing project.
+Outside comments, the code is checked to be identical to:
 
-`tests-11.6/FranchiseCornerCases.kt` is a **floor, not a grade** — 6 settled facts, and we measured that
-everything passes them (see below). Run it, but do not rank with it.
+`reference/.../Pricing.kt`
 
-**CONTRADICTORY needs a human.** It means the suite rejects every reading we hold, which is usually a
-broken test — but it is also what a learner who decided the fork some *third* way looks like. Read their
-specification before calling it a fault. The report says as much, and it cannot tell the difference.
+That matters because the grading tools use the reference pricing implementation.
+If the two versions calculated prices differently, students and teachers could get different results for reasons unrelated to the capstone.
 
-## The three measurements the design rests on
+---
 
-Do not redesign this without re-reading them; two of them killed earlier plans.
+## What do we grade?
 
-1. **The feature genuinely diverges.** Two specifications of the same brief, implemented by the *same*
-   agent, answer differently on 951 of 3010 probed inputs. This is what 11.5 failed: there, a local model
-   implementing the frontier's spec matched the reference byte for byte.
-2. **A hidden corner-case set grades nothing.** Every artifact in the corpus passes every settled corner
-   case — including a specification that disagrees with the reference on 884 of 3010 inputs. All the
-   divergence lives in the open forks, so "did it pass the hidden tests" measures nothing at all. That is
-   why the grading layer is fork discrimination.
-3. **Two independently written weak specifications missed exactly the same three forks** — the chain's own
-   rule, promotion order, and when cheapest is measured. Ties and empty chains converge every time. So
-   the forks are not arbitrary: they are where readers actually fail.
+The main grading tool is `verifyForks`.
+It runs against the student's test suite and checks **nine possible interpretations of four open questions**.
+The interpretations are defined in:
 
-## How the inherited artifacts were made — and which one is staged
+`forks/catalog.json`
 
-Honesty matters here, because the module's method is *calibrate, do not stage*.
+For each open question, the report can say:
 
-- **`SPEC.md` — not authored.** The six real franchise specifications in `fixtures/11.6/` (frontier plus
-  the whole local tier) were concatenated as `fixtures/11.6-parts/`, then consolidated into one document
-  by an agent under `prompts-capstone/agent-prompt-compress.md`, whose instruction is the opposite of the
-  11.4b compression prompt: **keep everything, keep the disagreements, decide nothing.** That is how
-  specifications actually get bloated — accretion, not bad writing. The parts are kept so the accretion
-  can be shown.
-  **Check after any regeneration:** that the consolidation did not quietly settle a fork. The prompt
-  forbids it; the model is not bound by the prompt.
-- **`BestOffer.kt` — an agent's implementation, then DEGRADED BY HAND. Staged, and here is the whole
-  audit trail.** First measured honestly: `qwen2.5-coder:14b` implementing the trimmed specification came
-  out **byte-identical to the reference on all 3010 probed inputs**, 6/6 settled and 7/7 open. So the
-  "partial implementation" the capstone wanted did not arise on its own, and could not — the merged
-  specification is dominated by the frontier layer's B-rules, which decide every fork outright, so a
-  competent implementer just reproduces the reference. That correct version is kept at
-  `fixtures/11.6/inherited-correct-14b.kt.txt` and is worth showing in the debrief.
+| Verdict           | Meaning                                                   |
+|-------------------|-----------------------------------------------------------|
+| **SETTLED**       | The tests accept exactly one interpretation.              |
+| **LEFT OPEN**     | The tests accept multiple interpretations.                |
+| **CONTRADICTORY** | The tests reject every interpretation in our catalog.     |
+| **DID NOT BUILD** | The tests couldn't be compiled against an interpretation. |
 
-  Her call was then to degrade it deliberately. **The constraint I held: every defect is a legitimate
-  reading of a contradiction the inherited document really contains**, so anything the learner finds can
-  be quoted back to them out of the specification they were handed. Four edits, each with its licence:
+**There is no score and no single correct answer.**
+We're not asking students to reproduce our reference implementation.
+We're asking them to make clear decisions about ambiguous behavior, document those decisions, and write tests that enforce them.
 
-  | edit | the sentence in `inherited/SPEC.md` that licenses it |
-  | --- | --- |
-  | `franchise.admissionPolicy` never consulted | §4: "the behavior when a shop's admission policy does not allow the duck to be sold is **left open**", and the appended bullet describing eligibility using only "the shop's `admissionPolicy`" |
-  | chain promotions applied **before** the shop's | nothing outside Q2's "*Assumed:*" fixes the order, and the appended bullet names the franchise first |
-  | a tie goes to the **last** shop (`<=`) | §4: "the order in which shops are considered when multiple have the same lowest price: **any shop can be returned**" |
-  | a duck priced `0` gets **no offer** | §3: "**Duck with zero price**: Return `null`" and "**Zero Price Duck**: it should be considered as not being sold by any shop" |
+### What about the corner-case tests?
 
-  Also left in: the now-dead `private fun applyRule` from 14b's output, whose pricing is wrong in two
-  ways. Dead code with wrong semantics is what inherited code looks like; deleting it is the learner's call.
+We also have:
 
-  **The resulting profile, measured:**
-  - `./gradlew :inherited:test` — **GREEN.** The first thing the learner sees says it works.
-  - the settled corner cases — **6/6.** It breaks nothing the brief settles, so there is no obvious bug.
-  - the open-fork corner cases — **2/7**, wrong on forks 1, 2, 3 and 4.
-  - the probe — **976/3010 = 32.4%** disagreement with the reference: 680 inputs where it sells and the
-    reference says nobody will (chain admission), 139 where it refuses a duck priced 0, 60 same-shop
-    price differences (order), 97 where it names a different shop.
+`tests-11.6/FranchiseCornerCases.kt`
 
-  **A structural fact found while choosing the edits, worth knowing:** no defect exists that breaks a
-  *settled* fact while leaving the inherited suite green. Weak as that suite is, it pins every settled
-  fact it is capable of pinning. So this profile — plausible, green, and wrong on three quarters of the
-  open forks — is the honest maximum, not a compromise.
-- **`FranchiseTests.kt` — AUTHORED, and the only staged artifact.** Written to a profile: green on the
-  inherited implementation, and settling **no fork** (verified with `verifyForks`, expect 0 settled).
-  Selecting a real agent suite by that criterion was the alternative and is the better provenance; it was
-  passed over for cost. If it is ever regenerated, prefer the measured route.
+These tests cover six behaviors that the business description clearly specifies.
+They are a **minimum correctness check, not a grading system**.
+In our experiments, every implementation passed all six tests, including implementations that disagreed significantly on the open questions.
+So run these tests, but don't use them to rank submissions.
 
-## The one edit made to the merged specification, and why
+### Be careful with CONTRADICTORY
 
-The consolidation is the agent's; **the scoping is mine**, and the boundary matters, so here it is
-exactly. The merge came out **re-specifying pricing** — unsurprising, since all six sources specify a
-feature whose price computation they each restate. An agent implementing that document therefore
-reimplemented `priceFor` instead of calling it, and got it wrong three ways (Int overflow, an exclusive
-big-spender threshold, and a `Then` that rewrote the duck's own price so a nested `OnlyIf` saw a
-different duck) — **154 of 3010 probed inputs, and in 20 of them a different shop wins.** Realistic, but
-it puts 11.4's settled arithmetic back on the table and drags the capstone's scope with it.
+A `CONTRADICTORY` verdict usually means something is wrong with the student's tests.
+But there's another possibility: the student may have chosen a valid interpretation that isn't in our catalog.
+The checker can't tell the difference.
+**Read the student's specification before treating CONTRADICTORY as a mistake.**
+A well-explained third interpretation can be a very good outcome.
 
-So the pricing restatements were removed, and nothing else: **185 → 165 lines, 2988 → 2552 words.**
+---
 
-- B4 no longer fixes the base at `max(0, duck.price)`
-- B6 keeps **which** rules apply and **in what order** — that is fork 2 — but states the price as
-  `priceFor(duck, s.promotions + franchise.promotions)` instead of spelling out the arithmetic
-- B7–B9 (applying one rule, clamping at zero, exact arithmetic) collapse into one **B7** saying pricing
-  was settled earlier, is documented on `priceFor`, and is not restated here
-- three appended bullets restating what Percentage, AmountOff and BigSpenderBonus do
-- §3 edge cases 6, 7, 8, 9, 10, 19, 20 — zero, negative and `Int.MAX_VALUE` bases, clamping, overflow,
-  and the two rounding worked examples. The other 17 stay and are renumbered.
-- §5 **Q4**, the rounding question
+## Why did we design the capstone this way?
 
-**Asserted, not eyeballed:** the trimming script fails unless every fork statement (B1, B5, B6, B11,
-B12, B14) and every retained contradiction ("any one of them may be returned", "left open", "highest
-discount is applied first", "Return the first shop") is still in the file.
+Three experiments shaped the design.
 
-## What the inherited specification actually contains
+### 1. Different specifications really produce different implementations
 
-185 lines, ~3000 words, against 31–35 lines for each of the six sources. It came out better than hoped,
-because the contradictions are **real** — the frontier's precise rules sit next to the local models'
-vague restatements of the same thing, and neither side was edited. The ones worth having ready:
+We gave two specifications of the same business description to the **same AI agent**.
+The resulting implementations disagreed on **951 of 3,010 inputs**.
+That's exactly the kind of problem we want students to experience: different interpretations of the same requirements can lead to different working software.
+An earlier exercise, 11.5, didn't show this effect. There, a local model implementing a frontier model's specification produced exactly the same behavior as the reference.
 
-| §2 says | and elsewhere the same document says |
-| --- | --- |
-| **B12** a tie goes to the lowest index in `franchise.shops` | "If multiple shops have the same lowest price, **any one of them may be returned**" — and §4 repeats it as *deliberately not specified* |
-| **B1** a shop is eligible only if the chain admits the duck too | §4: "the behavior when a shop's admission policy does not allow the duck to be sold is **left open**" |
-| **B5/B6** every rule in both lists applies, in a fixed order | §4: "**the promotion with the highest discount is applied first**" — which is not a reading of the brief at all, it is simply false |
-| **B6** each rule sees the price left by the one before it | the appended bullets: a percentage "reduces the price by percent percent of the **original** price", and the bonus fires "if the **original** price exceeds the threshold" — both contradict what 11.4 settled |
-| **§5 Q1–Q6** each end in an explicit *"Assumed:"* line | §4 lists several of those same questions as open |
+### 2. Hidden corner-case tests don't help us grade this task
 
-So the decisions **are** in there — buried, restated wrongly, and contradicted. That is the reading work.
-Note also **Q5**: one source recorded that it could not read `:core` from its folder and so could not verify
-the rule semantics at all. That is a specification honestly reporting the limit of its own evidence, and
-it is worth showing next to the sources that simply guessed.
+Every implementation in our corpus passed every settled corner case.
+Even a specification that disagreed with the reference on **884 of 3,010 inputs** passed them all.
+Why?
+Because the differences were in the questions the business description left open.
+So a traditional hidden-test score would tell us almost nothing.
+That's why we check **which decisions the tests make**, rather than simply counting passing tests.
 
-## The practice fork is YOURS to demonstrate, not theirs to run (changed 2026-09-18)
+### 3. Weak specifications missed the same important questions
 
-It used to ship in the capstone build so a learner could run it themselves. **Her question found the
-problem: a reading is a complete implementation of the feature.** `forks/readings/Fork3Earliest.kt` answers
-*all four graded forks* — chain admission as a conjunction, the shop's promotions first, price-then-choose,
-`null` for an empty chain — so shipping its source put our answer to the whole graded set in the learner's
-folder, and any agent pointed at that folder would read it. Exactly what moved the briefs out.
+Two independently written weak specifications missed exactly the same three decisions:
 
-So the practice tier now lives here, as `forks-practice/`, and you demonstrate it in class:
+- Whether the franchise's own admission policy matters.
+- In what order promotions are applied.
+- At what point the cheapest shop is chosen.
+
+Other questions, such as ties and empty chains, tended to produce the same interpretation.
+So the four graded questions weren't chosen randomly. They reflect places where readers actually disagreed or failed to make a decision.
+
+---
+
+## Where did the inherited materials come from?
+
+This is important to explain accurately.
+The course generally tries to **measure what agents actually produce**, rather than create artificial examples that fit our teaching goals.
+But the capstone includes some deliberately prepared materials.
+Here's the full story.
+
+### `SPEC.md` — Combined by an AI agent
+
+We started with six real franchise specifications saved in:
+
+`fixtures/11.6/`
+
+They came from a frontier model and the local models.
+We collected them in `fixtures/11.6-parts/` and asked an agent to combine them using:
+
+`prompts-capstone/agent-prompt-compress.md`
+
+The instruction was deliberately different from the compression exercise in 11.4b.
+Instead of making the document short, the agent was told to:
+
+**Keep everything. Keep disagreements. Don't decide anything.**
+
+The result shows a realistic way specifications become difficult to work with.
+They don't always become long because someone writes badly. Sometimes they become long because multiple people keep adding requirements without resolving disagreements.
+We kept the original parts so students can see how that happened.
+
+**If you regenerate `SPEC.md`, check that the agent hasn't silently resolved any open questions.**
+
+The prompt tells it not to, but that doesn't guarantee it will follow the instruction.
+
+### `BestOffer.kt` — Agent-generated, then deliberately changed
+
+This part needs an especially clear explanation.
+We first asked `qwen2.5-coder:14b` to implement the trimmed specification.
+Its implementation matched the reference on **all 3,010 tested inputs**.
+It also passed all six settled cases and all seven open-fork checks.
+So the partially correct implementation we wanted for the capstone didn't appear naturally.
+The combined specification already contained enough precise rules from the frontier model for a capable agent to reproduce the reference behavior.
+We saved that original correct implementation here:
+
+`fixtures/11.6/inherited-correct-14b.kt.txt`
+
+It's worth showing during the debrief.
+We then **deliberately changed the implementation by hand**.
+But we followed one important rule: every change had to be supported by a possible reading of the inherited specification.
+That way, students can trace each surprising behavior back to something in the document they received.
+
+Here are the four changes:
+
+| Change                                            | Why the inherited specification allows that reading                                                                                    |
+|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Ignore `franchise.admissionPolicy`                | Section 4 leaves the effect of the franchise-level policy open, and another bullet describes eligibility using only the shop's policy. |
+| Apply franchise promotions before shop promotions | Outside an assumed answer to Q2, the order isn't consistently fixed, and one bullet mentions franchise promotions first.               |
+| Return the last shop when prices tie              | Section 4 says any shop may be returned when several have the same lowest price.                                                       |
+| Return no offer for a duck priced `0`             | Section 3 explicitly contains statements saying a zero-priced duck should not be sold.                                                 |
+
+We also left an unused `private fun applyRule` from the agent's original output.
+Its pricing logic is wrong in two ways, but the function isn't called.
+That's realistic inherited code: sometimes a project contains unused code with incorrect assumptions.
+Students can decide whether to remove it.
+
+### What does the resulting implementation do?
+
+We measured it after making the changes.
+
+| Check                       | Result                          |
+|-----------------------------|---------------------------------|
+| `./gradlew :inherited:test` | GREEN                           |
+| Settled corner cases        | 6/6                             |
+| Open-fork corner cases      | 2/7                             |
+| Differential probe          | 976/3,010 disagreements (32.4%) |
+
+Those 976 disagreements break down as follows:
+
+| Difference                                                                   | Cases |
+|------------------------------------------------------------------------------|------:|
+| It sells a duck that the reference rejects because of franchise admission    |   680 |
+| It refuses a duck priced `0`                                                 |   139 |
+| It calculates a different price for the same shop because of promotion order |    60 |
+| It chooses a different shop                                                  |    97 |
+
+The important thing is that **the inherited tests are green, and all clearly specified corner cases pass**.
+The disagreements are in the ambiguous behavior students are supposed to investigate.
+We also found that the inherited suite already covers every settled fact it can meaningfully test. We couldn't introduce a defect in settled behavior while keeping that suite green.
+So the shipped implementation is deliberately imperfect, but not randomly broken.
+
+### `FranchiseTests.kt` — Written by us
+
+The inherited test suite is also a prepared artifact.
+We wrote it to satisfy two conditions:
+
+- It passes against the inherited implementation.
+- It doesn't settle any of the four graded questions.
+
+We verified the second condition using `verifyForks`: it settles **zero forks**.
+A better approach would have been to select a real agent-generated suite with those properties.
+We chose the manually written version to reduce the cost of preparing the exercise.
+If this artifact is regenerated later, prefer the measured approach.
+
+---
+
+## Why did we edit the combined specification?
+
+The AI-generated combined specification was originally **185 lines and 2,988 words**.
+It included detailed pricing rules from exercise 11.4.
+That created a problem.
+When we asked an agent to implement the capstone from that document, it reimplemented `priceFor` instead of calling the existing function.
+And it introduced three pricing bugs:
+
+- Integer overflow.
+- An exclusive threshold for the big-spender bonus.
+- A `Then` implementation that changed the duck's own price, so a nested `OnlyIf` evaluated a different duck.
+
+These bugs caused differences on **154 of 3,010 inputs**, including 20 cases where a different shop won.
+Those are realistic mistakes, but they belong to exercise 11.4.
+We didn't want the capstone to turn into another pricing exercise.
+So we removed only the sections that repeated the already-settled pricing rules.
+The document became **165 lines and 2,552 words**.
+
+### What exactly changed?
+
+We made these edits:
+
+- Removed B4's rule fixing the base price at `max(0, duck.price)`.
+- Kept B6's decision about which promotions apply and in what order, but expressed the calculation as `priceFor(duck, s.promotions + franchise.promotions)`.
+- Replaced B7–B9 with one B7 explaining that pricing was settled earlier and is documented on `priceFor`.
+- Removed three appended bullets restating the behavior of `Percentage`, `AmountOff`, and `BigSpenderBonus`.
+- Removed the pricing-specific edge cases in section 3: 6, 7, 8, 9, 10, 19, and 20.
+- Removed the rounding question, Q4, from section 5.
+
+The remaining edge cases were renumbered.
+**We did not intentionally resolve any of the capstone's open questions.**
+A script checks that all important fork statements and retained contradictions are still present.
+It specifically checks B1, B5, B6, B11, B12, and B14, along with phrases such as “any one of them may be returned,” “left open,” “highest discount is applied first,” and “Return the first shop.”
+This is checked automatically, not just by someone reading the document.
+
+---
+
+## What contradictions should teachers know about?
+
+The inherited specification is intentionally difficult to read.
+The original six specifications were only 31–35 lines each.
+After consolidation, the document grew to around 3,000 words and contained real contradictions.
+Here are the important ones:
+
+| One part says…                                                         | Another part says…                                                                          |
+|------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| **B12:** When prices tie, choose the shop with the lowest index.       | Any shop with the lowest price may be returned, and section 4 calls the choice unspecified. |
+| **B1:** A shop is eligible only if the franchise also admits the duck. | Section 4 leaves the effect of the franchise's admission policy open.                       |
+| **B5/B6:** Apply all promotions in a fixed order.                      | Section 4 says the promotion giving the highest discount should go first.                   |
+| **B6:** Each promotion uses the price left by the previous one.        | Appended bullets describe percentage discounts and bonuses using the original price.        |
+| **Section 5:** Questions Q1–Q6 end with explicit assumptions.          | Section 4 describes some of those same questions as open.                                   |
+
+The decisions are there, but they're mixed with other statements that contradict them.
+**Students need to notice the disagreement and decide which interpretation their specification will follow.**
+There's also a useful detail in Q5.
+One agent explicitly said it couldn't access `:core` from its working folder and therefore couldn't verify the pricing rules.
+That's a good example of an AI-generated specification honestly stating the limits of its evidence.
+It's worth comparing with specifications that simply guessed.
+
+---
+
+## Demonstrating a fork in class
+
+<text color="secondary" size="xs">Updated September 18, 2026</text>
+
+We originally planned to give students a practice fork they could run themselves.
+But we discovered a problem.
+**A fork reading is a complete implementation of the feature.**
+The example `forks/readings/Fork3Earliest.kt` didn't just answer the question about ties.
+It also contained decisions about franchise admission, promotion order, choosing the cheapest shop, and empty chains.
+So sharing its source code would accidentally reveal answers to all four graded questions.
+We moved the practice example into the teacher project:
+
+`forks-practice/`
+
+**Teachers demonstrate this check in class. Students don't receive the practice implementation.**
+
+### Commands for the demonstration
+
+Run these from the teacher grading project:
 
 ```bash
 ./gradlew generateForks -PforksCatalog=forks-practice/catalog.json -PforksOut=forks-practice \
     -PforkTests=../spec-test-driven-capstone/inherited/src/test/kotlin
+
 ./gradlew verifyForks   -PforksCatalog=forks-practice/catalog.json -PforksOut=forks-practice --continue
 ```
 
-Pointed at the suite the learner *inherited*, that reports **LEFT OPEN** — which is the demonstration:
-eight green tests that decide nothing about ties. Swap `-PforkTests` for a learner's own directory to show
-the same thing on their work. (Regenerate when the *path* changes; test contents are read at build time,
-so editing tests needs only the second command.)
+When you run this against the inherited test suite, the report says:
+**LEFT OPEN**
 
-The learner-facing consequence is in `README.md` and on slide 57: the check exists, it will be run on their
-work, and **there is no command for them** — stated outright, because a practice band with no command has to
-say so.
+That's exactly what we want to demonstrate.
+The inherited suite has eight passing tests, but none of them decides how ties should work.
+You can also point `-PforkTests` at a student's own test directory to demonstrate the same check using their work.
+If the test directory path changes, regenerate the forks. If you only edit the tests inside the same directory, running `verifyForks` again is enough.
+The student README and slide 57 explain that this check exists and will be used on submissions, but **there is no student command for running it**.
 
-## Giving feedback on a submission
+---
 
-**Why this is here and not on a slide (her call, 2026-08-19).** The capstone is an assignment, not a
-lecture. If the deck explains what a fork is, which forks exist and what we measured, it hands over the
-answer and the learner is walked through instead of working. So the student deck is **five slides — 52–56:
-the situation, the brief, the deliverable, and how to run things** — and everything below stays with you,
-to use when you respond to their work. One consequence, deliberate: **the recurring "how the models did"
-slide is not in this block.** Use the numbers in conversation if they help.
+## How to review a student's submission
 
-### Reading their submission
+The capstone is an assignment, not a guided lecture.
+We deliberately kept the student-facing slides short.
+Slides 52–56 introduce the situation, business description, deliverables, and commands.
+They don't explain all the open questions or show how previous agents performed.
+Students should discover those things through their own work.
+Use the information below **after they've attempted the exercise**, when you're discussing their submission.
+
+### Step 1: Run the fork checks
+
+From `spec-test-driven-grading/`, point the tool at the student's test sources:
 
 ```bash
-# in spec-test-driven-grading/, pointing at the learner's own test source
 ./gradlew generateForks -PforkTests=<path to their work/src/test/kotlin>
 ./gradlew verifyForks --continue
 ```
 
-Then, separately, the floor: put their implementation in `implementations/<name>/` and run
-`verifyImplementations`, plus `tests-11.6/FranchiseCornerCases.kt` against it. **Do not rank with the
-corner cases** — see above, everything passes them.
+### Step 2: Check the implementation
 
-### What to say to each verdict
+Put the student's implementation in:
 
-| verdict | what it means | what to ask them |
-| --- | --- | --- |
-| **SETTLED** | their tests accept exactly one reading | Which one, and *why that one?* The answer is theirs to defend, and "it is what the code already did" is not a defence. |
-| **LEFT OPEN** | their tests accept several readings that answer differently | Not a bug they missed — **a decision nobody made.** Show them the two readings and ask what their specification says about it. Usually: nothing. |
-| **CONTRADICTORY** | their tests reject every reading we hold | **Read their specification before calling this a fault.** It looks identical to a learner who decided the fork a *third* way, which is a good outcome. The report cannot tell the difference; you can. |
-| **DID NOT COMPILE** | their tests do not build against a reading | Often a test reaching into their own implementation's internals rather than the contract. Worth naming as its own lesson. |
-| **NO TESTS YET** | nothing in the suite directory | They have not started, or ran the check in the wrong directory. |
+`implementations/<name>/`
 
-### What a good submission looks like
+Then run `verifyImplementations` and the corner-case tests in:
 
-There is no single shape, and saying so is part of the feedback. Signals worth crediting, in rough order
-of how much they show:
+`tests-11.6/FranchiseCornerCases.kt`
 
-1. **Every fork decided, and each decision stated in the specification** — not just pinned in a test.
-   A test that pins something the text does not say is a decision that will be lost at the next rewrite.
-2. **They noticed the inherited specification contradicts itself** and said which side they took. The
-   table above lists what is there to find.
-3. **They split the specification** rather than editing one long document, or explained why they did not.
-4. **They ran the same agent more than once**, or two different agents, and treated a disagreement as
-   evidence about their text rather than about the model.
-5. **They found something wrong with the inherited implementation** and can say whether the specification
-   licensed it. That is the highest-value observation in the whole exercise.
+Remember: the corner cases are a minimum check, **not a grade**.
 
-Signals that need a conversation, not a mark: a suite that pins arithmetic `priceFor` already settled
-(scope) · a specification that grew rather than shrank · tests written against the inherited code's
-behaviour instead of against their own text (this makes every fork SETTLED for the wrong reason — worth
-catching, because the report cannot).
+### Step 3: Discuss the fork verdicts
 
-### Discussion points that used to be slides
+The most useful part of grading is the conversation that follows.
 
-Use these when they fit what a particular learner did. None of them should be delivered before the attempt.
+| Verdict             | What it means                                                | What to ask                                                                                                                                     |
+|---------------------|--------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| **SETTLED**         | The tests accept exactly one interpretation.                 | “Why did you choose this interpretation?” The answer should come from their specification, not just from what the existing code happened to do. |
+| **LEFT OPEN**       | Several interpretations still pass.                          | “What does your specification say about this question?” Often the answer is nothing, which is the point of the exercise.                        |
+| **CONTRADICTORY**   | Every catalog interpretation fails.                          | Read their specification first. They may have chosen a valid third interpretation that we didn't include.                                       |
+| **DID NOT COMPILE** | The tests don't build against an alternative implementation. | Check whether the tests depend on implementation details instead of the public contract.                                                        |
+| **NO TESTS YET**    | The selected directory has no tests.                         | Check whether the student hasn't started or the wrong directory was selected.                                                                   |
 
-- **A reading is not a mutant.** A mutant asks *does your suite catch a defect*; a reading asks *does your
-  suite express a decision*. The two checks are mirrors: the conformance check from 11.2 says **do not pin
-  what the contract leaves free**, this one says **do pin what is a decision**. Telling those apart is the
-  whole skill, and no report will do it for them.
-- **One counterexample closes one alternative, not a fork.** Our own self-test pinned "the chain can refuse
-  a duck every shop would sell" and the check still said LEFT OPEN — because two of the three readings we
-  held answer that case identically. Closing a fork means rejecting *every* reading but one. Same shape as
-  the 11.2 lesson that hardening against a counterexample closes the instance and not the class.
-- **The options a brief imagines are not the options readers take.** Our brief offered three answers for
-  the chain-versus-shop question; building the checks showed two of them were the same reading and the
-  third was not expressible against the types — while the reading every weak specification actually took
-  was not listed at all. Good material for anyone who has to write a brief.
-- **A clean report is worth exactly what the check can reach.** They practised on one fork. The others were
-  never in their folder.
+The important distinction is that **LEFT OPEN isn't necessarily a missed bug**.
+It means the tests haven't made a decision between alternatives.
+And **CONTRADICTORY isn't automatically wrong**.
+It may mean the student's decision falls outside the options we prepared.
 
-## The reveal, for the debrief
+---
 
-**Moved to `capstone-11.6-debrief.md`** — five beats, the numbers with their provenance, and the one
-decision left to each teacher (how much of the staging to admit out loud). There are no slides for it.
+## What does a good submission look like?
 
-One correction worth recording, because the earlier draft of this section had it wrong: it said the
-inherited implementation was "nobody's mistake — an agent doing exactly what that text says". **That was
-true of the version we measured and is NOT true of the one that ships.** The shipped one was degraded by
-hand. The defects are still all licensed by the document, which is what makes the lesson work, but the
-picking was ours.
+There's no single correct structure.
+But here are some things worth looking for.
 
-## One thing to watch for in the brief
+### 1. Every important decision is written in the specification
 
-`briefs/11.6-franchise.md` records that its own fork 1 was badly posed — two of its three options were
-the same reading, the third was not expressible against `Shop`, and the reading that readers *actually*
-take was not listed. Worth showing when teaching brief-writing: **the options a brief imagines are not
-the options readers take.**
+It's not enough for a test to enforce one interpretation.
+The specification should explain that interpretation too.
+Otherwise, the next person who rewrites the tests may accidentally change the decision.
+
+### 2. The student notices contradictions
+
+The inherited specification contains statements that can't all be true at the same time.
+A strong submission identifies those conflicts and explains which interpretation it chooses.
+
+### 3. The student makes the specification easier to work with
+
+For example, they might split one long document into smaller, focused specifications.
+They might also have a good reason not to split it.
+What matters is whether they can explain their choice.
+
+### 4. The student compares agent results thoughtfully
+
+They might run the same agent several times or use two different agents.
+If the results differ, that's useful evidence about the clarity of the specification.
+It's not automatically proof that one model is better.
+
+### 5. The student finds a problem in the inherited implementation
+
+This is especially valuable.
+Ask them to explain whether the behavior is clearly wrong under the specification or whether the specification allows it.
+That distinction is at the heart of the capstone.
+
+### Things that deserve a conversation
+
+Some results aren't necessarily bad, but are worth discussing:
+
+- The tests spend a lot of effort checking pricing arithmetic that was already settled in exercise 11.4.
+- The student's specification becomes longer instead of clearer.
+- The tests copy the inherited implementation's behavior rather than enforcing the student's own decisions.
+
+The last one is particularly important.
+A suite can settle every fork simply by copying what the inherited code already does.
+The checker can't tell whether those decisions were deliberate.
+That's something you need to ask the student.
+
+---
+
+## Discussion points for the debrief
+
+These ideas used to appear in slides.
+We moved them into the teacher notes so they can come up naturally in response to students' work.
+
+### A fork reading isn't a mutant
+
+A mutant asks:
+
+**Can your tests catch this bug?**
+
+A fork reading asks:
+
+**Have your tests made a decision about this ambiguous behavior?**
+
+These are different questions.
+In exercise 11.2, conformance testing teaches students **not to require behavior the contract leaves open**.
+In the capstone, fork checking teaches students to **make and test the decisions that the specification needs**.
+Knowing when to leave behavior flexible and when to make it precise is the real skill.
+
+### One counterexample doesn't necessarily settle a fork
+
+We tried a test that established the franchise could reject a duck even when every individual shop would sell it.
+But the fork checker still reported LEFT OPEN.
+Why?
+Because two of the three interpretations in our catalog behaved the same way on that example.
+To settle a fork, tests must reject every alternative except one.
+This connects directly to the advanced exercise 11.2 lesson:
+**Fixing one counterexample doesn't necessarily cover the whole category of behavior.**
+
+### The options in a business description may not match what readers actually understand
+
+Our original business description offered three possible answers to the franchise-versus-shop admission question.
+But when we implemented them, we found that:
+
+- Two options described the same behavior.
+- One couldn't be expressed using the available `Shop` types.
+- The interpretation that weak specifications actually used wasn't listed at all.
+
+That's a useful lesson for anyone writing requirements.
+**The alternatives we imagine when writing a brief aren't always the alternatives readers will actually choose.**
+
+### A clean report has limits
+
+Students may have seen a clean result for the practice fork.
+But that doesn't mean the other forks are settled.
+Those other interpretations weren't available in their project.
+As in mutation and adversarial testing, **a checker can only report on the cases it knows how to examine**.
+
+---
+
+## What should we reveal at the end?
+
+The full capstone debrief is in:
+
+[`capstone-11.6-debrief.md`](capstone-11.6-debrief.md)
+
+It contains five parts, with the evidence behind each number.
+We intentionally don't use slides for this debrief.
+There's one important point to handle accurately.
+An earlier draft described the inherited implementation as an agent naturally following an ambiguous specification.
+That was true of the original implementation we measured.
+**It isn't true of the version students receive.**
+
+The shipped version was deliberately modified by hand.
+Every modification is supported by a possible reading of the inherited specification, but **we chose those modifications**.
+How much of that preparation to explain during the debrief is a teaching decision. The teacher notes should always preserve the actual history.
+
+---
+
+## One final note about the business description
+
+The original brief is in:
+
+`briefs/11.6-franchise.md`
+
+Its first open question wasn't written as well as we initially thought.
+Two of the three options described the same behavior. The third wasn't expressible using `Shop`. And the interpretation readers actually chose wasn't included.
+That's worth mentioning when teaching students how to write specifications.
+Even the people preparing an exercise can misunderstand the possible interpretations of their own requirements!
+**A good specification isn't just about writing down decisions. It's also about discovering which decisions really need to be made.**

@@ -1,6 +1,6 @@
-// Root of the teacher-only grading build. Holds the reference implementation (:grading) and the
-// GRADED mutant set for mutation testing. The mutation tasks come from the same convention plugin
-// the student build uses; the paths this build feeds them are in gradle.properties.
+// Root build for teacher-only grading. It contains the reference implementation (:grading)
+// and the graded mutants used in mutation testing. Both builds use the same mutation tasks;
+// this build sets its own paths in gradle.properties.
 
 plugins {
     kotlin("jvm") version "2.2.20" apply false
@@ -9,14 +9,12 @@ plugins {
     id("duck-shop.spec")
 }
 
-// The 11.4 pricing mutants are a second catalog in this build: they mutate :reference, not :core, so
-// they need their own source root, package and output dir. Same task classes, different wiring —
-// the shared convention plugin stays generic.
+// Exercise 11.4 has a separate set of pricing mutants. They change :reference rather than
+// :core, so they need different source, package, and output paths. The task code stays shared.
 tasks.named<duckshop.SpecReportTask>("verifySpec") {
-    // This build sits one level over, so the surface file is across the sibling. Keep -PspecSurface
-    // ahead of it: setting a bare convention here REPLACES the plugin's, which silently killed the
-    // flag — the advanced fixture was then checked against the basic surface, so nothing ever
-    // verified that it covers Then, BestOf and OnlyIf.
+    // The exercise files are in a sibling directory. Keep -PspecSurface as the first choice:
+    // replacing the plugin's convention without it would ignore the flag and could check an
+    // advanced spec against the basic requirements instead.
     surfaceFile.convention(
         providers.gradleProperty("specSurface")
             .orElse("../spec-test-driven/exercises/write-spec/README.md"),
@@ -25,44 +23,44 @@ tasks.named<duckshop.SpecReportTask>("verifySpec") {
 
 tasks.register<duckshop.GenerateMutantsTask>("generatePricingMutants") {
     group = "duck-shop"
-    description = "Regenerate the 11.4 pricing mutant modules from pricing-mutants/catalog.json."
+    description = "Recreate the pricing mutant modules for exercise 11.4 from pricing-mutants/catalog.json."
     catalogPath.set("pricing-mutants/catalog.json")
     outPath.set("pricing-mutants")
     packagePath.set("org/jetbrains/kotlin/course/duck/shop/pricing")
-    // The mutated file is the teacher-only reference, not :core.
+    // Change the teacher's reference implementation, not :core.
     coreSrc.set("reference/src/main/kotlin")
-    // :core is compiled in unmutated — the reference needs Duck, DiscountRule and AdmissionPolicy.
+    // Include :core unchanged; the reference needs Duck, DiscountRule, and AdmissionPolicy.
     alsoCompile.set("../spec-test-driven/core/src/main/kotlin")
-    // These mutants exist to be shot at by the property catalog, not by the 11.2 admission suite.
+    // Test these mutants with the pricing properties, not the admission tests from 11.2.
     defaultTests.set("pricing-properties/kotlin")
 }
 
 tasks.register<duckshop.MutationReportTask>("verifyPricingMutants") {
     group = "verification"
-    description = "Run a property suite against every 11.4 pricing mutant. " +
-        "Params: [-PmutantTests=<test source dir>] [-PmutantsStrict]."
+    description = "Run the property tests against each pricing mutant from exercise 11.4. " +
+            "Params: [-PmutantTests=<test source dir>] [-PmutantsStrict]."
     catalogPath.set("pricing-mutants/catalog.json")
     defaultTests.set("pricing-properties/kotlin")
     outPath.set("pricing-mutants")
-    // Order only — a report downstream of a compile failure is skipped. See
-    // ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts.
+    // Set the order only. A report that depends on a failed compilation would be skipped.
+    // See ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts.
     mustRunAfter(subprojects.filter { it.path.startsWith(":pricing-mutants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<duckshop.PropertyMatrixTask>("pricingPropertyMatrix") {
     group = "verification"
-    description = "Which property kills which pricing mutant — the definition of load-bearing."
+    description = "Show which pricing mutants each property catches, and which properties catch none."
     catalogPath.set("pricing-mutants/catalog.json")
     outPath.set("pricing-mutants")
     dependsOn("verifyPricingMutants")
 }
 
-// The appeal against layer 2: score the claims a learner declares for themselves, rather than the
-// ones a model read out of their prose. Everything past the declaration is deterministic.
+// Let learners check the claims they chose themselves, rather than relying on what the AI
+// extracted from their spec. After they declare the claims, the checks are deterministic.
 tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
     group = "verification"
-    description = "Run the claims you declare as properties, and show where they disagree with the " +
-        "extraction. Params: -Pclaims=<ids or names> | claims.txt beside -Pspec, [-Pagent=<run>]."
+    description = "Test your declared claims as properties and compare them with the AI extraction. " +
+            "Params: -Pclaims=<ids or names> | claims.txt beside -Pspec, [-Pagent=<run>]."
     propertyFile.set(
         "pricing-properties/kotlin/org/jetbrains/kotlin/course/duck/shop/pricing/PricingProperties.kt",
     )
@@ -71,35 +69,30 @@ tasks.register<duckshop.ClaimReportTask>("verifyClaims") {
     dependsOn("verifyPricingMutants")
 }
 
-// verifyImplementations lives in THIS build only, so this build is what may name it. Overriding the
-// convention here is what keeps `prepareImplementation` in the student build from printing it.
+// Only this grading build has verifyImplementations. Set the command here so the student
+// build's prepareImplementation task never suggests a task that does not exist there.
 tasks.named<duckshop.PrepareImplementationTask>("prepareImplementation") {
     reportCommand.set("./gradlew verifyImplementations -Pagent=<agent>")
 }
 
-// 11.4 step 3e: what an agent builds when the specification is all it has.
+// Exercise 11.4, step 3e: see what an agent builds using only the specification.
 tasks.register<duckshop.ImplementationReportTask>("verifyImplementations") {
     group = "verification"
-    description = "Report where implementations written from a specification alone diverge from the " +
-        "reference, tier-aware. Params: -Pagent=<name> [-Pkey=<key.json>]. An implementation that " +
-        "does not compile is reported as a verdict, not a build failure."
+    description = "Compare implementations built from a spec alone with the reference, " +
+            "excluding out-of-scope checks. Params: -Pagent=<name> [-Pkey=<key.json>]. " +
+            "Code that does not compile appears in the report instead of counting as a build failure."
     keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
-    // Scoped to the agent being reported on. Depending on every implementation meant that one
-    // agent's non-compiling module broke the report for every other agent — and made the report's
-    // own "DID NOT BUILD" branch unreachable, since the build died before it could say so.
-    // A broken implementation inside the requested set is the case that branch exists for: run with
-    // --continue and it gets reported instead of aborting.
+    // Look only at the requested agent. A different agent's broken module must not stop
+    // this report. A broken module belonging to this agent is useful information, so
+    // running with --continue should still let the report show DID NOT BUILD.
     val reported = providers.gradleProperty("agent").orNull
-    // Order only, and this is the task that proved the point: scoping alone did NOT make the
-    // "DID NOT BUILD" branch reachable, because the report was still downstream of a failed
-    // compile. -Pagent=impl14b --continue printed nothing at all, three of its runs being
-    // agent output that does not compile — the very result the branch exists to report.
-    // ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts schedules these.
+    // Order tasks without making the report depend on successful compilation.
+    // Otherwise a failed compile would prevent the DID NOT BUILD result from appearing.
+    // The settings script below schedules the tasks:
+    // ../spec-test-driven/build-logic/reachable-reports.settings.gradle.kts.
     mustRunAfter(
         subprojects
             .filter { it.path.startsWith(":implementations:${reported ?: ""}") && it.buildFile.exists() }
             .map { "${it.path}:test" },
     )
 }
-
-

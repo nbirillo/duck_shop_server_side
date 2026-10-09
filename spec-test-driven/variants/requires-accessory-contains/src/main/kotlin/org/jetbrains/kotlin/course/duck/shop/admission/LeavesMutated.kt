@@ -5,12 +5,11 @@
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 
-// The leaf policies — given, correct, and shared from :core. Every exercise in the module is about
-// specifying or checking this algebra, never about implementing it, so these are not what an agent
-// writes.
+// The leaf policies are provided, correct, and shared from :core. Every exercise in this module
+// focuses on specifying or checking this algebra, not implementing it, so agents do not write these.
 
 /**
- * Admits only ducks that carry the Kotlin attribute.
+ * Admits only ducks with the Kotlin attribute.
  *
  * `admits(duck)` is `true` iff [Duck.hasKotlinAttribute] is `true`.
  */
@@ -19,7 +18,7 @@ class KotlinOnly : AdmissionPolicy {
 }
 
 /**
- * Admits ducks whose price does not exceed [maxPrice].
+ * Admits ducks whose price is no greater than [maxPrice].
  *
  * `admits(duck)` is `true` iff `duck.price <= maxPrice`.
  */
@@ -28,16 +27,16 @@ class MaxBudget(private val maxPrice: Int) : AdmissionPolicy {
 }
 
 /**
- * Admits ducks that wear at least one accessory named [accessoryName].
+ * Admits ducks wearing at least one accessory with the name [accessoryName].
  *
- * `admits(duck)` is `true` iff some accessory in [Duck.accessories] has that name.
+ * `admits(duck)` is `true` iff an accessory in [Duck.accessories] has that name.
  */
 class RequiresAccessory(private val accessoryName: String) : AdmissionPolicy {
     override fun admits(duck: Duck): Boolean = accessoryName in duck.accessories.map { it.name }
 }
 
 /**
- * Admits ducks wearing at least [min] accessories.
+ * Admits ducks that wear at least [min] accessories.
  *
  * `admits(duck)` is `true` iff `duck.accessories.size >= min`.
  */

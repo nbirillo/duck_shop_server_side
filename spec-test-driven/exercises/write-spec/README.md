@@ -1,20 +1,15 @@
 # Write the specification
 
-Until now the contract was handed to you. This time you write it.
+In the previous exercises, you were given a specification. Now it's your turn to write one!
+The shop wants to add promotions. Your teacher will give you a short description of what the business wants, 
+probably just a few lines. In real projects, this is pretty common. You get a short description, 
+but it's not enough to start implementing the feature.
 
-The shop wants promotions, and your teacher will give you the whole of what the business said about
-them — a few lines, no more.
+**Your task is to turn this description into a clear specification** that another developer 
+or an AI agent can use to implement the feature without asking you more questions.
+The important part is that two different developers following your specification should get the same results.
 
-> **The brief is not in this repository, on purpose.** It is a short piece of business text — a few
-> If it were, the agent you later hand your specification to could read it — and then it
-> would be answering the business, not you. Whatever it built would tell you nothing about
-> your own text, which is the only thing this exercise measures.
-
-That is a normal amount of detail to be given, and it is **not enough to implement from**. Your job
-is to turn it into a contract precise enough that somebody — a colleague, or an agent — can implement
-it without asking you anything, and precise enough that two correct implementations cannot disagree.
-
-## What you are specifying
+## What are we specifying?
 
 ```kotlin
 sealed interface DiscountRule {
@@ -27,115 +22,112 @@ sealed interface DiscountRule {
 fun priceFor(duck: Duck, rules: List<DiscountRule>): Int
 ```
 
-`Duck` is the type you already know: `name`, `price`, `hasKotlinAttribute`, `accessories`.
+You already know the `Duck` type from the previous exercises. 
+It has `name`, `price`, `hasKotlinAttribute`, and `accessories`.
 
-## How to write it
+## What should you do?
 
-Copy [`SPEC-template.md`](SPEC-template.md) to `SPEC.md` and fill it in. The sections are not
-decoration — each one is a different kind of statement, and a specification that skips one is missing
-something a reader needs.
+Copy [`SPEC-template.md`](SPEC-template.md) to `SPEC.md` and fill in all the sections.
+Pay special attention to the **"deliberately not specified"** section. We'll come back to why it's important.
 
-The section that will feel strangest is **"deliberately not specified"**. You met the idea while
-hardening the test suite:
-some behaviour is contract and some is an accident of how the code happens to be written, and pinning
-an accident costs a future refactor its freedom. Now you are on the other side of it — you decide,
-and you write the decision down.
+## What makes this exercise difficult?
 
-## What makes this hard
+Read the business description carefully. You'll probably notice that some things are not explained.
+For example, what happens if several discounts apply to the same duck? Can they be combined? In what order?
+Different developers might make different decisions here, and their implementations might return different prices.
 
-Read the business text again and count how many different implementations satisfy it. They will not
-all return the same number for the same duck. Every place where that is true is a decision waiting
-for you: either you make it, or the person implementing makes it for you, quietly, and you find out
-later.
+**Your job is to find these unclear cases and decide how they should work.**
 
-You are not expected to have one right answer. You are expected to **have an answer, on purpose, and
-to be able to say why** — and to be honest in the last two sections about what you left open.
+There isn't always one correct answer.
+What's important is that you make these decisions on purpose, explain them, and write them down clearly.
 
-## What happens to your spec
+## How will we check your specification?
 
-- It is read for **structure and completeness** — did you make statements of each kind, or only
-  describe the happy path.
-- The claims in it are turned into **executable properties** and run against a correct implementation
-  and against deliberately broken ones. A claim that holds everywhere pins nothing; a claim that
-  fails on correct code is simply wrong.
-- Every operation in the signature is checked for **coverage** — if nothing in your spec says anything
-  about some part of it, that shows up.
-- And an agent implements the feature **from your text alone**. What it gets wrong is the most direct
-  answer you will get to "was that enough?"
+We'll check your work in several ways:
 
-## Running the checks
+1. **Structure and completeness.** Did you fill in all the sections? Did you cover all the important parts of the feature, including edge cases?
+2. **Properties.** We'll turn the rules from your specification into executable properties and test them against a correct implementation and some intentionally broken ones.
+3. **Coverage.** We'll check whether your specification covers all the parts of the function and its types.
+4. **Implementation by AI agents.** We'll give your specification to an agent and ask it to implement the feature using only your text.
 
-Same order as above. Everything runs from `spec-test-driven/`, and the whole sequence uses **one**
-specification path — if the two readers get different text, you are measuring the text, not the readers.
+The last part is especially interesting. If the agent misunderstands something, 
+it might mean that your specification wasn't clear enough.
+
+## How to run the checks
+
+Run all commands from the `spec-test-driven/` directory.
+Make sure you use the same specification file for all the checks.
+
+### Step 1. Check structure and coverage
 
 ```bash
 SPEC=exercises/write-spec/SPEC.md
 
-# structure and coverage — is every name in the surface mentioned, is every section filled
 ./gradlew verifySpec -Pspec=$SPEC
 ```
 
-Then your claims as code. Put any number of `.kt` files in `properties/`, named however you like, and
-build a sandbox: your specification and the types, and nothing else.
+This checks whether you've filled in the required sections and mentioned all the important parts of the feature.
+
+### Step 2. Test your properties
+
+You can add any number of Kotlin files (`.kt`) to the `properties/` directory. You can name them however you like.
+Then create a sandbox and run the tests:
 
 ```bash
 ./gradlew sandbox -Pname=a -Pspec=$SPEC
 ./gradlew -p sandbox/a test
 ```
 
-A sandbox is a **separate Gradle build**. It has no `gradlew` of its own and this project's tasks do not
-exist inside it, so every command stays here at the project root and reaches in with `-p`.
+The sandbox is a separate Gradle project. 
+It contains your specification and the required types, but not the original implementation.
+It doesn't have its own `gradlew`, so you should run all commands from the main project directory and use `-p` to point to the sandbox.
 
-Finally, two readers of the same text. One interactive agent working in the sandbox, one over an API —
-they have to be **two different agents**, and both competent, or what you measure is the weaker one's
-incapacity rather than a gap in your text.
+### Step 3. Let two agents implement your specification
+
+Now let's see if two different agents understand your specification in the same way.
+You'll need two different AI agents. 
+Both should be capable of completing the task. 
+Otherwise, differences might come from the agents' abilities rather than your specification.
+The first agent works in the sandbox, and the second one runs through an API.
 
 ```bash
 ./gradlew sandbox -Pname=a -Pspec=$SPEC
-#   ▸ open sandbox/a in your agent and let it implement. this step is yours, not a command
+
+# Open sandbox/a in your agent and ask it to implement the feature.
+# This is a manual step.
+
 ./gradlew prepareImplementation -Pagent=reader-a -Pspec=$SPEC -Pfrom=sandbox/a
 
 ./gradlew runAgent -Pmode=impl-from-spec -Pagent=reader-b \
-    -Pprovider=ollama -Pmodel=qwen2.5-coder:32b -Pspec=$SPEC
+  -Pprovider=ollama -Pmodel=qwen2.5-coder:32b -Pspec=$SPEC
 
 ./gradlew verifyDivergence -PagentA=reader-a -PagentB=reader-b
 ```
 
-The last command records what each reader answers on a fixed corpus and reports how many inputs they
-answer **differently**. It needs no reference and no answer key: every open input is a decision your text
-did not make, so somebody else made it. Read the open lines, not the number — leaving something free on
-purpose is a legitimate choice, and section 4 of the template is where you say so.
+The last command compares the results of both implementations on the same set of inputs.
+It shows where the agents returned different answers.
 
-## The checker can be wrong, and you are allowed to say so
+**Don't focus only on the number of differences. Look at the actual cases!**
 
-Checking a specification is hard — harder than checking code, and our tooling does not manage it
-perfectly. One of those four steps, the one that turns your sentences into a list of claims, asks a
-model to read your prose, and it makes mistakes. On the best specification we have, it reported a
-claim as missing that the text states twice.
+If two agents made different decisions, check whether your specification explains what should happen in that case.
+Sometimes you might intentionally leave something unspecified. That's fine too! Just explain it in section 4 of the template.
 
-So if the report says something is absent and you are sure it is there, do not add a paragraph to
-satisfy the tool. Treat it as a question rather than a verdict, and settle it:
+## What if the checker is wrong?
 
-1. **Say what you claim, and hand that in.** Write the claims yourself — one per line, by number or
-   by name. From that list onward there is no model in the loop: those exact properties are run
-   against a correct implementation and against deliberately broken ones, and the report comes back
-   with both disagreements spelled out — claims you declared that the checker did not find, and
-   claims it found that you never declared. The second list is usually the more interesting one.
-2. **Let the later steps answer it.** The property run and the implement-from-your-spec run do not
-   depend on the checker's reading. If the property holds, and an agent given only your text builds
-   the thing you meant, then the claim was in there.
-3. **Check by hand.** Find the sentence and point at it. If it is there, the checker was wrong. If
-   what you find is vaguer than you remembered, then the checker read it the way a stranger would —
-   and that is worth more to you than a clean report was.
+One more important thing: **our checker isn't perfect.**
+Checking a specification is actually quite difficult. 
+One part of our tooling uses an AI model to read your text and extract the rules you've written.
+And yes, it can make mistakes!
+For example, we've seen cases where the checker reported a missing rule even though it was clearly written in the specification.
+So if the checker says something is missing, but you think it's there, don't immediately change your specification just to make the checker happy.
+Instead, you can try a few things:
 
-Declaring a claim does not make it true, and the report will not pretend otherwise. A property you
-declare still has to hold against correct code — one that fails there is a claim contradicting the
-feature — and it still has to rule something out to be worth anything. You can win the argument with
-the checker and discover in the same run that the claim you were defending constrains nobody.
+1. **Write down your claims yourself.** Make a list of the rules your specification defines, one per line. 
+You can then compare your list with what the checker found. The properties will still be tested against correct and intentionally broken implementations.
+2. **Check the results of the other steps.** If your properties pass and an agent can implement the feature correctly using your specification, that's useful evidence that your text was clear enough.
+3. **Read your specification again.** Find the exact sentence that explains the rule. Is it really clear? Or could someone understand it differently?
 
-Either outcome teaches you something, which is why this is written down rather than quietly fixed.
-It is also the module's own point turned around and aimed at us: **a result from a tool is a claim,
-and a claim gets verified.** That holds for the tool marking your work exactly as much as for the
-agent writing your code.
-
-Verification is what stays human — including verification of the thing doing the verifying.
+Also, remember that writing a rule doesn't automatically make it correct. It still needs to work with the correct implementation and help distinguish correct behavior from incorrect behavior.
+Sometimes the checker will be wrong. Sometimes it will help you find something you missed. Both are useful!
+And this is actually one of the main ideas of the course: **don't blindly trust the output of a tool, even when that tool is checking your work.**
+Always check the results, ask questions, and make sure they make sense.

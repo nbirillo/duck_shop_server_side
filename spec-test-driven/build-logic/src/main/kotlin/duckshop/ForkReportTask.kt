@@ -10,11 +10,11 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * The capstone's report: for each fork the brief leaves open, does the suite under test **decide** it?
+ * Checks whether the capstone tests make a clear choice for each question the brief leaves open.
  *
- * See [Forks] for why this replaced the hidden corner-case set. There is deliberately no score and no
- * right answer — a fork is either decided or it is not, and which way it was decided is the learner's
- * to defend.
+ * See [Forks] for why we use this instead of hidden corner cases. There is no score
+ * and no single correct answer. The report shows which choices the tests make;
+ * the learner decides which choice is right for their specification.
  */
 abstract class ForkReportTask @Inject constructor(
     private val providers: ProviderFactory,
@@ -33,46 +33,41 @@ abstract class ForkReportTask @Inject constructor(
         val outDir = outPath.get().trim('/')
         val readings = loadForkCatalog(root.resolve(catalogPath.get().trim('/')))
 
-        // Which suite really ran. See the note in GenerateForksTask: the suite is baked into the
-        // generated modules, so a -PforkTests that disagrees with them would produce a report about a
-        // suite nobody ran — invisible unless you read the failures, which is how this fault family
-        // wasted three earlier measurements.
+        // Check which suite the generated modules actually use. If -PforkTests points
+        // somewhere else, the report would describe tests that never ran. We've seen
+        // this give misleading results before, so don't guess.
         val marker = root.resolve("$outDir/generated-with.txt")
         require(marker.isFile) {
-            "No $outDir/generated-with.txt — run ./gradlew generateForks first (the readings' modules " +
-                "hold the suite they were generated with, and the report will not guess)."
+            "Missing $outDir/generated-with.txt. Run ./gradlew generateForks first. The generated modules " +
+                    "keep their test suite, so the report needs that information."
         }
         val generatedWith = marker.readLines()
             .mapNotNull { it.split('=', limit = 2).takeIf { p -> p.size == 2 } }
             .associate { (k, v) -> k to v }
         val ranSuite = generatedWith["tests"].orEmpty()
-        // A fork check with no suite compiled into the readings measures nothing, and it used to SAY
-        // something instead: with no tests there are no result files, which the branch below reads as
-        // "did not build". Refusing outright is the honest answer.
+        // No test suite means there's nothing to check. Stop here rather than
+        // mistaking missing results for a build failure.
         require(ranSuite.isNotBlank()) {
-            "The readings were generated with no test suite, so there is nothing to measure. Re-run " +
-                "./gradlew generateForks -PforkTests=<your test source dir> first."
+            "These readings have no test suite, so there is nothing to check. Run " +
+                    "./gradlew generateForks -PforkTests=<your test source dir> first."
         }
         providers.gradleProperty("forkTests").orNull?.let { asked ->
             require(asked.trim('/') == ranSuite.trim('/')) {
-                "-PforkTests=$asked but the modules were generated with '$ranSuite'. Re-run " +
-                    "generateForks with the suite you mean; the report will not score one suite and " +
-                    "name another."
+                "-PforkTests=$asked but the modules use '$ranSuite'. Re-run " +
+                        "generateForks with the intended suite. The report cannot check one suite and " +
+                        "report another."
             }
         }
 
-        // A test claiming to hold on EVERY reading, that some reading rejects. See the block that
-        // prints it: this is the invariant keeping a "settled" group honest, and it caught two tests of
-        // mine that were settled by argument and not by measurement.
+        // Track tests marked "settled" that fail on a valid reading. A settled rule
+        // should hold for every reading, so these failures need another look.
         val overreaching = sortedMapOf<String, MutableSet<String>>()
 
-        /** Readings with no results whose test sources really did fail to compile. */
+        /** Readings where the test code did not compile. */
         val notCompiled = sortedSetOf<String>()
 
-        // Does the suite contain any test source at all? An EMPTY suite directory produces neither
-        // results nor compiled classes, which the compiled-classes heuristic alone reads as "did not
-        // compile" — and that is the very first thing a learner sees, before they have written a test.
-        // Asking the source directory is the only way to tell the two apart.
+        // An empty test folder is normal before the learner writes tests.
+        // Check for source files so we don't report a compilation error by mistake.
         val suiteHasSources = root.resolve(ranSuite).let { dir ->
             dir.isDirectory && dir.walkTopDown().any { it.isFile && it.extension == "kt" }
         }
@@ -88,12 +83,9 @@ abstract class ForkReportTask @Inject constructor(
                     .filter { it.trimStart().startsWith(SETTLED_PREFIX) }
                     .forEach { overreaching.getOrPut(it) { sortedSetOf() } += reading.id }
                 when {
-                    // No results at all is a DIFFERENT fact from "nothing failed" — its own outcome,
-                    // because an earlier report of mine folded it into "rejected" and it read as a
-                    // decision. TWO causes reach here and they are not the same problem: compiled test
-                    // classes with no results means the suite ran nothing, while no classes at all means
-                    // it did not compile. Saying "did not build" for the first one is what this branch
-                    // did on its first run against the capstone build, and it was simply wrong.
+                    // No test results does not mean the reading was rejected.
+                    // It may mean the tests never ran or failed to compile.
+                    // Keep those cases separate from actual test failures.
                     failures == null -> {
                         unbuilt += reading
                         if (suiteHasSources && !ranNothing(moduleDir)) notCompiled += reading.id
@@ -106,12 +98,12 @@ abstract class ForkReportTask @Inject constructor(
         }
 
         logger.lifecycle("")
-        logger.lifecycle("Fork discrimination — does this suite DECIDE what the brief left open?")
+        logger.lifecycle("Open choices — do your tests make a decision?")
         logger.lifecycle("suite: ${ranSuite.ifEmpty { "(none — every reading ran with no tests at all)" }}")
         logger.lifecycle("")
-        logger.lifecycle("A fork is SETTLED when the suite accepts exactly one reading of it. Accepting")
-        logger.lifecycle("several is not a bug it failed to catch — it is a decision nobody made.")
-        logger.lifecycle("Neither reading of a fork is wrong: the report never says which to pick.")
+        logger.lifecycle("A fork is SETTLED when your tests accept exactly one reading. If they accept")
+        logger.lifecycle("several, the choice is still open. That is not an implementation bug.")
+        logger.lifecycle("Both readings are valid. This report does not choose one for you.")
 
         verdicts.forEach { v ->
             logger.lifecycle("")
@@ -137,39 +129,38 @@ abstract class ForkReportTask @Inject constructor(
             v.rejected.forEach { logger.lifecycle("    rejected        ${it.id} — ${it.label}") }
             when {
                 anyFailedToCompile ->
-                    logger.lifecycle("  ⇒ your tests do not compile against this reading, so nothing is " +
-                        "measured here.\n     Run with --continue and read the compiler output above.")
+                    logger.lifecycle("  ⇒ your tests did not compile for this reading, so nothing was " +
+                            "checked.\n     Run with --continue and look at the compiler errors above.")
                 v.unbuilt.isNotEmpty() && !suiteHasSources ->
-                    logger.lifecycle("  ⇒ there is nothing in $ranSuite yet, so there is nothing to " +
-                        "measure.\n     Write a test that says which of the readings above you mean, " +
-                        "then run this again.")
+                    logger.lifecycle("  ⇒ $ranSuite has no tests yet, so there is nothing to " +
+                            "check.\n     Add a test that chooses between these readings, " +
+                            "then run this again.")
                 v.unbuilt.isNotEmpty() ->
-                    logger.lifecycle("  ⇒ the suite compiled but contains no tests, so nothing is measured " +
-                        "here.")
+                    logger.lifecycle("  ⇒ the suite compiled but ran no tests, so nothing was checked " +
+                            "here.")
                 v.settled ->
-                    logger.lifecycle("  ⇒ your tests require '${v.accepted.single().label}'. That is a decision, " +
-                        "and you own it.")
+                    logger.lifecycle("  ⇒ your tests choose '${v.accepted.single().label}' . That is your choice, " +
+                            "and your tests now enforce it.")
                 v.contradictory ->
-                    logger.lifecycle("  ⇒ your tests reject EVERY reading held here. Either a test is wrong, or " +
-                        "you decided\n     this fork some third way — worth saying which, because the report " +
-                        "cannot tell.")
+                    logger.lifecycle("  ⇒ your tests reject every reading here. A test may be wrong, or " +
+                            "you may have chosen a third option.\n     Explain which, because this report " +
+                            "cannot decide.")
                 else ->
-                    logger.lifecycle("  ⇒ your tests accept ${v.accepted.size} readings that answer this " +
-                        "differently, so the\n     specification has not said anything yet. Pick one and pin it.")
+                    logger.lifecycle("  ⇒ your tests still accept ${v.accepted.size} readings that handle this " +
+                            "differently.\n     Choose the behavior you want and write a test for it.")
             }
         }
 
-        // A test named "settled — …" asserts something the brief decides, so it must hold on EVERY
-        // reading; if a legitimate reading rejects it, either the test over-reaches or the reading is
-        // excluded by something already settled — and both are real findings about the BRIEF. Deciding
-        // that boundary by argument got it wrong twice, so it is checked here instead.
+        // A test starting with "settled" claims something the brief already requires.
+        // Every valid reading should pass it. If one doesn't, either the test is
+        // too strict or that reading shouldn't be in the catalog.
         if (overreaching.isNotEmpty()) {
             logger.lifecycle("")
-            logger.warn("⚠ ${overreaching.size} test(s) named '$SETTLED_PREFIX…' are rejected by a reading:")
+            logger.warn("⚠ ${overreaching.size} test(s) named '$SETTLED_PREFIX…' fail on a valid reading:")
             overreaching.forEach { (test, by) -> logger.warn("    $test\n        rejected by ${by.joinToString()}") }
-            logger.warn("  ⇒ a settled fact holds on every reading. Either the test pins a choice and")
-            logger.warn("     belongs with the open group, or that reading contradicts something already")
-            logger.warn("     settled and does not belong in the catalog. Both are findings about the brief.")
+            logger.warn("  ⇒ A settled requirement should hold for every reading. Either the test")
+            logger.warn("     makes an extra choice, or the reading conflicts with something already")
+            logger.warn("     settled and should not be in the catalog. Check the brief to decide.")
         }
 
         val settled = verdicts.count { it.settled }
@@ -179,27 +170,25 @@ abstract class ForkReportTask @Inject constructor(
         logger.lifecycle("")
         logger.lifecycle(
             "$settled settled · $open left open · $broken contradictory · $unbuilt not measured " +
-                "(of ${verdicts.size} forks)",
+                    "(of ${verdicts.size} forks)",
         )
         if (open > 0) {
             logger.lifecycle("")
-            logger.lifecycle("A fork left open is not a mark against you until you SHIP it — but the answer names")
-            logger.lifecycle("a shop and a price, so someone downstream will depend on whichever way your code")
-            logger.lifecycle("happens to go. That is what deciding it in writing prevents.")
+            logger.lifecycle("Leaving a choice open is not automatically wrong. But the result names")
+            logger.lifecycle("a shop and a price, and someone will rely on whichever choice your code")
+            logger.lifecycle("makes. Writing the decision down makes that behavior intentional.")
         }
 
-        // Same opt-in as -PmutantsStrict: naming the flag is what makes an open fork a build failure,
-        // so the report is always readable first.
+        // -PforksStrict turns unresolved forks into a build failure.
+        // Print the full report before failing.
         if (providers.gradleProperty("forksStrict").isPresent && (open > 0 || broken > 0 || unbuilt > 0)) {
-            error("-PforksStrict: $open fork(s) left open, $broken contradictory, $unbuilt did not build")
+            error("-PforksStrict: $open fork(s) still open, $broken contradictory, $unbuilt not checked")
         }
     }
 
     /**
-     * True when this module's test sources compiled but produced no results — i.e. the suite is empty,
-     * as opposed to broken. Compiled classes on disk with no JUnit XML beside them is the only signal
-     * that separates the two, and telling a learner "did not build" when their suite merely has no
-     * tests sends them looking for a compiler error that does not exist.
+     * True when test classes compiled but no test results were produced.
+     * This helps distinguish a suite with no runnable tests from a compilation failure.
      */
     private fun ranNothing(moduleDir: File): Boolean {
         val classes = moduleDir.resolve("build/classes/kotlin/test")
@@ -208,9 +197,8 @@ abstract class ForkReportTask @Inject constructor(
 
     private companion object {
         /**
-         * Test-name prefix marking a claim that must hold on every reading. A naming convention rather
-         * than a catalog field on purpose: the suite under test is not ours to add fields to, and the
-         * same trick already keeps `scoreExtraction` honest about the key's claim list.
+         * Prefix for tests that should pass on every valid reading.
+         * We use test names so we don't have to change the learner's test suite.
          */
         const val SETTLED_PREFIX = "settled"
     }

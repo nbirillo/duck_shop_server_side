@@ -1,75 +1,73 @@
-// The deterministic half of checking a specification (11.4). Applied by both builds: it reads text
-// and declarations only, so there is nothing in it a learner should not run on their own work.
+// Adds the specification checks for exercise 11.4. Both builds use these tasks because they
+// work with specifications and claim lists, not hidden reference implementations.
 //
-// scoreExtraction is the exception and is teacher-only in practice: it needs the hand-authored key,
-// which lives with the fixtures in the grading build.
+// scoreExtraction is mainly for teachers: it needs the manually checked answer key
+// from the grading build.
 
 import duckshop.ExtractionScoreTask
 import duckshop.SpecReportTask
 
 tasks.register<SpecReportTask>("verifySpec") {
     group = "verification"
-    description = "Check a specification's structure, length and surface coverage. " +
-        "Params: -Pspec=<SPEC.md or a directory of them> [-Pparts, if that directory is ONE " +
-        "specification split into parts rather than several separate ones]."
+    description = "Check a specification's structure, length, and basic coverage. " +
+            "Params: -Pspec=<SPEC.md or a directory of them> [-Pparts, if the directory contains " +
+            "one specification split into parts instead of several separate specs]."
     surfaceFile.convention(
         providers.gradleProperty("specSurface")
             .orElse("exercises/write-spec/README.md"),
     )
 }
 
-// Teacher-only: it scores the claim extractor against the hand-authored key, and the key lives with
-// the fixtures in the grading build. Registering it where there is no key put a task in a learner's
-// `gradlew tasks` that can only fail — and advertised the key while it is meant to be out of sight.
+// Only add this task when an answer key is available. Otherwise students would see
+// a task they cannot run, and the hidden key would be unnecessarily exposed.
 if (file("fixtures/11.4/key.json").isFile || providers.gradleProperty("key").isPresent) {
-tasks.register<ExtractionScoreTask>("scoreExtraction") {
-    group = "verification"
-    description = "Score the claim extractor against the hand-authored key — how often layer 2 is " +
-        "right, as opposed to merely repeatable. Params: -Pagent=<name> [-Pkey=<key.json>]."
-    keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
-}
+    tasks.register<ExtractionScoreTask>("scoreExtraction") {
+        group = "verification"
+        description = "Compare the AI claim extractor with the manually checked answer key. " +
+                "This measures accuracy, not just consistency. Params: -Pagent=<name> [-Pkey=<key.json>]."
+        keyPath.convention(providers.gradleProperty("key").orElse("fixtures/11.4/key.json"))
+    }
 }
 
 tasks.register<duckshop.SandboxTask>("sandbox") {
     group = "duck-shop"
-    description = "Lay out a folder with the data types and your SPEC.md and nothing else, to point " +
-        "an agent at. Params: -Pspec=<SPEC.md> [-Pname=<folder>]."
+    description = "Create a folder with only the data types and your SPEC.md for an AI agent to use. " +
+            "Params: -Pspec=<SPEC.md> [-Pname=<folder>]."
 }
 
-// Collect what an agent wrote in a sandbox into a module that can be recorded and compared.
-// Learner-side: the paths come from each build's gradle.properties, and in the student build the
-// property catalog is deliberately absent.
+// Take the code an agent wrote in its sandbox and prepare it for comparison.
+// Students can use this too. Each build supplies its own paths through gradle.properties,
+// and the student build intentionally has no property catalog.
 tasks.register<duckshop.PrepareImplementationTask>("prepareImplementation") {
     group = "duck-shop"
-    description = "Take the implementation an agent wrote in a sandbox so it can be compared. " +
-        "Params: -Pagent=<name> -Pspec=<the spec> [-Pfrom=sandbox/<name>]."
-    // verifyDivergence is registered just below, so it is available wherever this task is. The
-    // grading build overrides this with verifyImplementations, which exists only there.
+    description = "Prepare an agent's sandbox implementation so you can compare it with another. " +
+            "Params: -Pagent=<name> -Pspec=<the spec> [-Pfrom=sandbox/<name>]."
+    // verifyDivergence is available in both builds. The grading build instead points
+    // to verifyImplementations, which is only available to teachers.
     reportCommand.convention(
         "./gradlew verifyDivergence -PagentA=<agent> -PagentB=<a second run of the same specification>",
     )
 }
 
-// This plugin registers verifyDivergence, so this plugin is what tells runAgent to point at it.
+// Since this plugin adds verifyDivergence, it also tells runAgent to suggest that task next.
 tasks.withType<duckshop.RunAgentTask>().configureEach {
     implNextStep.set(
         "./gradlew verifyDivergence -PagentA=<agent> -PagentB=<a second run of the " +
-            "same specification>   (where two readings disagree is what your text left open)",
+                "same specification>   (differences between the two show what your spec left open)",
     )
 }
 
-// How much did your specification leave to chance? Two readers, compared. Needs no reference and no
-// answer key, which is exactly why a learner can run it on their own work.
+// Compare two independent implementations to see where the specification leaves room
+// for different choices. Students need neither a reference implementation nor an answer key.
 tasks.register<duckshop.DivergenceReportTask>("verifyDivergence") {
     group = "verification"
-    description = "Compare two independent implementations of the same specification. " +
-        "Params: -PagentA=<name> -PagentB=<name> [-Pspec=<one>] [-Pexamples=n]."
+    description = "Compare two independent implementations built from the same specification. " +
+            "Params: -PagentA=<name> -PagentB=<name> [-Pspec=<one>] [-Pexamples=n]."
     referenceRecording.convention(
         providers.gradleProperty("referenceRecording").orElse("reference-probe/recording.txt"),
     )
-    // Record before comparing. Without this the documented sequence ends in "No recordings for
-    // reader-a / reader-b. Run their :test tasks first." — a step the learner has no reason to know
-    // about, and one more command on a slide that already has four.
+    // Run the tests before comparing recordings. Otherwise students would get a
+    // missing-recordings error and have to discover an extra command on their own.
     listOfNotNull(providers.gradleProperty("agentA").orNull, providers.gradleProperty("agentB").orNull)
         .flatMap { agent ->
             subprojects.filter { it.path.startsWith(":implementations:$agent:") && it.buildFile.exists() }

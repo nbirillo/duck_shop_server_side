@@ -3,22 +3,22 @@ package org.jetbrains.kotlin.course.duck.shop.admission
 import org.jetbrains.kotlin.course.duck.shop.pricing.DiscountRule
 
 /**
- * An accessory a duck can wear (e.g. a hat, a scarf).
+ * An accessory that a duck can wear (e.g. a hat, a scarf).
  *
- * @property name the accessory's name; used by [RequiresAccessory].
+ * @property name the name of the accessory; used by [RequiresAccessory].
  */
 data class Accessory(val name: String)
 
 /**
- * A duck being considered for admission to a shop.
+ * A duck being considered for entry to a shop.
  *
- * This is the minimal, self-contained domain used by the in-memory MVP — it deliberately
+ * This is the minimal, self-contained domain for the in-memory MVP — it intentionally
  * does not depend on the upstream course's JPA entities.
  *
- * @property name the duck's display name.
+ * @property name the name displayed for the duck.
  * @property price the duck's price, in whole currency units; used by [MaxBudget].
- * @property hasKotlinAttribute whether the duck carries the "Kotlin" attribute; used by [KotlinOnly].
- * @property accessories the accessories the duck currently wears (may be empty).
+ * @property hasKotlinAttribute whether the duck has the "Kotlin" attribute; used by [KotlinOnly].
+ * @property accessories the accessories the duck is currently wearing (may be empty).
  */
 data class Duck(
     val name: String,
@@ -28,20 +28,20 @@ data class Duck(
 )
 
 /**
- * A duck shop that admits ducks according to its [admissionPolicy].
+ * A duck shop that uses its [admissionPolicy] to decide which ducks to admit.
  *
- * @property name the shop's name.
- * @property admissionPolicy the policy this shop applies to candidate ducks.
+ * @property name the name of the shop.
+ * @property admissionPolicy the policy the shop applies to candidate ducks.
  */
 data class Shop(
     val name: String,
     val admissionPolicy: AdmissionPolicy,
     /**
-     * The promotions this shop runs. Defaulted, so every existing use of `Shop(name, policy)` — the
-     * whole of the test-writing exercise — is untouched.
+     * The promotions offered by this shop. This has a default value, so all existing uses of
+     * `Shop(name, policy)` — throughout the test-writing exercise — remain unchanged.
      */
     val promotions: List<DiscountRule> = emptyList(),
 ) {
-    /** Returns `true` if [duck] is allowed into this shop by its [admissionPolicy]. */
+    /** Returns `true` if [admissionPolicy] allows [duck] into this shop. */
     fun admits(duck: Duck): Boolean = admissionPolicy.admits(duck)
 }

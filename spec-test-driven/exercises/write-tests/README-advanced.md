@@ -1,148 +1,192 @@
-# Verify and harden, advanced — three harder questions
+# Verify and Improve AI-Generated Tests — Advanced
 
-Take this tier if the basic exercise felt **too easy for the agent you were working with**: it fixed the
-wrong test, filled the gaps, and the mutation report came back clean without much of a fight.
+Welcome to the advanced version of the testing exercise!
+If the basic exercise felt too easy, this one is for you
+Maybe your AI agent quickly fixed the incorrect test, added the missing cases, 
+and passed all the mutation checks without much trouble.
+That's completely fine! The basic exercise is relatively small, and a strong AI agent might already know how to handle most of its edge cases.
+So now let's make things a bit more challenging!
+**One important note:** These tasks work best with strong AI agents. Smaller local models might not be able to complete some of them, so a clean report doesn't always mean your test suite is good enough.
 
-That is not a sign you did it wrong. It is a sign the task was small enough for your agent — the
-specification is complete, the algebra is a boolean function of four fields, so the whole space of
-defects is a checklist a strong agent already carries. This tier puts the difficulty back.
-
-**Be warned about what that costs.** All three additions below only bite a **strong** agent. With a
-small local model two of them come out trivially clean and the third it cannot perform at all — so a
-green result here would tell you nothing. That is a fact about these three checks, not a ranking of
-models.
-
-First, read [`contract-addendum.md`](contract-addendum.md). It closes two questions the basic tier
-deliberately left open, and everything below depends on the answers.
-
-> If you pinned either of those questions down in the basic tier, **you were right to** — the question
-> was open and you closed it. Here it has been closed the other way, in writing, and the rules follow
-> the addendum. An open question is answered by whoever is entitled to answer it; after that, your job
-> is to respect the answer in *both* directions — pin what the contract promises, leave alone what it
-> does not.
+Before you start, please read [`contract-addendum.md`](contract-addendum.md).
+It defines two additional rules that were left open in the basic exercise. 
+These rules are important for everything you'll do next.
+If you made different decisions about these cases in the basic exercise, that's fine! But from now on, your tests need to follow the updated specification.
 
 ---
 
-## 1. Did you forbid a change that was allowed?
+## 1. Can your tests reject correct implementations?
 
-Mutation testing asks whether your tests notice a defect. Nothing so far has asked whether they
-**fail on code that is also correct** — and a suite can reach a perfect score by pinning down things
-that were never promised. Those tests pass today and break the first honest refactor, punishing a
-change the contract permits.
+In the basic exercise, we used mutation testing to check whether your tests could catch bugs.
+But there's another important question: **can your tests fail even when the implementation is correct?**
+This can happen when tests check implementation details that aren't actually required by the specification.
+For example, you might write a test that expects policies to be evaluated in a specific order. 
+But if the specification doesn't require that order, a different implementation should still be considered correct.
+These tests can become a problem when someone tries to refactor the code.
 
-So: the same engine, the opposite expectation. Each entry in `../../variants/catalog.json` is a
-**legal rewrite** of `:core`, and your suite is supposed to stay **green** on all of them. A failure is
-reported as a FALSE ALARM, with the names of the tests to relax. See
-[`../../variants/README.md`](../../variants/README.md) for how to read it.
+### Let's check!
+
+We prepared several alternative implementations of `:core`.
+They work differently internally, but all of them follow the specification.
+You can find them in `../../variants/catalog.json`.
+**Your tests should pass on all of these implementations.**
+Run:
 
 ```bash
 ./gradlew verifyVariants --continue
-./gradlew verifyVariants -PmutantsStrict     # fails while any false alarm remains
+./gradlew verifyVariants -PmutantsStrict
 ```
 
-A false alarm is never the variant's fault. The honest fix is to weaken or delete **your test**.
+The first command runs the checks and shows the results.
+The second command fails if any false alarms remain.
+If your tests fail on a valid implementation, the report will show a **FALSE ALARM** and tell you which tests caused it.
+You can read more about the report in the [Variants README](../../variants/README.md).
+**Important:** If a variant is correct but your test fails, you need to change the test, not the implementation.
 
-### Worth running as an experiment
+### An extra experiment
 
-Get two suites for the same algebra and check both:
+Let's compare two ways of creating a test suite with an AI agent.
 
-- **Run A — from nothing.** Ask your agent to write a suite for `../../core/…/Leaves.kt` and
-  `Combinators.kt`, with no starting point.
-- **Run B — from the given one.** Hand it `src/test/kotlin/…/PolicyTests.kt` and ask it to fix what is
-  wrong and add what is missing — the basic exercise, in other words.
+- **Run A:** Ask your agent to write tests from scratch using `../../core/…/Leaves.kt` and `Combinators.kt`.
+- **Run B:** Give your agent the existing `src/test/kotlin/…/PolicyTests.kt` and ask it to fix incorrect tests and add missing ones, just like in the basic exercise.
+
+Then run the conformance checks on both suites:
 
 ```bash
 ./gradlew verifyVariants --continue -PmutantTests=path/to/your/src/test/kotlin
 ```
 
-Predict it first: which of the two do you expect to fail on a legal rewrite, and why? The answer says
-something about where over-specification comes from, and it is not what most people guess.
+Before running the checks, try to predict the results.
+**Which approach do you think is more likely to produce tests that reject correct implementations? And why?**
+Compare your prediction with the actual results. You might be surprised!
 
 ---
 
-## 2. Could you have said it in fewer tests?
+## 2. Can you write fewer tests?
 
-Mutation scoring rewards every distinction you pin and charges **nothing** for the tests you spend, so
-there is never a reason to choose between them. That is why suites drift to forty tests and nobody
-notices.
+In the basic exercise, our goal was to catch as many bugs as possible.
+But mutation testing doesn't care how many tests you write.
+You could have 10 tests or 50 tests, and both suites might catch exactly the same bugs.
+In real projects, though, we need to read, review, and maintain these tests.
+**So the goal here is to keep good coverage while reducing the number of tests.**
 
-It matters because you are still in the loop. A suite is code you will read, review and keep working
-in — a dozen tests that each earn their place are a better thing to inherit than fifty that overlap,
-and you are the one inheriting them.
+### Your task
 
-**Derive your own cap** from what you have already measured — the reports from the basic tier, and
-your own runs — and be ready to say why it is neither the floor nor forty-seven:
+Look at the results from the basic exercise and decide how many tests your suite should have.
+You need to choose your own test budget and explain why you chose that number.
 
-- aim at the floor and you are only writing the tests that kill the defects you were *shown*, which is
-  the trap the basic tier warned about;
-- aim too loose and the constraint does nothing at all.
+Try to find a balance:
+
+- If your budget is too small, you might only cover the bugs you already know about.
+- If your budget is too large, it won't really help you improve the test suite.
+
+Then run:
 
 ```bash
 ./gradlew verifyMutants --continue -PtestBudget=<your number>
 ```
 
-The report prints in full first, then fails if the suite is over. Naming a budget is opting in to it.
+The command runs the mutation checks and shows the full report.
+If your test suite has more tests than your budget allows, the check will fail.
 
-The technique that makes a small suite possible is **parameterising instead of enumerating**: put the
-interesting values in one shared corpus that every test runs over, and sweep arity and position
-instead of picking one of each. One test per *axis*, not one per case.
+### How can you reduce the number of tests?
+
+One useful approach is **parameterized testing**.
+Instead of writing a separate test for every input, you can use one test that runs on several different inputs.
+For example, instead of testing each possible number of policies separately, you can create a set of inputs and check the same behavior for all of them.
+You can also test different positions and combinations of policies in the same way.
+The idea is simple: **try to cover different types of behavior, not just add more and more individual test cases.**
+And remember, fewer tests aren't automatically better. We still want to catch important bugs!
 
 ---
 
-## 3. Can somebody get past you on purpose?
+## 3. Can another AI agent find a bug your tests missed?
 
-Nothing says you only get one agent. **Agents can check each other**, and a second opinion costs one
-more prompt — a different model has different blind spots, which is the entire value of asking twice.
+Now let's try something different!
+So far, you've been using an AI agent to help write and improve tests.
+But what if we ask another agent to find problems in them?
+**The idea is to let one AI agent check the work of another.**
+Different agents might notice different problems, so this can be a useful way to get a second opinion.
+For this exercise, you'll need a strong AI agent. 
+Ideally, it should be at least as capable as the one that helped you write the tests.
+Otherwise, if it doesn't find anything, we won't really know whether your tests are good or the agent simply wasn't able to find a problem.
 
-So when an agent hands you work that looks right and you still doubt it, reading it more carefully is
-not the move. Give it an opponent:
+### Your task
 
-> Write an implementation that passes every test in this suite and still contradicts the
-> specification. If no such implementation exists, say so instead of forcing it — and name the tests
-> that close the door.
+Ask another AI agent to write an implementation that passes your tests but doesn't follow the specification.
+For example, you can use this prompt:
 
-**The opponent has to be at least as strong as the agent whose work you are checking.** A weaker one
-comes back empty-handed and that means nothing at all.
+> Write an implementation that passes all tests in this test suite but breaks the specification. Try to find a realistic bug that the tests don't catch. If you can't find one, explain why and point to the tests that prevent it.
 
-Save its answer in a folder you name yourself, one per attempt, then:
+Save the implementation in a new folder under `attacks/`.
+Use a different folder for each attempt.
+Then run:
 
 ```bash
-# attacks/my-attack/src/main/kotlin/…/Leaves.kt
+# Example: attacks/my-attack/src/main/kotlin/…/Leaves.kt
+
 ./gradlew prepareAttack -Pagent=my-attack
-./gradlew verifyAttack  -Pagent=my-attack --continue
+./gradlew verifyAttack -Pagent=my-attack --continue
 ```
 
-### Reading the verdict
+### How does the check work?
 
-The check needs no answer key. Your attack and the untouched algebra each answer the same 20 000
-seeded random cases, and the two recordings are compared — the implementations cannot be compared
-directly, since they declare the same classes in the same package and can never share a classpath.
+We compare the agent's implementation with the correct implementation.
+Both are run on the same **20,000 randomly generated inputs**, using a fixed seed so the results can be reproduced.
+We can't run the two implementations together because they define the same classes in the same packages. 
+Instead, we run them separately and compare their results.
+Here's how to understand the report:
 
-| Report | What it means |
-| --- | --- |
-| your suite **fails** | it caught the attack |
-| suite passes, **no divergence** | a correct implementation written differently — not an attack |
-| suite passes, **they diverge** | your suite has a hole, and the first disagreeing case is printed |
+| Result                                | What it means                                                                                                  |
+|---------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| Your tests fail                       | Great! Your tests caught the bug.                                                                              |
+| Tests pass, no differences found      | The implementation passed your tests and behaved like the correct one on the checked inputs. No bug was found. |
+| Tests pass, but results are different | Your tests missed a bug! The report will show the first input where the implementations disagree.              |
 
-### Who invents the attack
+### Who should come up with the bug?
 
-Either let the agent find its own angle — you learn what it reaches for first, and whether it will
-admit it cannot find anything — or decide the angle yourself and ask only for the implementation. The
-second is harder and the better exercise: you have to imagine a defect that is both plausible **and**
-invisible to your suite, which is the same imagination the suite needed in the first place.
+You have two options.
 
-Either way, insist on a **plausible** defect — a mistake somebody could really make — rather than an
-**arbitrary special case** on one value. A defect that singles out one value (*if the price is exactly
-seven, answer the other way*) is always available, and it only tells you the suite is finite, which it
-always is.
+**Option 1: Let the agent decide.**
 
-### Then do it again
+Ask it to find a problem in your test suite and write an implementation that demonstrates it.
+This is a good way to see what kinds of problems the agent can find on its own.
 
-Attack, close the hole, attack again, and **count the rounds**. That number says more about your suite
-than any score does. After each one, ask whether the hole you closed was a **class** of mistake or
-just that one case — closing the case tends to leave its neighbours open.
+**Option 2: Find the problem yourself.**
 
-And know when to stop. You are not trying to exhaust the opponent: on an algebra this small, a capable
-one will always find something, because a finite suite always has inputs nobody tested. **You stop
-when the attacks stop being mistakes anyone would plausibly make.** That call is yours, and making it
-is the skill this tier is for.
+Think about a realistic bug your tests might miss, and ask the agent to implement it.
+This is harder, but also a very useful exercise!
+You'll need to understand your tests well enough to find a case they don't cover.
+
+**One important rule:** Try to find realistic bugs.
+For example, a mistake in how `AllOf` handles an empty list is interesting because someone could actually make that mistake.
+But a special case like "return the wrong answer only when the price is exactly 7" isn't very useful.
+You can always invent a random exception that a finite test suite won't catch. That's not what we're trying to learn here.
+
+### Try several rounds!
+
+Once you find a bug your tests missed:
+
+1. Understand why your tests didn't catch it.
+2. Improve the test suite.
+3. Ask the agent to try again.
+4. Keep track of how many rounds you complete.
+
+After each round, think about whether your new tests cover a whole group of similar bugs or just the one example the agent found.
+**And don't forget to stop at some point!**
+A strong agent might always be able to invent another unusual case that your tests don't cover.
+But our goal isn't to test every possible input.
+The goal is to catch realistic mistakes and build a test suite that we can trust.
+Once the agent starts finding only very artificial bugs that nobody would realistically make, it's probably a good time to stop.
+
+---
+
+## What should you learn from this exercise?
+
+By the end, you should have a better understanding of three things:
+
+- **Correctness:** Good tests should catch bugs without rejecting valid implementations.
+- **Efficiency:** More tests don't always mean better tests.
+- **Verification:** Even a test suite that looks complete can have problems, and another AI agent might help you find them.
+
+The main idea is the same as in the basic exercise: **don't just trust AI-generated tests because they pass. Check what they actually test, what they miss, and whether they follow the specification.**

@@ -1,14 +1,13 @@
-// Registers the mutation-testing tasks on the project it is applied to (the root of a build).
-// Applied by both the student build and the teacher-only grading build; the paths each build uses
-// come from gradle properties (mutantsCatalog / mutantsCoreSrc / mutantsLearnerTests / mutantsOut),
-// so the task code is shared.
+// Adds the mutation-testing tasks to the root project.
+// Both the student build and the teacher's grading build use these tasks. Each build sets its
+// own paths through Gradle properties, so they can share the same task definitions.
 //
-// Catalogs, directions, one engine:
-//   mutants/  — injected defects, a faithful suite KILLS them (exercise 11.2, both tiers)
-//   variants/ — legal refactorings, a faithful suite stays GREEN on them (11.2 advanced tier only)
-//   forks/    — READINGS of what the brief leaves open; a suite SETTLES a fork by accepting exactly
-//               one of them (the 11.6 capstone). The mirror of variants/: that one says "do not pin
-//               what is free", this one says "do pin what is a decision".
+// Three catalogs, three kinds of checks, one shared setup:
+//   mutants/  — broken implementations. Good tests should catch them (11.2, both tiers).
+//   variants/ — valid refactorings. Good tests should still pass (11.2, advanced tier).
+//   forks/    — different valid ways to fill gaps in the brief. In the 11.6 capstone, tests
+//               settle a fork when they accept exactly one reading. Variants check that tests
+//               leave flexible behavior flexible; forks check that tests make choices explicit.
 
 import duckshop.AttackReportTask
 import duckshop.ForkReportTask
@@ -19,7 +18,7 @@ import duckshop.PrepareAttackTask
 
 tasks.register<GenerateMutantsTask>("generateMutants") {
     group = "duck-shop"
-    description = "Regenerate the mutant modules from the mutant catalog (mutation testing)."
+    description = "Rebuild the mutant modules from the catalog for mutation testing."
     catalogPath.convention(providers.gradleProperty("mutantsCatalog").orElse("mutants/catalog.json"))
     outPath.convention(providers.gradleProperty("mutantsOut").orElse("mutants"))
     alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
@@ -30,20 +29,19 @@ tasks.register<GenerateMutantsTask>("generateMutants") {
 
 tasks.register<MutationReportTask>("verifyMutants") {
     group = "verification"
-    description = "Mutation testing: run a suite against every mutant and report the mutation score. " +
-        "Params: [-PmutantTests=learner|<test source dir>] [-PtestBudget=<n>] [-PmutantsStrict]."
+    description = "Check the test suite against every mutant and show how many it catches. " +
+            "Params: [-PmutantTests=learner|<test source dir>] [-PtestBudget=<n>] [-PmutantsStrict]."
     catalogPath.convention(providers.gradleProperty("mutantsCatalog").orElse("mutants/catalog.json"))
     outPath.convention(providers.gradleProperty("mutantsOut").orElse("mutants"))
-    // Task paths are resolved lazily, so the mutant modules do not need to be evaluated yet.
-    // ORDER ONLY, not dependsOn: a report that is downstream of a compile failure is skipped, and
-    // then a learner with a type error in their suite sees compiler stack traces instead of a score.
-    // build-logic/reachable-reports.settings.gradle.kts requests these and explains the whole of it.
+    // Resolve task paths only when needed; the mutant modules may not be loaded yet.
+    // Use mustRunAfter, not dependsOn. If a test fails to compile, the report should still run
+    // and explain the result instead of being skipped. See reachable-reports.settings.gradle.kts.
     mustRunAfter(subprojects.filter { it.path.startsWith(":mutants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<GenerateMutantsTask>("generateVariants") {
     group = "duck-shop"
-    description = "Regenerate the conformant-variant modules from the variant catalog."
+    description = "Rebuild the modules containing valid refactorings from the variant catalog."
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
     alsoCompile.convention(providers.gradleProperty("mutantsAlsoCompile").orElse(""))
@@ -54,23 +52,23 @@ tasks.register<GenerateMutantsTask>("generateVariants") {
 
 tasks.register<MutationReportTask>("verifyVariants") {
     group = "verification"
-    description = "Conformance check: run a suite against legal refactorings of the algebra and report " +
-        "every test that fails on behaviour-preserving code. Params: [-PmutantTests=learner|<dir>] " +
-        "[-PmutantsStrict]."
+    description = "Run the suite against valid refactorings and show tests that fail even though " +
+            "the behavior is unchanged. Params: [-PmutantTests=learner|<dir>] " +
+            "[-PmutantsStrict]."
     catalogPath.convention(providers.gradleProperty("variantsCatalog").orElse("variants/catalog.json"))
     outPath.convention(providers.gradleProperty("variantsOut").orElse("variants"))
-    // Order only — see verifyMutants above.
+    // Set the order without making the tests dependencies. See verifyMutants.
     mustRunAfter(subprojects.filter { it.path.startsWith(":variants:") }.map { "${it.path}:test" })
 }
 
 tasks.register<GenerateForksTask>("generateForks") {
     group = "duck-shop"
-    description = "Regenerate one module per READING of a fork the capstone brief leaves open."
+    description = "Build one module for each possible reading of an open choice in the capstone brief."
     catalogPath.convention(providers.gradleProperty("forksCatalog").orElse("forks/catalog.json"))
     outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
     coreSrc.convention(providers.gradleProperty("forksCoreSrc").orElse("core/src/main/kotlin"))
-    // No default that could be a correct answer: the student build has no priceFor to point at until
-    // the capstone hands one over, and quietly falling back to the reference would leak 11.4.
+    // Do not provide a default pricing implementation. Students do not have priceFor until
+    // the capstone gives them one, and falling back to the reference would reveal the 11.4 answer.
     pricingSrc.convention(providers.gradleProperty("forksPricing").orElse(""))
     testsSrc.convention(providers.gradleProperty("forkTests").orElse(""))
     packagePath.convention(providers.gradleProperty("forksPackage")
@@ -79,37 +77,34 @@ tasks.register<GenerateForksTask>("generateForks") {
 
 tasks.register<ForkReportTask>("verifyForks") {
     group = "verification"
-    description = "Capstone: report which forks the suite SETTLES and which it leaves open. " +
-        "Params: [-PforkTests=<test source dir>] [-PforksStrict]."
+    description = "Show which capstone forks the tests settle and which choices are still open. " +
+            "Params: [-PforkTests=<test source dir>] [-PforksStrict]."
     catalogPath.convention(providers.gradleProperty("forksCatalog").orElse("forks/catalog.json"))
     outPath.convention(providers.gradleProperty("forksOut").orElse("forks"))
-    // Derived from the SAME property the modules were generated under, not the literal ":forks:". A
-    // second catalog in the same build (forks-practice/) produced a full report with none of its tests
-    // having run, which the report then read as "did not compile" — the fourth time in this repo that a
-    // hard-coded name stood in for a configured one.
+    // Use the configured output directory, not a hard-coded :forks: path. Otherwise a second
+    // catalog (such as forks-practice/) could produce a report before its tests had run.
     val forksPrefix = ":" + providers.gradleProperty("forksOut").getOrElse("forks") + ":"
-    // Order only — see verifyMutants above. This report needs it most: DID NOT COMPILE is one of its
-    // verdicts, and a suite that does not build against a reading is exactly what it has to say.
+    // Order only, as in verifyMutants. This report must still show DID NOT COMPILE when
+    // the test suite cannot compile against one of the readings.
     mustRunAfter(subprojects.filter { it.path.startsWith(forksPrefix) }.map { "${it.path}:test" })
 }
 
-// For an interactive agent, which writes the attacking sources itself and has no API call to hang
-// the scaffolding off. runAgent -Pmode=attack does the same thing for an API agent.
+// For an interactive agent that writes attack source files directly. API-based agents can
+// use runAgent -Pmode=attack to prepare the same setup.
 tasks.register<PrepareAttackTask>("prepareAttack") {
     group = "duck-shop"
-    description = "Turn hand-placed sources in attacks/<agent>/src/main into a module verifyAttack can " +
-        "score. Params: -Pagent=<name> [-PmutantTests=<dir>]."
+    description = "Turn sources in attacks/<agent>/src/main into a module that verifyAttack can " +
+            "check. Params: -Pagent=<name> [-PmutantTests=<dir>]."
     agent.convention(providers.gradleProperty("agent"))
 }
 
-// The third direction, and the only one without a ceiling: an agent writes an implementation that
-// passes the suite and still contradicts the spec. An attack that does not compile still reaches the
-// report — see build-logic/reachable-reports.settings.gradle.kts for how, and for why `--continue`
-// alone was never enough.
+// Another way to test the suite: an agent writes code that passes the tests but breaks the
+// specification. Even if that code does not compile, the report still runs. See
+// build-logic/reachable-reports.settings.gradle.kts for why --continue alone is not enough.
 tasks.register<AttackReportTask>("verifyAttack") {
     group = "verification"
-    description = "Score one attacking implementation from attacks/<agent>/: does the suite catch it, " +
-        "and does it really differ from :core? Params: -Pagent=<name> [-PmutantsStrict]."
+    description = "Check one implementation in attacks/<agent>/: do the tests catch it, and " +
+            "does it differ from :core? Params: -Pagent=<name> [-PmutantsStrict]."
     agent.convention(providers.gradleProperty("agent"))
     val attacked = providers.gradleProperty("agent").orNull
     listOfNotNull(attacked?.let { ":attacks:$it" }, ":attacks:reference")

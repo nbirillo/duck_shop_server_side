@@ -7,16 +7,16 @@ import kotlin.test.assertTrue
 /**
  * VERIFY AND HARDEN an AI-generated test suite.
  *
- * An AI was asked to test the admission-policy algebra (given and correct in `:core`). Below is
- * what it produced. Your job is NOT to implement anything — it is to VERIFY these tests:
+ * An AI was asked to test the admission-policy algebra (provided and correct in `:core`). The tests
+ * below are what it produced. Your task is NOT to implement anything — it is to VERIFY these tests:
  *
- *   1. One of these tests is WRONG — it asserts the wrong thing and fails against the correct
- *      code. Find it and fix it so the suite is green (`./gradlew :exercises:write-tests:test`).
+ *   1. One of these tests is WRONG — it checks the wrong result and fails against the correct
+ *      code. Find it and fix it so the suite passes (`./gradlew :exercises:write-tests:test`).
  *   2. The suite MISSES important cases. Add tests for them (see README.md).
- *   3. Two behaviours are left unspecified (see README.md). Decide what they should be and pin
- *      your decision with a test — or flag the ambiguity.
+ *   3. Two behaviours are left unspecified (see README.md). Decide what they should be and capture
+ *      your decision in a test — or flag the ambiguity.
  *
- * Then check your suite actually catches bugs: `./gradlew verifyMutants --continue`.
+ * Then check that your suite actually catches bugs: `./gradlew verifyMutants --continue`.
  */
 class PolicyTests {
 
@@ -73,7 +73,7 @@ class PolicyTests {
 
     @Test
     fun `Not returns the decision of the wrapped policy`() {
-        // The AI wrote this one. Not is supposed to INVERT the wrapped policy — is this assertion right?
+        // The AI wrote this test. Not should INVERT the wrapped policy — is this assertion correct?
         assertTrue(Not(KotlinOnly()).admits(kotlinDuck))
     }
 }

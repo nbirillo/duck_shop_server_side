@@ -1,483 +1,552 @@
-# Exercise 11.2, advanced tier — teacher notes
+# Exercise 11.2 — Advanced Tier: Teacher Notes
 
-The basic tier of 11.2 is unchanged: fix the invalid test, harden the suite by reasoning, then check
-it with mutation testing. It discriminates the local model tier well (36–63%) and a learner working
-with a weak agent is fully occupied by it.
+These notes explain the advanced version of exercise 11.2, including the additional checks, 
+how they work, and what we learned from running them with different AI agents.
 
-It does not challenge a frontier agent. Claude reaches 11/11 blind on the graded mutant set, and more
-mutants of the same kind would not change that: the specification is complete and machine-readable,
-the object is a pure boolean function of four fields, so the defect space is enumerable by a
-checklist a strong agent already has. What is missing is not difficulty, it is a second and a third
-direction. The advanced tier adds three constraints and a contract addendum that makes the first of
-them well-founded.
+## Why do we need an advanced version?
 
-**Which frontier agent.** Every "frontier" result in these notes is **Claude Opus 5** (`claude-opus-5`), driven interactively through Claude Code on its default model, checked 2026-08-05. That was recorded late: the runs themselves only ever said `claude-code`, which breaks the same pin-the-version rule we apply to the Ollama tier and would have made the numbers irreproducible. The artefacts under `attacks/` and `hardened/` have been backfilled.
+The basic exercise stays the same:
+
+1. Find and fix the incorrect test.
+2. Improve the test suite by thinking about missing cases.
+3. Use mutation testing to find more gaps.
+
+This works well with smaller local models. 
+In our experiments, they caught around 36–63% of the graded mutants, 
+so there's plenty for students to investigate and improve.
+But for a strong frontier agent, the task can be too easy.
+
+Claude caught all **11 out of 11 graded mutants** without seeing the mutation report.
+This makes sense. The admission-policy implementation is small, the specification is complete, and the result is a Boolean value determined by four fields. A strong agent can work through most of the possible mistakes systematically.
+Adding more mutants of the same kind probably wouldn't make the exercise much harder.
+So the advanced version introduces three new challenges:
+
+1. **Conformance testing:** Can the test suite accidentally reject a correct implementation?
+2. **Test budget:** Can we cover the same behavior with fewer tests?
+3. **Adversarial testing:** Can another AI agent find a realistic bug that the suite misses?
+
+We also add two rules to the contract so the first challenge has a clear answer.
+
+### Which frontier model did we use?
+
+All frontier results in these notes come from **Claude Opus 5** (`claude-opus-5`), used interactively through Claude Code.
+The model version was confirmed on October 9, 2026.
+We originally recorded these runs only as `claude-code`. 
+That wasn't precise enough to reproduce the experiments, so we later added the model information to the saved artifacts in `attacks/` and `hardened/`.
 
 ## The contract addendum
 
-The addendum belongs to this tier only, and lives in the exercise folder as its own file — **never as
-an edit to the `:core` KDoc**, because the basic tier's lesson is precisely that the specification is
-silent on these points and the learner has to decide. It states:
+The advanced exercise includes a separate contract addendum.
+**Don't add these rules to the `:core` KDoc!**
+In the basic exercise, students are supposed to notice that the original specification doesn't answer two questions and make their own decisions.
+The advanced version answers those questions explicitly:
 
-> Policies are pure: `admits` has no side effects and depends only on the duck. The order in which a
-> combinator evaluates its policies, and how many times, are therefore not part of the contract. A
-> combinator captures its policy list at construction; mutating the caller's list afterwards is
-> unspecified.
+> **Policies are pure.** `admits` has no side effects and depends only on the duck. The order in which policies are evaluated, and the number of times they're evaluated, are not part of the contract.
+>
+> **Policy lists are captured at construction.** If the caller changes the original list later, the combinator may or may not notice. Both behaviors are allowed.
 
-So the same two questions change role between tiers. In the basic tier the learner decides them and
-either answer counts, as long as it is a decision. In the advanced tier they have been decided, and
-pinning them is now a defect. The advanced README says that in one line — without it a learner who
-legitimately killed `allof-defensive-copy` in the basic tier gets penalised for it here and
-reasonably concludes the rules changed at random.
+This means the same tests can be valid in the basic exercise but invalid in the advanced one.
+For example, a student might have decided that `AllOf` must use changes made to the original list and written a test that catches `allof-defensive-copy`.
+That was a valid decision in the basic exercise.
+But in the advanced version, **the contract explicitly allows both behaviors**, so that test would be too strict.
+Make sure students understand why the rules are different. Otherwise, it can feel like we're suddenly penalizing them for something they previously did correctly.
 
-## 1. Conformant variants — the suite must not over-specify
+---
 
-`spec-test-driven/variants/catalog.json`, run with `./gradlew verifyVariants --continue`. Same engine
-as the mutants, opposite expectation: each entry is a legal rewrite of `:core`, the suite has to stay
-GREEN, and a failure is reported as FALSE ALARM together with the tests to relax.
+## 1. Conformance testing: Does the suite reject correct code?
 
-The catalog carries no prose, for the same reason the practice mutants carry none — naming the
-behaviour each variant frees would say which tests to drop before the learner has worked it out. The
-rationale therefore lives here:
+Mutation testing checks whether tests catch bugs.
+Conformance testing checks the opposite: **do tests still pass when the implementation changes in a way the specification allows?**
+The student project contains valid alternative implementations in:
 
-| Variant | Rewrite | What a suite has to avoid to survive it |
-| --- | --- | --- |
-| `allof-no-short-circuit` | `map { }.all { }` | asserting that evaluation stops at the first rejection |
-| `anyof-no-short-circuit` | `map { }.any { }` | the same for the first acceptance |
-| `allof-reverse-order` | `policies.reversed().all { }` | asserting the order policies are consulted in |
-| `allof-memoized` | caches the verdict per duck | asserting how many times a policy is consulted |
-| `allof-defensive-copy` | `policies.toList()` | pinning that the caller's list stays live |
-| `allof-fold` | `fold(true) { … && … }` | depending on `all {}` specifically |
-| `not-explicit-comparison` | `== false` instead of `!` | — (syntactic; a sanity entry) |
-| `max-budget-negated` | `!(price > maxPrice)` | — (syntactic) |
-| `requires-accessory-contains` | `name in accessories.map { }` | asserting the accessories are scanned lazily |
-| `min-accessories-count` | `count()` instead of `size` | — (syntactic) |
+`spec-test-driven/variants/catalog.json`
 
-The first five have teeth; the rest are there so a suite that has fitted itself to the shape of the
-code rather than to its behaviour shows up.
-
-**Measured, 2026-08-04.** Every archived suite that *hardened a given suite* — both Claude runs and
-all five local models — accepts all ten, zero false alarms. The only suite that trips it is Claude's
-86-test suite written **from scratch**: three variants, four tests, all of them about evaluation
-order and short-circuiting (`AllOf/AnyOf evaluates its policies in list order`, `AllOf/AnyOf
-short-circuits after the first rejection/admission`).
-
-Two conclusions worth carrying into the materials:
-
-- Over-specification tracks **authoring freedom**, not model strength. The same agent hardening a
-  given suite produces none of it; inventing a suite from nothing, it reaches for spies and order
-  traces. So this check belongs to 11.3, where the learner's agent writes a suite from scratch, more
-  than to 11.2.
-- No local model over-specifies at any size — they never reach for a spy in the first place. The
-  check is therefore free for a weak-agent learner and only bites a strong one, which is exactly what
-  an advanced tier should do.
-
-That eight independent suites stay green on all ten is also the evidence the rewrites really are
-behaviour-preserving.
-
-### Which suite to point the check at — the one thing the slide leaves out
-
-The slide for this exercise prints one command with a placeholder (`-PmutantTests=<your suite>`) and
-asks the learner to run it for both arms. Deliberately short — but it hides two things a learner asks
-within a minute, so answer them at the board:
-
-- **Run B — the suite they were given and edited in place.** The value is the literal **`learner`**, not
-  a path: the task expands it to `exercises/write-tests/src/test/kotlin` itself and prints
-  `suite: learner (exercises/write-tests/src/test/kotlin)`. Nothing to look up.
-- **Run A — the suite an agent wrote from nothing.** The slide says to have one written but never says
-  where to put it. Any source root works; the house location is **`test-suites/<name>/src/test/kotlin`**
-  — the same place `runAgent -Pmode=tests` writes to, and git-ignored, so their runs never end up in a
-  commit.
+Run:
 
 ```bash
-./gradlew verifyVariants --continue -PmutantTests=test-suites/run-a/src/test/kotlin   # run A
-./gradlew verifyVariants --continue -PmutantTests=learner                             # run B
+./gradlew verifyVariants --continue
 ```
 
-Both verified in a clean export (2026-09-18): each prints the suite it really used and reports 10/10.
-Worth saying out loud that the **path is the second thing that differs between the arms** — the slide's
-own line is "the only thing that changes is where the agent starts", and the suite moving with it is the
-same fact seen from the filesystem.
+Each variant is a correct rewrite of `:core`.
+The test suite should stay green on every variant. 
+If it fails, the report shows **FALSE ALARM** and names the failing tests.
+
+### What do the variants change?
+
+The student catalog intentionally doesn't explain each variant.
+If we told students what behavior each variant changes, we'd also be telling them which tests to remove.
+
+Here's the teacher reference:
+
+| Variant                       | What changes                       | What tests must not require                             |
+|-------------------------------|------------------------------------|---------------------------------------------------------|
+| `allof-no-short-circuit`      | Uses `map { }.all { }`             | `AllOf` must stop after the first rejection             |
+| `anyof-no-short-circuit`      | Uses `map { }.any { }`             | `AnyOf` must stop after the first acceptance            |
+| `allof-reverse-order`         | Uses `policies.reversed().all { }` | Policies must be checked in list order                  |
+| `allof-memoized`              | Caches the result for each duck    | A policy must be called a particular number of times    |
+| `allof-defensive-copy`        | Uses `policies.toList()`           | Changes to the caller's list must affect the combinator |
+| `allof-fold`                  | Uses `fold(true) { … && … }`       | The implementation must use `all { }`                   |
+| `not-explicit-comparison`     | Uses `== false` instead of `!`     | No meaningful behavior difference                       |
+| `max-budget-negated`          | Uses `!(price > maxPrice)`         | No meaningful behavior difference                       |
+| `requires-accessory-contains` | Uses `name in accessories.map { }` | Accessory checks must be lazy                           |
+| `min-accessories-count`       | Uses `count()` instead of `size`   | No meaningful behavior difference                       |
+
+The first five are particularly useful because they expose tests that depend on implementation details.
+The others help check whether a suite is too closely tied to how the code happens to be written.
+
+### What happened in our experiments?
+
+<text color="secondary" size="xs">Measured August 4, 2026</text>
+
+We checked the archived test suites against all ten variants.
+**Every suite that started from the provided tests passed all ten variants.**
+That includes both Claude runs and all five local models.
+But Claude's **86-test suite written from scratch** failed on three variants.
+Four tests caused the failures. They checked evaluation order and short-circuit behavior in `AllOf` and `AnyOf`.
+
+This gives us an interesting result:
+**Over-specification depended more on how the tests were created than on how strong the model was.**
+When Claude improved an existing suite, it didn't add these unnecessary requirements.
+When it wrote a suite from scratch, it added tests that checked the order and number of policy evaluations.
+None of the local models wrote these kinds of tests, so they didn't produce false alarms.
+This also suggests that conformance testing may be especially useful in exercise 11.3, where students ask agents to create a test suite from scratch.
+The fact that eight independent suites passed all ten variants also gives us evidence that the variants preserve the intended behavior.
+
+### Which test suite should students check?
+
+The slides show a command with a placeholder:
+
+`-PmutantTests=<your suite>`
+
+But students may need help knowing what value to use.
+For **Run A**, where the agent writes a test suite from scratch, we recommend saving it under:
+
+`test-suites/<name>/src/test/kotlin`
+
+This is also where `runAgent -Pmode=tests` saves generated tests. The directory is git-ignored.
+For **Run B**, where students improve the provided test suite, use the special value `learner`.
+Here are the exact commands:
+
+```bash
+# Run A: tests written from scratch
+./gradlew verifyVariants --continue -PmutantTests=test-suites/run-a/src/test/kotlin
+
+# Run B: the provided suite, improved by the agent
+./gradlew verifyVariants --continue -PmutantTests=learner
+```
+
+Both commands were checked in a clean export on September 18, 2026. They selected the intended suites and reported 10/10.
+The slides focus on the difference between starting from scratch and improving existing tests. In practice, students also need to point the checker at the correct folder.
+
+---
 
 ## 2. The test budget
 
-`-PtestBudget=<n>` on `verifyMutants` or `verifyVariants`. The suite size is read off the baseline run
-and always printed; with a budget it becomes a constraint, and the task fails after printing the full
-report. Naming a budget is opting in to it, so it does not wait for `-PmutantsStrict`.
-
-**The number is calibrated, not guessed.** Taking Claude's blind 47-test suite and asking which of
-its tests kill which of the 11 graded must-kill mutants, a greedy cover shows **seven tests suffice**.
-One of them, `a nested policy admits exactly the ducks it describes`, accounts for four mutants on its
-own; four mutants are killed by exactly one test each (both empty-list cases, prefix matching, case
-sensitivity) and are the fragile part of the set.
-
-So the floor is 7, the suites that score 100% spend 47, and **the budget is 12** — real headroom, and
-still a fourfold cut.
-
-Say plainly in the materials that the budget is a teaching device rather than a style rule. It trades
-the readability of one-assertion-per-test suites for the skill of choosing the discriminating case,
-and it only works while the graded set stays hidden: a learner who knew the mutants would simply
-write those seven.
-
-### Told the budget in advance, the local tier just writes less (2026-08-04)
-
-`runAgent -Pmode=verify-harden` now appends the limit to the prompt when `-PtestBudget` is set, so the
-agent knows about it while writing rather than meeting it afterwards. The whole Ollama matrix, rerun
-at `-PtestBudget=12` and scored against the graded set:
-
-| Model | Unconstrained | Under the budget |
-| --- | --- | --- |
-| qwen2.5-coder:1.5b | 10 tests, 4/11 | 10 tests, 4/11 |
-| llama3.2:3b | did not compile | 12 tests, 4/11 — but **baseline invalid**, one test contradicts `:core` |
-| qwen2.5-coder:7b | 13 tests, 5/11 | 10 tests, **4/11** |
-| qwen2.5-coder:14b | 15 tests, 5/11 | 10 tests, **4/11** |
-| qwen2.5-coder:32b | 15 tests, 7/11 | 12 tests, **5/11** |
-
-Every one of them now fits. Every one that had anything to lose lost it. They obey the constraint by
-writing fewer tests, not by choosing better ones — 32b's efficiency even slipped, from 0.47 must-kills
-per test to 0.42. The budget does not make a weak agent sharper; it makes it smaller.
-
-(Amusing side effect: llama3.2:3b compiles for the first time. Its earlier suite failed on duplicate
-test names, and a shorter suite has fewer chances to repeat one. Its baseline is still red, so the
-4/11 is honest arithmetic on a broken suite.)
-
-So the budget joins the other two: **all three advanced-tier elements are frontier-only.** A learner
-working with a local model gets nothing from any of them, which is worth saying once, plainly, in the
-tier's framing rather than discovering three times.
-
-The target is provably reachable, though, which matters for fairness: the structurally hardened suite
-written for round 4 scores **11/11 on the graded set with 11 tests**, and 10/10 on the conformant
-variants at the same time. Twelve is not a trick. Still untested: a frontier agent asked to hit it.
-
-### Nothing in the archive satisfies it (2026-08-04)
-
-Every archived suite scored against the graded set with `-PtestBudget=12`:
-
-| Suite | Tests | Graded score | Must-kills per test |
-| --- | --- | --- | --- |
-| greedy cover of the graded set | 7 | 11/11 | 1.57 |
-| qwen2.5-coder:1.5b | **10 — within budget** | 4/11 | 0.40 |
-| qwen2.5-coder:7b | 13 | 5/11 | 0.38 |
-| this module's authored suite | 14 | 8/11 | 0.57 |
-| qwen2.5-coder:14b | 15 | 5/11 | 0.33 |
-| qwen2.5-coder:32b | 15 | 7/11 | 0.47 |
-| Claude, blind harden | 47 | 11/11 | 0.23 |
-| Claude, harden with feedback | 47 | 10/11 | 0.21 |
-
-The only suite that fits is the weakest one, and it fits because it barely tests anything. Nobody in
-the archive achieves both at once — which is what makes the constraint worth setting rather than
-decorative.
-
-Note also that efficiency runs *backwards* against strength here: the frontier suites are the least
-economical per mutant killed, roughly a seventh of what the greedy cover manages. That is not a
-criticism of them — a test suite is documentation as well as a detector, and 47 readable tests may
-well be the better artifact to maintain. It does mean the budget measures something the mutation
-score alone never sees, and that no agent has yet been asked to optimise for it. Whether any can is
-still open: these numbers are the budget applied *after the fact*, to suites written without knowing
-about it.
-
-## 3. The adversary
-
-`runAgent -Pmode=attack` then `verifyAttack -Pagent=<name> --continue`. A second agent is given the
-algebra and the learner's suite and asked for an implementation that passes every test and still
-contradicts the specification. Unlike a catalog, this has no ceiling: each time the suite improves,
-the next attack has to reach further out.
-
-The oracle needs no answer key, so the whole loop runs in the student folder. The attack module and
-`attacks/reference` both run `DifferentialProbe` over 2000 seeded random policy trees and ducks and
-record their verdicts; `verifyAttack` diffs the two files. (Comparing the implementations directly is
-impossible — same classes, same package, never the same classpath.) Outcomes:
-
-- the suite fails against the attack → it caught it;
-- the suite passes and the probe finds nothing → the attack is a correct implementation written
-  differently, and says nothing about the suite;
-- the suite passes and the probe disagrees → the suite has a hole, and the first disagreeing case is
-  printed as the counterexample.
-
-Failures the suite already has against the correct algebra are subtracted, or a suite with one broken
-test would claim every attack as a catch.
-
-`attacks/demo-prefix/` is a hand-written attack (accessory names matched by prefix) kept so the
-machinery can be demonstrated without an API key: the flawed starter suite accepts it while the probe
-disagrees in 36 of 2000 cases, and Claude's blind suite catches it.
-
-### Measured: the local tier cannot attack (2026-08-04)
-
-All five Ollama models were run live with `-Pmode=attack` against Claude's blind 47-test suite — the
-strongest artifact we have, 11/11 on the graded mutants. None of them produced a usable attack:
-
-| Attacker | What it returned | Verdict |
-| --- | --- | --- |
-| qwen2.5-coder:1.5b | `:core` verbatim | identical to `:core` — no attack |
-| llama3.2:3b | `:core` verbatim | identical to `:core` — no attack |
-| qwen2.5-coder:7b | `:core` verbatim | identical to `:core` — no attack |
-| qwen2.5-coder:14b | **refused the task** | no code at all |
-| qwen2.5-coder:32b | `RequiresAccessory` admits any duck wearing anything, commented `// Incorrect implementation` | differs in 222/2000, but caught by every suite tried |
-
-Only 32b understood the task, and its attack is blunt rather than subtle: it was caught by Claude's
-suite (3 tests), by its own hardened suite (1 test), and even by the flawed starter suite (3 tests).
-
-So the adversary is a **frontier-versus-frontier** exercise. That is the same asymmetry the variant
-check has, and it should be stated in the tier's framing: a learner with only a local model can do
-the basic tier and the budget, but not this. Do not present the adversary as optional-but-equivalent
-— without a capable attacker it produces a reassuring green that means nothing.
-
-The 14b refusal is worth keeping as a per-agent note in its own right: asked to write code that
-deliberately violates a specification, it answered *"I will not provide an implementation that
-deliberately violates the specification or tests in a way that could cause harm or confusion."* An
-adversarial-testing exercise can trip a model's refusal behaviour even though the task is ordinary
-test engineering. Learners will hit this, and the materials should say what it looks like and that
-rephrasing the request as "find an implementation this suite fails to distinguish from the correct
-one" usually gets past it.
-
-Two harness facts from the same runs: only 32b honoured the `// FILE:` contract, so the attack
-builder infers which `:core` file was taken over from the **class names declared** in the reply, and
-replaces a file only when every declaration in it was rewritten. Three of the five models returned
-`:core` unchanged, which the probe reports as "identical" rather than as a pass — a copied reference
-is a failed attack, not a clean suite.
-
-### Measured: the frontier attack succeeded (2026-08-04)
-
-Prompt E, blind, in a clean export, aimed at Claude's blind 47-test suite — the artifact that kills
-all 11 graded mutants and is therefore *complete* by mutation testing's own measure. The attack got
-past it: **suite PASSED, probe DIFFERS in 50 of 2000 cases.** It rewrote the leaves in two places the
-suite never constructs:
-
-- `RequiresAccessory("")` admits any duck. The suite checks case (`"Hat"`, `"HAT"`) and prefix
-  (`"hatband"`), but never builds a policy with an empty required name. Specification says false for a
-  bare duck; the attack says true.
-- `MaxBudget` with `price.coerceAtLeast(0)`. Every boundary in the suite is at 0/1, 39/40, 99/100 — no
-  duck costs less than nothing and no budget is negative. `MaxBudget(-1)` against a duck priced −2:
-  specification admits, the attack refuses.
-
-**This is the answer the tier was built to get.** Mutation testing was never the ceiling on this
-algebra; a perfect mutation score means "nothing the mutants know about is missing", and an adversary
-finds what they do not know about. Put the two numbers next to each other in the materials: 11/11 and
-still broken.
-
-### The probe's reach is itself a target — and it had a false negative
-
-The attacker read `tools/probe/kotlin/…/DifferentialProbe.kt` — nothing forbade it, and it compiles
-into the attacking module anyway — and picked its two defects *because they land inside the space the
-generator samples*. It also reported a third hole it deliberately did **not** exploit: the suite pins
-`AllOf`/`AnyOf` as boolean functions only for arities 0, 1 and 2, so an `AllOf` consulting
-`policies.take(3)` would pass — and the probe, which built children of length 0..2, could never have
-shown it.
-
-Checked, and it was right: that implementation passed the suite while the probe reported **IDENTICAL**.
-A real hole, reported as "not an attack". Fixed by raising the generator's width bound
-(`MAX_WIDTH = 6`, covering combinator arity and accessory-list length); the same implementation now
-disagrees in 17 of 2000 cases, and the frontier attack still shows at 44.
-
-Two things to carry forward:
-
-- **A "no disagreement" verdict is only as strong as the generator.** Whatever it cannot build, the
-  check cannot see. If the algebra grows, widen the probe before trusting a clean report — and say so
-  in the tier's framing, since the whole point of this exercise is not to mistake an instrument's
-  silence for a property of the code.
-- **This is Goodhart a third time**, after the mutation report and the practice tier: given a visible
-  measurement, a capable agent optimises against the measurement. Here it did so *articulately* — it
-  named the better attack and rejected it for being unmeasurable. That is worth quoting to learners
-  verbatim; it is the clearest example in the whole module of a metric shaping the work rather than
-  describing it.
-
-### Round 2, with feedback: succeeded on the first iteration
-
-Prompt F, fresh export, same suite. The attack got through immediately — suite green at 47/47, probe
-disagreeing in 45 of 2000 — so **the feedback loop never engaged and the Goodhart question is still
-open for attackers.** We did not learn whether a visible disagreement count narrows an adversary,
-because this one never needed a second look.
-
-The attack itself is more economical than the blind one: a single change, `duck.price >= 0 &&
-duck.price <= maxPrice`, on the reasoning that a negatively priced duck has no meaningful price. The
-suite misses it because every duck in it costs 0 or more — 0, 1, 20, 30, 40, 60, 100, 10 000. The
-boundary *at* the limit and one *above* it are both pinned; the bottom of the range is not.
-
-To test the anchoring question properly, the suite has to be patched against the known holes first,
-so that iteration is actually required. That is the next run, not a repeat of this one.
-
-### The real finding: four holes, all the same shape
-
-Between the two rounds the agents named four gaps, and all four check out. Two they exploited, two
-they described and I confirmed:
-
-| Hole | Found | Verified |
-| --- | --- | --- |
-| `RequiresAccessory("")` admits everyone | round 1, exploited | 45/2000 |
-| `MaxBudget` refusing negative prices | rounds 1 and 2, exploited | 45/2000 |
-| `AllOf` consulting only `policies.take(3)` | round 1, declined as unmeasurable | 17/2000 |
-| `MinAccessories` counting only the first three | round 2, described | 37/2000 |
-
-Not one is a code perturbation. Every one is **an input value the suite never constructs**: an empty
-string, a negative number, a collection longer than three. That is why mutation testing scored the
-suite 11/11 and missed all four — a mutant is a change to the code, so it can only be caught or
-missed *within the inputs the suite already builds*. Mutation testing measures how sharply a suite
-discriminates over the values it imagines. It says nothing about the values it never imagined.
-
-That sentence is the one to put in front of learners, and it is what the adversary adds that no
-catalog can.
-
-### The oracle's own blind spots, twice
-
-Widening the generator after round 1 was not enough. `MinAccessories` was still being built with
-arguments 0..3, so a policy counting only the first three accessories answered identically on every
-case the probe could construct — a second silent false negative, in a different dimension of the same
-generator, found one step after fixing the first.
-
-Every bound in the generator is a blind spot, so the ranges are now **asserted rather than assumed**:
-`DifferentialProbe` carries a second test that fails if the corpus does not actually contain a
-negative price, an empty required name, a duck wearing four or more accessories, and a
-`MinAccessories` above three. Narrow a bound and the build says so instead of quietly going blind.
-Checked by narrowing `MAX_WIDTH` back to 3 and watching it fail.
-
-### Round 3: the patched suite fell too — to a hole of a new kind
-
-`round3-target` closes all four earlier holes, scores 11/11 on the graded mutants, 10/10 on the
-variants, and catches every attack built before it. It lasted one attempt: **suite green at 52/52,
-probe disagreeing in 21 of 2000.**
-
-The change is one line in `MinAccessories` — `accessories.count { it.name.isNotBlank() } >= min`
-instead of `accessories.size >= min`, so an accessory with a blank name does not count towards the
-minimum. What makes it different from everything before is where it lives. The suite *does* build an
-accessory with an empty name, and it *does* exercise `MinAccessories` past the third accessory — but
-never both at once. Empty names appear only in the `RequiresAccessory` test; every duck fed to
-`MinAccessories` wears named accessories.
-
-So the first four holes were **missing ranges**, and this one is a **missing combination**. That
-matters for what we tell learners about convergence: closing a range is bounded work, and there are
-only so many ranges, but the pairs of ranges grow quadratically and the triples faster still. The
-adversary is not running out of room; it moved up a level. That is the strongest evidence we have
-that the loop does not converge cheaply — and the clearest reason the exercise should be framed as
-"how far can you push it" rather than "get to green".
-
-### But this run was not blind, and the reason generalises
-
-Two things went wrong with the method, both worth keeping.
-
-The session ran against the **working checkout instead of the export**, so the two previous attacks,
-every other agent's suite, and `attacks/reference/build/probe.txt` — two thousand correct verdicts —
-were all on disk, along with this file one directory up. What rescues the finding is that the hole it
-reports is *not* in these notes: the four listed here are exactly the ones already closed, and blank
-names inside `MinAccessories` is new. It went past whatever it may have read.
-
-The second problem is the interesting one. The prompt forbade *running Gradle tasks*, and it complied
-— then compiled both variants with `kotlinc`, ran the suite by reflection and diffed the two probe
-corpora by hand. It rebuilt the oracle. **A restriction on tools is not a restriction on
-information**: for a capable agent, "do not run the checker" only removes the convenience. Either the
-blind prompt must forbid reconstructing the check by any means, or — more honestly — we should accept
-that the blind regime is unenforceable against a strong agent and stop claiming it. For a *learner*
-the instruction still works, because the point there is pedagogical sequencing rather than
-containment; that distinction belongs in the teacher notes rather than in the student README.
-
-So the blind-versus-feedback comparison on a single suite is **still not done.** What this run
-actually measured is a self-served feedback regime that succeeded on its first submitted attempt.
-
-### The paired round, run properly — and the answer is "no difference"
-
-Prompts G and H, one clean export each, same target. The blind arm was **verified blind**: no `.class`
-file, no `build/`, no `.gradle`, no `probe.txt` anywhere in its export, and the only source it wrote
-was the attack itself. Forbidding *execution* rather than a named tool turned out to be enforceable
-after all — the earlier failure was our prompt, not the regime.
-
-Both arms succeeded **on the first attempt**, and found different holes:
-
-| Arm | Attack | Disagreements | Attempts |
-| --- | --- | --- | --- |
-| Blind (no execution at all) | `AllOf` splits its list in two passes with an off-by-one, so the **fourth** policy is never consulted | 7 / 2000 | 1 |
-| Feedback (checker available) | `KotlinOnly` also requires `price >= 0` | 26 / 2000 | 1 |
-
-So the feedback arm gained nothing measurable, and the anchoring question **cannot be answered at this
-difficulty**: anchoring needs iteration, iteration needs the task to be hard, and attacking this suite
-is not hard. The harden experiment produced anchoring because reaching 100% there is genuinely
-difficult. That is a real finding about when the effect appears, not a failed run.
-
-Worth noting how sharp the blind analysis was: with nothing executed, it enumerated every `AllOf`
-construction in the suite by line number, showed that arity 4 is never built and that in the only
-two length-5 lists index 3 holds an admitting policy, and predicted the probe would see it because
-`MAX_WIDTH` is 6. All of it correct.
-
-### The diagnosis is about the patch, not the agents
-
-Both holes exist because of how `round3-target` was hardened — by us, adding one test per
-counterexample, right next to the counterexample that motivated it.
-
-- "Combinators must look past the third policy" was closed with a length-5 list whose deciding policy
-  sits at index 4. **Index 3 was left untested**, and that is exactly where the blind attack went.
-- "Prices below zero" was closed inside the `MaxBudget` test, using a local helper. **No
-  negatively-priced duck reaches any other leaf**, and none is in `allDucks`, the shared corpus that
-  drives the De Morgan, double-negation and `Shop` tests — so `KotlinOnly` had never seen one.
-- The same shape is still open: the suite builds accessory lists of size 1 and one of size 5, and
-  **never one of exactly 4**. The feedback arm pointed this out unprompted.
-
-**Hardening against a counterexample closes the instance, not the class.** That sentence is the most
-transferable thing the adversary work has produced, and it is a lesson about how people patch rather
-than about how agents attack. The structural fix is to put the interesting values into the *shared
-fixture corpus* every test already runs over, and to parameterise over arity and position instead of
-picking one, so closing a hole closes its neighbours too.
-
-That also makes the next experiment obvious and worth doing: harden `round3-target` structurally
-rather than instance-wise, and attack again. If a structurally hardened suite survives, the loop
-converges after all and instance-patching was the whole problem. If it falls again, the exercise's
-framing as "how far can you push it" is the honest one.
-
-### Probe sensitivity
-
-The blind attack disagreed in only 7 cases out of 2000 — it survives 99.65% of the corpus, far subtler
-than anything before it, and a slightly subtler one could have slipped through on another seed. The
-corpus is now **20 000 cases**, which costs nothing measurable (the probe still runs in about a
-second) and moves the same two attacks to 91 and 290. Numbers recorded before this change were taken
-at 2000 and are not directly comparable.
-
-### Round 4: structural hardening held everywhere except one seam
-
-`round4-target` is the suite rebuilt the structural way — every interesting value in one shared
-corpus, the combinators checked at every arity with the deciding policy at every position, each leaf
-pinned as a formula rather than by examples. It is **11 tests**, scores 11/11 on the graded set, 10/10
-on the variants, fits the budget, and catches all six attacks that came before it.
-
-It fell anyway, first attempt, 239 disagreements in 20 000 — but the attack had to work for it, and
-the agent's own account of what it had to discard is the most useful part of the run: symmetric
-`trim()` (indistinguishable from `:core`, so invisible even to the probe), case-insensitive matching,
-`startsWith`, `contains`, `distinct()` in `MinAccessories`, "negative price means free" in
-`MaxBudget`, an off-by-one tolerance on the budget, "the last policy decides", "exactly one policy
-decides" — the structural suite catches every one.
-
-What got through is a **one-sided `trim()`**: normalise the name the policy requires, leave the name
-the duck wears alone. A duck wearing `Accessory("Scarf ")` no longer satisfies
-`RequiresAccessory("Scarf ")`.
-
-The suite covered that value. It had `"Scarf "` in `names`. But `names` fed only the *argument* side —
-no duck in the corpus ever wore a padded name — so the padded string was permanently in the "must not
-match" role, where a trimmed comparison and an exact one agree. **The axis looked covered and was
-covered in one direction only.**
-
-So the escalation continues, and it is getting sharper each time:
-
-| Round | How the suite was hardened | What got through |
-| --- | --- | --- |
-| 3 | one test per counterexample | a **missing combination** — empty name × `MinAccessories` |
-| 4 | one shared corpus, parameterised | a **role asymmetry** — a value present as an argument, never as data |
-
-That is the finding to build the exercise's framing on. Each round closes a class of defect and
-uncovers a subtler one, and the subtler one is always about a *relationship* between axes rather than
-a missing value on any single axis.
-
-### Round 5 is the terminating experiment
-
-`round5-target` fixes the seam: both sides are now built from one `names` alphabet, so every name is
-worn by some duck and required by some policy, and the alphabet gains ` hat` and `hat ` so padding
-appears in both roles. It also adds a mid-range price, a three-accessory duck and distinct duck names,
-which closes the three gaps the round-4 attacker listed as reachable only by a magic-number backdoor.
-Still 11 tests, still 11/11 graded, still 10/10 conformant, and it catches all seven attacks to date.
-
-The round-4 agent predicted that after this fix only class (b) attacks remain — arbitrary special
-cases on a value the corpus does not contain.
-
-### Round 5: the prediction was wrong, and how it was wrong is the whole lesson
-
-The suite fell again — 11/11 green, **165 disagreements in 20 000** — and to a class (a) defect. But
-the hole is no longer on any value axis. The attack drops composite children that "state no
-requirement":
+Mutation testing rewards tests for catching bugs, but it doesn't care how many tests we write.
+A suite with 47 tests might catch exactly the same bugs as a suite with 11.
+Both could get a perfect mutation score.
+But in a real project, tests are code we need to read, review, and maintain.
+So the advanced exercise adds a **test budget**.
+
+### How does it work?
+
+Use `-PtestBudget=<n>` with `verifyMutants` or `verifyVariants`.
+The tool counts the tests in the baseline suite and includes that number in the report.
+If the suite exceeds the budget, the task fails after showing the full report.
+Students don't need `-PmutantsStrict` to activate the budget. Specifying `-PtestBudget` is enough.
+
+### Why did we choose 12 tests?
+
+We didn't pick this number randomly.
+Claude's original blind suite had 47 tests and caught all 11 graded must-kill mutants.
+We analyzed which tests caught which mutants and found that **just seven tests were enough to catch all 11**.
+One test, `a nested policy admits exactly the ducks it describes`, caught four mutants by itself.
+Four mutants depended on a single test each: the two empty-list cases, prefix matching, and case sensitivity.
+So we had two useful numbers:
+
+- **7 tests:** The smallest set we found that catches all graded mutants.
+- **47 tests:** The size of Claude's complete suite.
+
+We chose a budget of **12 tests**.
+That's enough room to write a useful suite without simply copying the seven tests that match the known mutants. But it's still a big reduction from 47.
+**This budget is a teaching tool, not a general rule that every project should have fewer tests.**
+Sometimes many small, readable tests are better than a few complicated ones.
+Here, we deliberately introduce the constraint to practice choosing test cases carefully.
+
+### What happened when local models knew the budget?
+
+<text color="secondary" size="xs">Measured August 4, 2026</text>
+
+We ran the Ollama models again with `-PtestBudget=12`.
+This time, `runAgent -Pmode=verify-harden` included the budget in the prompt, so agents knew about it while writing tests.
+
+| Model | Without a budget | With a 12-test budget |
+|---|---|---|
+| `qwen2.5-coder:1.5b` | 10 tests, 4/11 | 10 tests, 4/11 |
+| `llama3.2:3b` | Did not compile | 12 tests, 4/11, but baseline invalid |
+| `qwen2.5-coder:7b` | 13 tests, 5/11 | 10 tests, 4/11 |
+| `qwen2.5-coder:14b` | 15 tests, 5/11 | 10 tests, 4/11 |
+| `qwen2.5-coder:32b` | 15 tests, 7/11 | 12 tests, 5/11 |
+
+Every model managed to stay within the budget.
+But the models that previously caught more bugs now caught fewer.
+**They responded by writing fewer tests, not by choosing better tests.**
+For example, the 32b model went from catching 7 mutants with 15 tests to catching 5 mutants with 12 tests.
+The budget didn't make it better at testing. It just made its suite smaller.
+An interesting side effect: `llama3.2:3b` compiled successfully for the first time. Its previous suite had duplicate test names, and the shorter version avoided that problem. But its baseline was still incorrect, so its score wasn't evidence of a valid suite.
+This is why the budget challenge is mainly useful with strong agents.
+
+### How efficient were the original suites?
+
+We also applied the 12-test budget to archived suites that had been written without knowing about it.
+
+| Suite                                | Tests | Graded score | Must-kills per test |
+|--------------------------------------|------:|-------------:|--------------------:|
+| Smallest cover of the graded mutants |     7 |        11/11 |                1.57 |
+| `qwen2.5-coder:1.5b`                 |    10 |         4/11 |                0.40 |
+| `qwen2.5-coder:7b`                   |    13 |         5/11 |                0.38 |
+| Teacher's test suite                 |    14 |         8/11 |                0.57 |
+| `qwen2.5-coder:14b`                  |    15 |         5/11 |                0.33 |
+| `qwen2.5-coder:32b`                  |    15 |         7/11 |                0.47 |
+| Claude, blind hardening              |    47 |        11/11 |                0.23 |
+| Claude, hardening with feedback      |    47 |        10/11 |                0.21 |
+
+Among the archived agent suites, only the weakest one stayed within the budget, and it caught just 4/11 mutants.
+None of those archived suites achieved both a perfect mutation score and the 12-test limit.
+The frontier suites caught more bugs, but they also used many more tests.
+That doesn't necessarily make them worse. A 47-test suite with clear, focused tests might be easier to maintain than a much shorter suite with complicated parameterization.
+But it shows that **mutation score and test-suite efficiency measure different things**.
+
+### Is the budget actually achievable?
+
+Yes!
+We later created a structurally improved suite for round 4 of the adversarial exercise.
+It had **11 tests**, caught **11/11 graded mutants**, and passed **10/10 conformant variants**.
+So the 12-test budget is achievable.
+What we haven't yet tested is whether a frontier agent can reach that result when given the budget as a requirement from the beginning.
+
+---
+
+## 3. Adversarial testing
+
+Now for the most interesting part of the advanced exercise!
+Instead of checking a test suite against a fixed list of mutants, we ask another AI agent to find a bug the suite doesn't catch.
+The agent receives the admission-policy specification and the learner's tests.
+Its task is to write an implementation that:
+
+- Passes the entire test suite.
+- Breaks the specification in some realistic way.
+
+The process uses:
+
+```bash
+# Generate an attack with an agent
+./gradlew runAgent -Pmode=attack
+
+# Check a saved attack
+./gradlew verifyAttack -Pagent=<name> --continue
+```
+
+Unlike mutation testing, there's no fixed catalog of bugs.
+Each time students improve their tests, the attacking agent can try a new approach.
+
+### How do we know whether an attack is valid?
+
+We don't need a separate answer key.
+Instead, we run the attacking implementation and the correct implementation on the same randomly generated inputs.
+The tool is called `DifferentialProbe`.
+Originally, it used **2,000 seeded cases**. We later increased that to **20,000 cases** to catch subtler differences.
+The two implementations can't share a classpath because they define the same classes in the same packages, so we run them separately and compare the recorded results.
+There are three possible outcomes:
+
+| Result                                              | Meaning                                                    |
+|-----------------------------------------------------|------------------------------------------------------------|
+| The test suite fails                                | The tests caught the attack.                               |
+| The suite passes and the probe finds no differences | No incorrect behavior was found in the checked cases.      |
+| The suite passes but the probe finds differences    | The tests missed a bug. The report shows a counterexample. |
+
+The checker also accounts for tests that already fail on the correct implementation. Otherwise, a broken test could make every attack look successful.
+
+### A demo attack
+
+We keep a hand-written example in:
+
+`attacks/demo-prefix/`
+
+It incorrectly matches accessory names by prefix instead of exact name.
+The original flawed test suite accepts it, but the differential probe found differences in **36 of 2,000 cases**.
+Claude's blind test suite caught it.
+This is a useful demonstration because it works without an API key.
+
+### Can local models create attacks?
+
+<text color="secondary" size="xs">Measured August 4, 2026</text>
+
+We asked five Ollama models to attack Claude's 47-test suite, which already caught all 11 graded mutants.
+None produced a successful attack.
+
+| Attacker             | What it produced                                                     | Result                                  |
+|----------------------|----------------------------------------------------------------------|-----------------------------------------|
+| `qwen2.5-coder:1.5b` | A copy of `:core`                                                    | No attack                               |
+| `llama3.2:3b`        | A copy of `:core`                                                    | No attack                               |
+| `qwen2.5-coder:7b`   | A copy of `:core`                                                    | No attack                               |
+| `qwen2.5-coder:14b`  | Refused the task                                                     | No code                                 |
+| `qwen2.5-coder:32b`  | Made `RequiresAccessory` accept any duck with at least one accessory | Bug found, but existing tests caught it |
+
+The 32b model understood the task, but its bug was too obvious.
+The implementation disagreed with the correct one in 222 of 2,000 cases, but Claude's suite, the 32b model's own suite, and even the flawed starter suite all caught it.
+So **this is really a frontier-versus-frontier exercise**.
+Students with smaller local models can still complete the basic exercise, but an unsuccessful attack from a weak model doesn't tell us much about the quality of the test suite.
+
+#### What if an agent refuses?
+
+The 14b model refused because the prompt asked it to deliberately write code that violated a specification.
+This can happen even though the task is ordinary software testing.
+A useful alternative is to ask the agent to:
+
+> Find an implementation that this test suite cannot distinguish from the correct one, even though their behavior differs.
+
+The goal is still the same, but this wording makes the testing purpose clearer.
+We also learned something about the tool integration: most local models didn't follow the expected `// FILE:` output format. The attack builder therefore identifies which source file to replace from the class declarations in the response.
+And when a model simply copies `:core`, the checker reports it as identical, not as a successful attack.
+
+---
+
+## 4. What happened when a frontier agent attacked?
+
+This is where the experiment became much more interesting.
+We asked Claude to attack another Claude-generated suite.
+The target was the **47-test suite that had already caught all 11 graded mutants**.
+
+### Round 1: A perfect mutation score wasn't enough
+
+<text color="secondary" size="xs">August 4, 2026 — blind attack, prompt E</text>
+
+Claude found an implementation that passed the entire test suite but disagreed with the correct implementation in **50 of 2,000 cases**.
+It exploited two missing inputs.
+
+**First: an empty accessory name.**
+The tests checked case sensitivity and prefix matching, but never created `RequiresAccessory("")`.
+The attack made that policy admit every duck.
+
+**Second: negative prices.**
+The tests covered several price boundaries, but never used a negatively priced duck.
+The attack changed `MaxBudget` to treat negative prices as zero:
+
+```kotlin
+price.coerceAtLeast(0)
+```
+
+That broke cases such as a duck priced at −2 with a budget of −1.
+The original specification admits that duck, but the attack refuses it.
+So we had a very clear result:
+
+**11/11 mutants caught — and the test suite still missed real bugs.**
+
+That's an important lesson for students. A perfect mutation score means the suite caught all the bugs in the mutant catalog, not every bug that could exist.
+
+### The checker had its own blind spot
+
+The attacking agent also noticed another possible bug.
+The tests checked `AllOf` and `AnyOf` with zero, one, or two children, but didn't properly cover longer lists.
+An implementation that checked only the first three policies could pass.
+At first, the differential probe couldn't detect this either because it generated lists with only zero to two children.
+We confirmed the problem: the incorrect implementation passed the tests, and the probe reported no differences.
+After increasing `MAX_WIDTH` to 6, the same implementation disagreed in **17 of 2,000 cases**.
+
+**The checker can only find problems in the inputs it generates.**
+This is important because the checker itself is another piece of software with assumptions and limits.
+A clean result isn't proof that the implementation is correct.
+
+### Round 2: Feedback didn't help yet
+
+<text color="secondary" size="xs">August 4, 2026 — prompt F</text>
+
+We tried another attack, this time allowing feedback.
+The agent succeeded immediately: all 47 tests passed, but the probe found **45 disagreements in 2,000 cases**.
+The attack added a condition to `MaxBudget`:
+
+```kotlin
+duck.price >= 0 && duck.price <= maxPrice
+```
+
+Again, the suite never tested negative prices.
+Because the attack succeeded on the first attempt, the agent didn't need to use feedback to improve it.
+So we still couldn't answer whether feedback helps an attacking agent or causes it to focus too much on the checker.
+
+### Four gaps with the same pattern
+
+Across the first two rounds, we found four real gaps:
+
+| Missing case                                             | How we found it  | Differences in 2,000 cases |
+|----------------------------------------------------------|------------------|---------------------------:|
+| `RequiresAccessory("")` accepts everyone                 | Round 1 attack   |                         45 |
+| `MaxBudget` refuses negative prices                      | Rounds 1 and 2   |                         45 |
+| `AllOf` checks only the first three policies             | Round 1 analysis |                         17 |
+| `MinAccessories` counts only the first three accessories | Round 2 analysis |                         37 |
+
+All four had something in common.
+**The test suite never constructed the inputs needed to expose them.**
+It didn't use empty required names, negative prices, or sufficiently long collections.
+Mutation testing can tell us whether our tests distinguish different implementations on the inputs they use.
+But it can't tell us which inputs we never thought to test.
+That's one of the biggest lessons from this experiment.
+
+### The probe missed another case
+
+Even after increasing the width of generated lists, the probe still didn't generate `MinAccessories` arguments above 3.
+So an implementation that counted only the first three accessories could still look correct to the probe.
+We fixed this by adding checks for the generated corpus itself.
+Now the probe verifies that its inputs include:
+
+- Negative prices.
+- Empty required accessory names.
+- Ducks with at least four accessories.
+- `MinAccessories` thresholds greater than three.
+
+If those cases disappear from the generated corpus, the check fails instead of silently losing coverage.
+
+---
+
+## 5. Round 3: Missing combinations
+
+We created `round3-target`, a test suite that fixed all four earlier gaps.
+It caught all 11 graded mutants, passed all 10 variants, and detected every previous attack.
+But the next attack succeeded immediately.
+All **52 tests passed**, while the probe found **21 differences in 2,000 cases**.
+
+### What was the bug?
+
+The attack changed `MinAccessories` from counting all accessories to counting only those with nonblank names:
+
+```kotlin
+accessories.count { it.name.isNotBlank() } >= min
+```
+
+The test suite already included empty accessory names.
+It also tested ducks with more than three accessories.
+But it never combined those two cases.
+Empty names appeared in `RequiresAccessory` tests, while `MinAccessories` tests used only named accessories.
+**This was a new kind of gap: not a missing value, but a missing combination of values.**
+That's much harder to fix by simply adding more boundary cases.
+
+### An important limitation of this run
+
+This experiment wasn't fully blind.
+The agent worked in a checkout that still contained earlier attacks, other suites, and generated results.
+It also found a way to run its own checks using `kotlinc`, even though the prompt told it not to run Gradle tasks.
+So we can't claim that this was a clean blind experiment.
+The new bug was real, but the experiment didn't prove that the agent found it without access to feedback.
+The lesson for us was simple: **telling a capable agent not to run one tool doesn't necessarily prevent it from recreating the same check another way.**
+We needed a cleaner experiment.
+
+---
+
+## 6. A proper blind-versus-feedback comparison
+
+We ran two new experiments using prompts G and H, each in a clean export.
+In the blind run, we confirmed that no compiled files, build directories, or previous probe results were available. The agent was not allowed to execute code, and it only wrote the attack implementation.
+Both agents succeeded on their first attempt.
+
+| Run           | Attack                                       | Differences in 2,000 cases | Attempts |
+|---------------|----------------------------------------------|---------------------------:|---------:|
+| Blind         | `AllOf` accidentally skips the fourth policy |                          7 |        1 |
+| With feedback | `KotlinOnly` also requires `price >= 0`      |                         26 |        1 |
+
+Feedback didn't provide any measurable advantage because neither agent needed a second attempt.
+So the question about feedback influencing the agent's search is still open.
+
+### Why did these attacks work?
+
+Both problems came from how we had improved the suite after previous attacks.
+We had added individual tests for specific counterexamples.
+
+For example:
+
+- To check that `AllOf` looks past the third policy, we used a five-policy list where the important policy was at index 4. But index 3 remained untested.
+- To check negative prices, we added them to the `MaxBudget` tests. But no negatively priced duck appeared in the shared corpus used by `KotlinOnly` and other policies.
+- We tested accessory lists of sizes 1 and 5, but not exactly 4.
+
+So the fixes were too narrow.
+**We fixed the exact examples the agents found, but not the larger groups of similar bugs.**
+
+### What should we do instead?
+
+Put important input values into a shared test corpus.
+Then use parameterized tests to check different list lengths, positions, and combinations.
+For example, instead of testing one list of five policies with a rejecting policy at a particular position, check different positions across different list lengths.
+This helps us test a whole category of behavior rather than one example.
+
+---
+
+## 7. Making the probe more sensitive
+
+The blind attack from the previous round disagreed with the correct implementation in only **7 of 2,000 cases**.
+That means it behaved correctly on 99.65% of the generated inputs.
+A slightly more subtle bug might have escaped the probe entirely.
+So we increased the corpus to **20,000 cases**.
+The probe still ran in about a second, so the extra coverage was inexpensive.
+With the larger corpus, the two attacks produced 91 and 290 disagreements.
+**Important:** Results recorded with 2,000 cases aren't directly comparable with results recorded using 20,000.
+
+---
+
+## 8. Round 4: Structural tests are better, but still not perfect
+
+We created `round4-target` using the more systematic approach.
+
+Instead of adding one test per discovered bug, we:
+
+- Put important values into a shared corpus.
+- Tested combinators with different numbers of policies.
+- Checked every possible position of a deciding policy.
+- Described leaf behavior using general rules rather than a few examples.
+
+The result was much smaller:
+
+**11 tests, 11/11 graded mutants, 10/10 variants.**
+
+It also caught all six previous attacks and stayed within the 12-test budget.
+This was a big improvement!
+But the next attack still got through on its first attempt.
+
+The suite passed, while the probe found **239 differences in 20,000 cases**.
+
+### What did the attack change?
+
+It changed how `RequiresAccessory` compares names.
+The implementation trimmed whitespace from the required name but not from the accessory name.
+For example, a duck wearing `Accessory("Scarf ")` would no longer satisfy `RequiresAccessory("Scarf ")`.
+
+### Why didn't the tests catch it?
+
+The test suite already included `"Scarf "` in its list of interesting names.
+But that list was only used for the **required name**.
+No duck in the shared corpus actually wore an accessory with a trailing space.
+So we had covered the value, but only in one role.
+
+**The important lesson: a value appearing somewhere in your tests doesn't mean you've tested every way that value can be used.**
+
+The agent had also considered several other bugs, including case-insensitive matching, prefix matching, duplicate handling, negative-price behavior, and off-by-one errors.
+The structural suite caught all of those.
+The successful attack had to exploit a more subtle relationship between the inputs.
+
+---
+
+## 9. Round 5: The problem moved from values to structure
+
+We improved the suite again.
+In `round5-target`, both required accessory names and the names ducks actually wear came from the same shared list.
+We added names with leading and trailing spaces, along with a few other missing values.
+The suite still had **11 tests**, caught **11/11 graded mutants**, passed **10/10 variants**, and detected all seven earlier attacks.
+We expected that only very artificial bugs might remain.
+But the next agent proved us wrong!
+All 11 tests passed, while the probe found **165 differences in 20,000 cases**.
+
+### What was the new bug?
+
+The attack tried to simplify nested policies by removing children that appeared to have no requirements.
+It used this helper:
 
 ```kotlin
 private fun AdmissionPolicy.statesNoRequirement(): Boolean = when (this) {
@@ -487,47 +556,72 @@ private fun AdmissionPolicy.statesNoRequirement(): Boolean = when (this) {
 }
 ```
 
-An empty `AllOf` and an empty `AnyOf` are the identity elements of **different** operations — one says
-yes, the other says no — so treating both as "no opinion" is wrong exactly across types. Within a type
-the simplification is sound, which is what would get it through review. The witness is not a duck at
-all: `AnyOf(AllOf())` is `true` in the specification and `false` in the attack **for every duck**. The
-shape of the policy is the counterexample.
+The problem is that empty `AllOf` and empty `AnyOf` have different meanings.
 
-The suite misses it for a reason that can be stated precisely: it checks `AllOf(emptyList())` and
-`AnyOf(emptyList())` **only at the root**. Verified — an empty composite appears nowhere as a child,
-and in the arity unfolding the children are always `always`/`never`. The probe meanwhile builds them
-freely at any depth, since `children()` may draw zero children.
+- `AllOf(emptyList())` admits every duck.
+- `AnyOf(emptyList())` admits no ducks.
 
-**The law the three rounds add up to, and what the exercise should teach:**
+Treating both as something that can be ignored changes the result.
+For example:
 
-| Round | What the suite had corpus-ised | Where the next hole lived |
-| --- | --- | --- |
-| 3 | nothing — one test per counterexample | a missing **combination** of values |
-| 4 | values, but per role | a **role asymmetry** — present as an argument, never as data |
-| 5 | values, symmetrically, from one alphabet | **tree shape** — the one axis still written out example by example |
+```kotlin
+AnyOf(listOf(AllOf(emptyList())))
+```
 
-**Whatever axis you enumerate by example rather than by corpus is where the next defect lives.** The
-round-5 attacker diagnosed this itself: the suite lifted every interesting *value* into a shared
-corpus and ran every leaf over it, but a shape is not a value, there is no corpus of shapes, and each
-one is hand-written in its own test. The instance-to-structure move made for ducks was never made for
-trees.
+This should admit every duck, but the attack makes it reject them.
 
-Its patch is the right one and generalises: put `AllOf(emptyList())` and `AnyOf(emptyList())` into
-`leaves()` and into the pool the arity unfolding draws children from, so an empty composite reaches
-every position at every arity the way `never` already does.
+### Why didn't the tests catch it?
 
-### Two things worth quoting to learners
+The suite tested empty `AllOf` and empty `AnyOf` individually.
+But it never used an empty combinator **inside another combinator**.
+The shared corpus covered many interesting values, but we were still writing policy-tree structures manually.
+So we had moved from missing values to missing combinations, then to missing roles, and finally to missing tree shapes.
 
-**It graded its own plausibility, unprompted, and was right to.** It called this "class (a) in the
-sense of a plausible mistake in a plausibly *extended* implementation, not a typo in a one-liner" —
-because `:core` needs no normalisation step at all, so the defect is *added* code rather than
-*altered* code. That is a signal in itself: the space of plausible modifications is exhausted, and
-what is left requires inventing a reason to touch the code first. Defect density per unit of
-plausibility is falling, even though it has not reached zero.
+Here's the progression:
 
-**It rejected a real hole because our instrument could not see it** — the fourth time this has
-happened. `MaxBudget` written as `maxPrice - duck.price >= 0` overflows at `MaxBudget(Int.MAX_VALUE)`
-against a negative price; the suite does not catch it, but the probe only builds limits in −1..11, so
-the report would have said IDENTICAL. We therefore knowingly hold a genuine hole this oracle
-structurally cannot report. Say that out loud in the materials: the check's reach is part of the
-result, and a clean report is a statement about the instrument as much as about the suite.
+| Round | What we improved                             | What the next attack found                  |
+|-------|----------------------------------------------|---------------------------------------------|
+| 3     | Added tests for individual counterexamples   | A missing combination of values             |
+| 4     | Used a shared corpus and parameterized tests | A value covered in one role but not another |
+| 5     | Used the same values in both roles           | A missing nested policy structure           |
+
+**Whatever we still test using only a few hand-picked examples can become the next gap.**
+The natural next improvement is to build a shared corpus of policy-tree shapes too.
+For example, include empty `AllOf` and `AnyOf` as possible children, not just as top-level policies.
+Then test them in different positions and combinations.
+
+### What does this tell us about realistic bugs?
+
+The round-5 agent also made an interesting observation.
+This attack was realistic for an implementation that someone had tried to simplify or extend, but it wasn't a likely typo in the original `:core` code.
+That's an important distinction.
+As we improve the suite, finding realistic mistakes becomes harder. The agent may need to invent increasingly complicated changes to create a bug.
+So the goal isn't necessarily to reach a point where no attack is possible.
+**The goal is to understand how far we can improve the suite before the remaining attacks stop looking like mistakes developers would actually make.**
+
+### One more limitation of the probe
+
+The agent also found a real overflow problem that the probe couldn't detect.
+An implementation of `MaxBudget` using:
+
+```kotlin
+maxPrice - duck.price >= 0
+```
+
+can overflow for extreme integer values.
+The suite doesn't catch this, but the probe generates budget limits only in the range −1 to 11.
+So the differential check would report no differences even though the bug is real.
+This is another reminder that **a clean report tells us as much about the inputs our checker can generate as it does about the code we're checking**.
+
+---
+
+## What should teachers emphasize?
+
+The most important lesson from these experiments isn't that one model is better than another.
+It's that **test quality has several dimensions, and no single score captures all of them**.
+Mutation testing helps us find bugs our tests miss. Conformance testing helps us find tests that are too strict. A test budget encourages us to choose cases more carefully. Adversarial testing helps us discover gaps that our existing tools never considered.
+The adversarial rounds also show why simply adding a test for each discovered bug isn't enough.
+We need to ask a bigger question:
+**What whole category of mistakes does this test protect us against?**
+And even when we improve the structure of our tests, we should keep looking at the relationships between values, their roles, and the shapes of the objects we're testing.
+That's the real goal of the advanced tier: not just getting a green report, but learning how to evaluate the quality of the tests themselves.

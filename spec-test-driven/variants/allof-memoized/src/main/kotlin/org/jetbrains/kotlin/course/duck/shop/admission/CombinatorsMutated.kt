@@ -5,12 +5,11 @@
 
 package org.jetbrains.kotlin.course.duck.shop.admission
 
-// The combinator policies — given, correct, and shared from :core. The idiomatic stdlib
-// all{}/any{} give the vacuous-truth results (AllOf(emptyList())==true, AnyOf(emptyList())==false)
-// for free.
+// These combinator policies are provided, correct, and shared from :core. The idiomatic stdlib
+// all{}/any{} already give the vacuous-truth results (AllOf(emptyList())==true, AnyOf(emptyList())==false).
 
 /**
- * Admits a duck only when **every** policy in [policies] admits it (logical AND).
+ * Admits a duck only if **every** policy in [policies] admits it (logical AND).
  */
 class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {
     constructor(vararg policies: AdmissionPolicy) : this(policies.toList())
@@ -21,7 +20,7 @@ class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {
 }
 
 /**
- * Admits a duck when **at least one** policy in [policies] admits it (logical OR).
+ * Admits a duck if **at least one** policy in [policies] admits it (logical OR).
  */
 class AnyOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {
     constructor(vararg policies: AdmissionPolicy) : this(policies.toList())
@@ -30,7 +29,7 @@ class AnyOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {
 }
 
 /**
- * Admits exactly the ducks that [policy] does **not** admit (logical NOT).
+ * Admits exactly those ducks that [policy] does **not** admit (logical NOT).
  */
 class Not(private val policy: AdmissionPolicy) : AdmissionPolicy {
     override fun admits(duck: Duck): Boolean = !policy.admits(duck)
