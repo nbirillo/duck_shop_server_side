@@ -1,0 +1,17 @@
+{
+  "description": "PRACTICE tier for the capstone — one fork, so you can see what the check does before it is used on the rest of your work. Each entry is a READING of something the brief leaves open. `./gradlew generateForks -PforksPricing=<your pricing file> -PforkTests=<your test source dir>` builds a module per reading and `./gradlew verifyForks` reports whether your tests accept exactly one of them. Unlike a mutant, a reading is NOT a defect: neither of these two answers is wrong, and the report will never tell you which to pick. What it can tell you is whether you picked at all. The labels are spelled out here on purpose — this tier exists to teach the mechanic. The graded forks are not in this folder, and a clean report here means 'the one fork you practised on is decided', never 'my specification is complete'.",
+  "readings": [
+    {
+      "id": "fork3-earliest",
+      "fork": "fork3-which-shop-wins-a-tie",
+      "label": "the earliest shop in the chain's list wins",
+      "source": "readings/Fork3Earliest.kt"
+    },
+    {
+      "id": "fork3-latest",
+      "fork": "fork3-which-shop-wins-a-tie",
+      "label": "the last shop in the chain's list wins",
+      "source": "readings/Fork3Latest.kt"
+    }
+  ]
+}

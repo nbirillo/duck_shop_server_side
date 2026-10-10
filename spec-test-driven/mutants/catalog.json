@@ -1,0 +1,40 @@
+{
+  "description": "Practice mutants for the test-writing exercise. Each mutant swaps one piece of code in :core. Run ./gradlew generateMutants to create a separate module for each change, then ./gradlew verifyMutants to check whether your tests catch it. The mutants have no descriptions on purpose: telling you what is wrong and which test to write would give away the exercise. The search patterns match full `override` lines because the KDoc above them contains the same expressions.",
+  "mutants": [
+    {
+      "id": "max-budget-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.price <= maxPrice",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.price < maxPrice",
+      "bucket": "must-kill"
+    },
+    {
+      "id": "min-accessories-strict",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.size >= min",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.size > min",
+      "bucket": "must-kill"
+    },
+    {
+      "id": "allof-empty-false",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isNotEmpty() && policies.all { it.admits(duck) }",
+      "bucket": "must-kill"
+    },
+    {
+      "id": "anyof-empty-true",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.isEmpty() || policies.any { it.admits(duck) }",
+      "bucket": "must-kill"
+    },
+    {
+      "id": "allof-defensive-copy",
+      "file": "Combinators.kt",
+      "find": "class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {",
+      "replace": "class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n    private val policies: List<AdmissionPolicy> = policies.toList()",
+      "bucket": "spec-dependent"
+    }
+  ]
+}

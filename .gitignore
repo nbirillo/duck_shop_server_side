@@ -36,3 +36,24 @@ yarn-error.log*
 # ---- OS ----
 .DS_Store
 Thumbs.db
+
+# ---- Module 11.4 ----
+# Implement-from-spec sandboxes: derived from a SPEC.md by `./gradlew sandbox`, one per attempt.
+spec-test-driven/sandbox/
+
+# Collected sandbox implementations (derived; `prepareImplementation` rebuilds them).
+spec-test-driven/implementations/
+
+# The specification corpus the teacher hands out for 11.4b — material, not repository content.
+# The slides tell a learner to drop the folder into the project, so ignore it wherever it lands.
+corpus/
+
+# Generated specifications and extractions (runAgent -Pmode=spec* / spec-extract). These are
+# TEACHER-side work: the brief lives in spec-test-driven-grading/briefs/, so the mode only runs from
+# that build. Ignored in both, so output never turns up as a file waiting to be committed.
+specs/
+specs-advanced/
+specs-short/
+specs-corpus/
+extractions/
+

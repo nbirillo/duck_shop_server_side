@@ -1,0 +1,6 @@
+{
+  "agent": "demo-prefix",
+  "mode": "attack",
+  "provider": "hand-written",
+  "note": "Not a real agent run: a fixture demonstrating verifyAttack without an API key."
+}

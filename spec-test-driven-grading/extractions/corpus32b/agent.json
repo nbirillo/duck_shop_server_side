@@ -1,0 +1,1 @@
+{"agent":"corpus32b","mode":"spec-extract","provider":"ollama","model":"qwen2.5-coder:32b","checkedOn":"2026-08-13","temperature":0,"promptSha256":"8fbcaa5f906a0b6f5549c5a2415f2910bb5c040d0d5c8b2e9a5eed591ede0af5"}

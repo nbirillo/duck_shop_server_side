@@ -1,0 +1,75 @@
+{
+  "description": "Conformant variants for the advanced test-writing exercise. Each variant changes one part of a :core source file without changing the result required by the contract. Run ./gradlew generateVariants to create modules using the original :core with one file replaced, then ./gradlew verifyVariants to test each variant with your suite. Tests that check only the contract should pass for every variant. If a test fails, the report marks it as a false alarm and shows which tests may need to be relaxed. Variants have no individual descriptions on purpose: explaining what each one changes would give away which tests to reconsider. Only the advanced-tier contract addendum determines whether a variant is allowed. Search patterns include the full `override` line because the KDoc above it contains the same expression.",
+  "variants": [
+    {
+      "id": "allof-no-short-circuit",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.all { it }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "anyof-no-short-circuit",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.any { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.map { it.admits(duck) }.any { it }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "allof-reverse-order",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.reversed().all { it.admits(duck) }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "allof-memoized",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "private val decided = HashMap<Duck, Boolean>()\n\n    override fun admits(duck: Duck): Boolean = decided.getOrPut(duck) { policies.all { it.admits(duck) } }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "allof-defensive-copy",
+      "file": "Combinators.kt",
+      "find": "class AllOf(private val policies: List<AdmissionPolicy>) : AdmissionPolicy {",
+      "replace": "class AllOf(policies: List<AdmissionPolicy>) : AdmissionPolicy {\n    private val policies: List<AdmissionPolicy> = policies.toList()",
+      "bucket": "conformant"
+    },
+    {
+      "id": "allof-fold",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = policies.all { it.admits(duck) }",
+      "replace": "override fun admits(duck: Duck): Boolean = policies.fold(true) { verdict, policy -> verdict && policy.admits(duck) }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "not-explicit-comparison",
+      "file": "Combinators.kt",
+      "find": "override fun admits(duck: Duck): Boolean = !policy.admits(duck)",
+      "replace": "override fun admits(duck: Duck): Boolean = policy.admits(duck) == false",
+      "bucket": "conformant"
+    },
+    {
+      "id": "max-budget-negated",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.price <= maxPrice",
+      "replace": "override fun admits(duck: Duck): Boolean = !(duck.price > maxPrice)",
+      "bucket": "conformant"
+    },
+    {
+      "id": "requires-accessory-contains",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.any { it.name == accessoryName }",
+      "replace": "override fun admits(duck: Duck): Boolean = accessoryName in duck.accessories.map { it.name }",
+      "bucket": "conformant"
+    },
+    {
+      "id": "min-accessories-count",
+      "file": "Leaves.kt",
+      "find": "override fun admits(duck: Duck): Boolean = duck.accessories.size >= min",
+      "replace": "override fun admits(duck: Duck): Boolean = duck.accessories.count() >= min",
+      "bucket": "conformant"
+    }
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "_what": [
+    "Hand-authored ground truth: for each fixture specification, which claims from the property",
+    "catalog its text actually makes. Authored by reading all thirteen specifications, not by",
+    "running anything. This exists to measure LAYER 2 (model extraction), and nothing else — it is",
+    "not a grade, not a rubric for learners, and never shown as one.",
+    "",
+    "Why it is needed: the extractor is reproducible (five runs at temperature 0 agreed verbatim)",
+    "and that says nothing about whether it is RIGHT. It answered NO to claim 2 on the strongest",
+    "spec in the corpus, which states that claim twice. Without a key, an error like that is",
+    "indistinguishable from a weak specification, and the tool blames the learner for its own miss."
+  ],
+  "_verdicts": {
+    "yes": "the text asserts the claim (as a rule, or pinned unambiguously by a worked example)",
+    "no": "the text is silent — it neither asserts nor denies it",
+    "contra": "the text asserts something INCOMPATIBLE with the claim"
+  },
+  "_why_three": [
+    "Silence and contradiction are different facts about a specification and they have different",
+    "consequences downstream. A silent spec leaves an implementer free; a contradicting spec sends",
+    "them the wrong way and the property will fail against any conforming implementation. Two",
+    "values would have collapsed them, and four of the six written fixtures use the third."
+  ],
+  "_out_of_scope": [
+    "Claims a fixture's own brief never put in front of its author. A basic-tier spec is silent",
+    "about BestOf and OnlyIf because the basic brief has no such rules — that is correct work, not",
+    "a gap. The extractor should still answer NO; the distinction matters only when the report is",
+    "read by a person. Same trap as the surface check, which used to read the codebase instead of",
+    "the brief and flagged basic specs for omitting combinators they were never shown."
+  ],
+  "_claims": [
+    "an empty rule list leaves the price alone",
+    "no rule ever raises the price",
+    "the price is never negative",
+    "a percentage subtracts a rounded-down discount",
+    "rules compound — each sees what the one before it left",
+    "the big-spender threshold is inclusive",
+    "the big-spender bonus reads the price it is applied to",
+    "a large price does not overflow",
+    "BestOf hands over the lowest of its options",
+    "OnlyIf leaves a duck its condition rejects untouched"
+  ],
+  "_claims_note": [
+    "Order and wording match the test names in pricing-properties/.../PricingProperties.kt, which",
+    "is where the extractor reads them from. Rename a test and this file must be renumbered with it."
+  ],
+
+  "fixtures": {
+    "written/claude-code.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1, and the first row of the worked-examples table",
+        "2": "B9 states 0 <= priceFor <= duck.price; B16 states it again as monotonicity",
+        "3": "B9, E6",
+        "4": "B2, with the counter-formula spelled out as non-conforming; E7",
+        "5": "B1 fold, B10 (two 10% rules on 100 give 81, not 80)",
+        "6": "B5, E9",
+        "7": "B6, and Q2 records it as the assumption behind B6",
+        "8": "B2 requires a Long intermediate; E14 gives the Int.MAX_VALUE result"
+      }
+    },
+
+    "written/ollama-qwen2.5-coder-32b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "no", "yes", "yes", "yes", "yes", "contra", "no", "no", "no"],
+      "where": {
+        "1": "§3 first bullet",
+        "3": "§2 'not going below zero' twice; §5 'clamped to zero'",
+        "4": "§2 'rounding down to the nearest whole unit'",
+        "5": "§2 'each is applied sequentially to the current price after previous discounts'",
+        "6": "§2 'greater than or equal to threshold'",
+        "7": "CONTRA — §2 tests the bonus against 'the original price', and §2 also orders the bonus last regardless of list position"
+      },
+      "note": [
+        "Internally inconsistent: §2 says a percentage takes 'percent percent of the original price'",
+        "and then says rules apply sequentially to the current price. Both readings are in the same",
+        "section. Claim 5 is scored yes on the explicit sequential sentence; the inconsistency is a",
+        "separate finding and belongs in the report, not in the key."
+      ]
+    },
+
+    "written/ollama-qwen2.5-coder-14b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "no", "contra", "yes", "yes", "contra", "no", "no", "no", "no"],
+      "where": {
+        "1": "§3 'Empty Rules List'",
+        "3": "CONTRA — §3 'Negative Price Duck': price -50 with a 10 off rule gives -60. No clamp anywhere",
+        "4": "§2 'rounding down'",
+        "5": "§2 'Each rule is applied to the current price after all previous rules have been applied'",
+        "6": "CONTRA — §3 says a price exactly equal to the threshold does NOT fire the bonus"
+      },
+      "note": [
+        "The combination worked example in §3 is arithmetically wrong on its own terms (150 less 15",
+        "less 20 less 30 is 85, the spec says 98). Not a claim verdict — worth a line in the report,",
+        "because a spec whose examples do not compute is a spec nobody checked."
+      ]
+    },
+
+    "written/ollama-qwen2.5-coder-7b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "no", "no", "yes", "yes", "yes", "contra", "no", "no", "no"],
+      "where": {
+        "1": "§3 'Empty list of rules'",
+        "4": "§2 'rounding down'",
+        "5": "§2 'the price it is applied to'",
+        "6": "§2 'greater than or equal to the threshold'",
+        "7": "CONTRA — §2 tests the bonus against 'the duck's shelf price'"
+      },
+      "note": [
+        "Claim 5 is scored yes on §2's wording alone, and §4 then says the order rules are applied",
+        "in is not specified — which makes 'the price it is applied to' meaningless. Scored on the",
+        "assertion, flagged as a contradiction elsewhere."
+      ]
+    },
+
+    "written/ollama-qwen2.5-coder-1.5b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "no", "no", "no", "no", "yes", "no", "yes", "no", "no"],
+      "where": {
+        "6": "§3 pins it by example: price 100 with BigSpenderBonus(100, 20) gives 80",
+        "8": "§3 'Boundary values': for prices close to 2^31-1 the discount should not cause overflow"
+      },
+      "note": [
+        "The only small model to raise overflow, and it raised it unprompted. Also the only spec in",
+        "the corpus whose §2 is examples with no rule at all — which is why claims 4 and 5 are no:",
+        "every example divides evenly, so nothing in the text says which way rounding goes.",
+        "Contradicts itself on the bonus: §2 fires it on a 50 duck against a threshold of 100."
+      ]
+    },
+
+    "written/ollama-llama3.2-3b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "no", "no", "yes", "yes", "yes", "no", "no", "no", "no"],
+      "where": {
+        "1": "§3 first bullet",
+        "4": "§2 'rounding down'",
+        "5": "§2 'the price it is applied to'",
+        "6": "§2 'applies only if the duck's price is at least threshold'"
+      },
+      "note": [
+        "All three rule kinds are described in §2. An earlier note of mine claimed this spec was",
+        "silent about two of them; that was wrong and is corrected here.",
+        "§4 declares rule order unspecified and §5 asks whether percentages add or apply in",
+        "sequence — both undercut the claim-5 assertion in §2."
+      ]
+    },
+
+    "compressed/claude-code.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1",
+        "2": "§1 'never negative and never above duck.price'",
+        "3": "B6, §1",
+        "4": "B2, E5",
+        "5": "B1, B7",
+        "6": "B4 'The test is inclusive'",
+        "7": "B5",
+        "8": "B2 and E7"
+      },
+      "note": [
+        "Genuine compression — half the length of written/claude-code.md, all eight in-scope claims",
+        "still asserted. B16 monotonicity was dropped and claim 2 survives anyway, because §1 was",
+        "rewritten to carry the bound."
+      ]
+    },
+
+    "compressed/ollama-qwen2.5-coder-32b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1", "2": "B16", "3": "B9", "4": "B2", "5": "B1", "6": "B5", "7": "B6", "8": "E14"
+      },
+      "note": [
+        "Compressed by keeping every claim sentence and deleting every justification and example.",
+        "All eight survive as bare assertions. Several §3 entries are left as a heading and a colon",
+        "with nothing after them (E5, E7) — truncation, not compression, and the deterministic layer",
+        "should be the one to notice."
+      ]
+    },
+
+    "compressed/ollama-qwen2.5-coder-14b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1", "2": "B16", "3": "B9", "4": "B2", "5": "B1", "6": "B5", "7": "B6",
+        "8": "B2 'without intermediate overflow of the 32-bit range'"
+      },
+      "note": [
+        "Compressed §2 and §3 the same way 32b did, then replaced §4 and §5 wholesale with the weak",
+        "sections from written/ollama-qwen2.5-coder-1.5b.md. Claims survive; the decisions do not."
+      ]
+    },
+
+    "compressed/ollama-qwen2.5-coder-7b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1", "2": "B9, B16", "3": "B9", "4": "B2", "5": "B1, B10", "6": "B5", "7": "B6", "8": "B2, E14"
+      },
+      "note": [
+        "Not a compression: §1 to §3 are the original verbatim, with §4 and §5 swapped for the 1.5b",
+        "sections. Longer than several of the specs it was asked to shorten."
+      ]
+    },
+
+    "compressed/ollama-qwen2.5-coder-1.5b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1", "2": "B9, B16", "3": "B9", "4": "B2", "5": "B1, B10", "6": "B5", "7": "B6", "8": "B2, E14"
+      },
+      "note": "Original verbatim apart from §1 and the last two sections. No compression performed."
+    },
+
+    "compressed/ollama-llama3.2-3b.md": {
+      "outOfScope": [9, 10],
+      "verdicts": ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes", "no", "no"],
+      "where": {
+        "1": "E1", "2": "B9, B16", "3": "B9", "4": "B2", "5": "B1, B10", "6": "B5", "7": "B6", "8": "B2, E14"
+      },
+      "note": [
+        "The original with a dash prepended to each block. Longer than the input, and the longest",
+        "file in the corpus. The task was 'make it shorter'."
+      ]
+    },
+
+    "advanced/ollama-qwen2.5-coder-32b.md": {
+      "outOfScope": [],
+      "verdicts": ["no", "no", "yes", "yes", "yes", "yes", "contra", "no", "yes", "yes"],
+      "where": {
+        "3": "§5 'we assume that the price cannot go below zero'",
+        "4": "§2 'rounding down'",
+        "5": "§2 Then 'applies the first promotion and then applies the second on the resulting price'",
+        "6": "§2 'greater than or equal to threshold'",
+        "7": "CONTRA — §2 tests the bonus against 'the original price'",
+        "9": "§2 BestOf 'returns the lowest final price after applying each option'",
+        "10": "§2 OnlyIf 'otherwise, it leaves the price unchanged'; §3 'No qualifying condition'"
+      },
+      "note": [
+        "Nothing is out of scope here: the advanced brief shows all six rule kinds. Claim 1 is a real",
+        "gap — the spec never says what an empty list, or an empty top-level rule, does; it covers",
+        "only the empty BestOf. Claim 4 says 'of the original price', the same error as claim 7,",
+        "but claim 4 as stated is about rounding and rounding is asserted, so it scores yes.",
+        "Its §6 laws are largely vacuous (three of five are trivially true and pin nothing) — a",
+        "matter for the property layer, which will show they kill no mutant."
+      ]
+    }
+  }
+}
